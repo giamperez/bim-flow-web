@@ -15,15 +15,22 @@ if [ -e "$WEB/wp-config.php" ] || [ -e "$WEB/wp-content" ]; then
   echo "Esa aplicación es un WordPress. Use una aplicación PHP nueva y separada."; exit 1
 fi
 
-mkdir -p "$APP/app" "$WEB/admin"
-cp -r "$HERE/app/." "$APP/app/"
-cp "$HERE/public/index.php" "$HERE/public/.htaccess" "$WEB/"
-cp "$ROOT/public/admin/index.html" "$WEB/admin/index.html"
-echo "Archivos copiados a $APP"
-
-if [ ! -f "$APP/app/config.php" ]; then
-  echo "Primera instalación: ejecutando el asistente de configuración..."
-  php "$APP/app/bin/setup.php"
+# app/ (código y config.php) va junto a public_html si hay permiso; si no, dentro de ella, protegida por .htaccess.
+if mkdir -p "$APP/app" 2>/dev/null && [ -w "$APP/app" ]; then
+  APPDIR="$APP/app"
 else
-  echo "Ya existe app/config.php: se conserva la configuración y las claves."
+  APPDIR="$WEB/app"
+  echo "Aviso: no se puede escribir en $APP; se usa $APPDIR (protegida con .htaccess)."
+  mkdir -p "$APPDIR"
+fi
+mkdir -p "$WEB/admin"
+
+cp -r "$HERE/app/." "$APPDIR/"   && cp "$HERE/public/index.php" "$HERE/public/.htaccess" "$WEB/"   && cp "$ROOT/public/admin/index.html" "$WEB/admin/index.html"   || { echo "No se pudieron copiar los archivos (permisos). Revise que el usuario pueda escribir en $WEB"; exit 1; }
+echo "Archivos copiados: código en $APPDIR, sitio en $WEB"
+
+if [ ! -f "$APPDIR/config.php" ]; then
+  echo "Primera instalación: ejecutando el asistente de configuración..."
+  php "$APPDIR/bin/setup.php"
+else
+  echo "Ya existe config.php: se conserva la configuración y las claves."
 fi
