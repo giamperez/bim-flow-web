@@ -4,6 +4,7 @@
 //   php app/bin/setup.php --reset-password   genera otra contraseña de administrador
 //   php app/bin/setup.php --public-key       muestra la clave pública para compilar el complemento
 //   php app/bin/setup.php --migrate          aplica cambios de esquema tras actualizar el código (idempotente)
+//   php app/bin/setup.php --payment-mode=test|manual   test aprueba los pedidos al instante (solo pruebas)
 //   php app/bin/setup.php --force            REGENERA la clave de firma (invalida todas las DLL ya repartidas)
 // Variables de entorno opcionales (modo no interactivo): XP_DRIVER=mysql|sqlite, XP_DB_HOST, XP_DB_NAME,
 // XP_DB_USER, XP_DB_PASS, XP_SQLITE_PATH, XP_IP_HEADER.
@@ -165,6 +166,23 @@ if (in_array('--reset-password', $flags, true)) {
     write_config($configFile, $config);
     echo "Nueva contraseña del panel (anótela ahora, no se vuelve a mostrar): $plain\n";
     exit(0);
+}
+
+foreach ($flags as $flag) {
+    if (strpos($flag, '--payment-mode=') === 0) {
+        $mode = substr($flag, strlen('--payment-mode='));
+        if (!$exists || !in_array($mode, ['manual', 'test'], true)) {
+            fwrite(STDERR, "Uso: php app/bin/setup.php --payment-mode=manual|test (requiere configuración existente)\n");
+            exit(1);
+        }
+        $config = require $configFile;
+        $config['payment_mode'] = $mode;
+        write_config($configFile, $config);
+        echo $mode === 'test'
+            ? "Modo de pago: PRUEBA. Los pedidos se aprueban al instante (no usar con clientes reales).\n"
+            : "Modo de pago: MANUAL. El administrador aprueba cada pedido en el panel.\n";
+        exit(0);
+    }
 }
 
 if (in_array('--migrate', $flags, true)) {
