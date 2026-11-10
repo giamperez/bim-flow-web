@@ -272,6 +272,7 @@ function xp_license_public(array $l, int $expiringDays = 30): array
         'customerEmail' => $l['customer_email'],
         'plan' => $l['plan'],
         'maxDevices' => (int) $l['max_devices'],
+        'isTrial' => !empty($l['is_trial']),
         'status' => $l['status'],
         'state' => $state,
         'expiresAt' => $expires,

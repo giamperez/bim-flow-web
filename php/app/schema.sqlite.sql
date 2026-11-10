@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS licenses (
   created_at     INTEGER NOT NULL,
   updated_at     INTEGER NOT NULL,
   customer_id    TEXT,
-  key_enc        TEXT
+  key_enc        TEXT,
+  is_trial       INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_licenses_expires ON licenses (expires_at);
 CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses (status);
@@ -50,8 +51,10 @@ CREATE TABLE IF NOT EXISTS customers (
   email         TEXT NOT NULL UNIQUE,
   name          TEXT NOT NULL,
   password_hash TEXT NOT NULL,
-  created_at    INTEGER NOT NULL
+  created_at    INTEGER NOT NULL,
+  email_norm    TEXT
 );
+CREATE INDEX IF NOT EXISTS idx_customers_norm ON customers (email_norm);
 
 CREATE TABLE IF NOT EXISTS orders (
   id           TEXT PRIMARY KEY,
@@ -67,8 +70,15 @@ CREATE TABLE IF NOT EXISTS orders (
   currency     TEXT NOT NULL,
   status       TEXT NOT NULL DEFAULT 'pending',
   provider     TEXT NOT NULL DEFAULT 'manual',
+  tier         INTEGER NOT NULL DEFAULT 0,
   created_at   INTEGER NOT NULL,
   paid_at      INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders (customer_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders (status, created_at);
+
+CREATE TABLE IF NOT EXISTS trial_devices (
+  device_hash TEXT PRIMARY KEY,
+  license_id  TEXT NOT NULL,
+  first_at    INTEGER NOT NULL
+);

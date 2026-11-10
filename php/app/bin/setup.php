@@ -93,22 +93,39 @@ function migrate_schema(PDO $pdo, string $driver, string $appDir): void
     foreach (array_filter(array_map('trim', explode(';', $schema))) as $statement) {
         $pdo->exec($statement);
     }
-    $have = [];
-    if ($driver === 'sqlite') {
-        foreach ($pdo->query('PRAGMA table_info(licenses)') as $row) {
-            $have[$row['name']] = true;
+    $sqlite = $driver === 'sqlite';
+    $wanted = [
+        'licenses' => [
+            'customer_id' => $sqlite ? 'TEXT' : 'CHAR(36) NULL',
+            'key_enc' => $sqlite ? 'TEXT' : 'TEXT NULL',
+            'is_trial' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'TINYINT NOT NULL DEFAULT 0',
+        ],
+        'customers' => ['email_norm' => $sqlite ? 'TEXT' : 'VARCHAR(160) NULL'],
+        'orders' => ['tier' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'INT NOT NULL DEFAULT 0'],
+    ];
+    foreach ($wanted as $table => $columns) {
+        $have = [];
+        if ($sqlite) {
+            foreach ($pdo->query("PRAGMA table_info($table)") as $row) {
+                $have[$row['name']] = true;
+            }
+        } else {
+            foreach ($pdo->query("SHOW COLUMNS FROM $table") as $row) {
+                $have[$row['Field']] = true;
+            }
         }
-    } else {
-        foreach ($pdo->query('SHOW COLUMNS FROM licenses') as $row) {
-            $have[$row['Field']] = true;
+        foreach ($columns as $name => $type) {
+            if (!isset($have[$name])) {
+                $pdo->exec("ALTER TABLE $table ADD COLUMN $name $type");
+                echo "Columna agregada: $table.$name\n";
+            }
         }
     }
-    $columns = ['customer_id' => $driver === 'sqlite' ? 'TEXT' : 'CHAR(36) NULL', 'key_enc' => $driver === 'sqlite' ? 'TEXT' : 'TEXT NULL'];
-    foreach ($columns as $name => $type) {
-        if (!isset($have[$name])) {
-            $pdo->exec("ALTER TABLE licenses ADD COLUMN $name $type");
-            echo "Columna agregada: licenses.$name\n";
-        }
+    // Clientes creados antes de existir email_norm: se rellena para que el control de duplicados los incluya.
+    require_once $appDir . '/bootstrap.php';
+    foreach ($pdo->query("SELECT id, email FROM customers WHERE email_norm IS NULL")->fetchAll(PDO::FETCH_ASSOC) as $c) {
+        $st = $pdo->prepare('UPDATE customers SET email_norm = ? WHERE id = ?');
+        $st->execute([xp_normalize_email($c['email']), $c['id']]);
     }
 }
 

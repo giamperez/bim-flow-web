@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS licenses (
   updated_at     BIGINT NOT NULL,
   customer_id    CHAR(36) NULL,
   key_enc        TEXT NULL,
+  is_trial       TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uq_licenses_key_hash (key_hash),
   KEY idx_licenses_expires (expires_at),
   KEY idx_licenses_status (status)
@@ -53,7 +54,9 @@ CREATE TABLE IF NOT EXISTS customers (
   name          VARCHAR(120) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   created_at    BIGINT NOT NULL,
-  UNIQUE KEY uq_customers_email (email)
+  email_norm    VARCHAR(160) NULL,
+  UNIQUE KEY uq_customers_email (email),
+  KEY idx_customers_norm (email_norm)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -70,9 +73,16 @@ CREATE TABLE IF NOT EXISTS orders (
   currency     VARCHAR(8) NOT NULL,
   status       VARCHAR(12) NOT NULL DEFAULT 'pending',
   provider     VARCHAR(20) NOT NULL DEFAULT 'manual',
+  tier         INT NOT NULL DEFAULT 0,
   created_at   BIGINT NOT NULL,
   paid_at      BIGINT NULL,
   UNIQUE KEY uq_orders_code (code),
   KEY idx_orders_customer (customer_id, created_at),
   KEY idx_orders_status (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS trial_devices (
+  device_hash CHAR(64) NOT NULL PRIMARY KEY,
+  license_id  CHAR(36) NOT NULL,
+  first_at    BIGINT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

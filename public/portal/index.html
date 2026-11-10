@@ -3,99 +3,117 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mi cuenta · BinFlow</title>
-<meta name="description" content="Compra, renueva y gestiona tu licencia de BinFlow para Revit.">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Mi cuenta · BIM FLOW</title>
+<meta name="description" content="Prueba gratis, compra, renueva y gestiona tu licencia de BIM FLOW para Revit.">
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#070b12;--panel:#0e1521;--panel2:#121b2a;--ink:#e8eef7;--muted:#93a1b5;--line:#1d2a3d;
-  --brand:#3b9cff;--brand-ink:#04121f;--ok:#4ad08a;--ok-bg:#0f2b1e;--warn:#f5b84b;--warn-bg:#33260a;--bad:#ff8a7e;--bad-bg:#371511;--idle:#aab6c6;--idle-bg:#1a2535;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.35);
+  /* Manual de marca: azul #005bae, turquesa #00afb7, fondo #e7f3f7, azul oscuro #031a35 */
+  --bg:#eef6f9;--panel:#fff;--panel2:#f3f9fc;--ink:#031a35;--muted:#52677f;--line:#d9e6ee;
+  --brand:#005bae;--brand-ink:#fff;--teal:#00afb7;
+  --ok:#0b7a46;--ok-bg:#dff5e8;--warn:#8f5200;--warn-bg:#fff0cf;--bad:#b42318;--bad-bg:#fde7e4;--idle:#475467;--idle-bg:#e8edf2;
+  --shadow:0 1px 2px rgba(3,26,53,.06),0 14px 36px -14px rgba(3,26,53,.16);
 }
-@media (prefers-color-scheme:light){:root:not([data-theme=dark]){
-  --bg:#f3f6fa;--panel:#fff;--panel2:#f7f9fc;--ink:#142033;--muted:#5b6b80;--line:#dfe6ef;
-  --brand:#0b6bcb;--brand-ink:#fff;--ok:#14804a;--ok-bg:#e3f5ea;--warn:#a15c00;--warn-bg:#fff1d6;--bad:#b42318;--bad-bg:#fde7e4;--idle:#475467;--idle-bg:#eaecf0;
-  --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 28px rgba(16,24,40,.08);
+@media (prefers-color-scheme:dark){:root{
+  --bg:#031a35;--panel:#072a52;--panel2:#0a3566;--ink:#eaf2fb;--muted:#a3b7cf;--line:#16427a;
+  --brand:#2f93ee;--brand-ink:#031a35;--teal:#2fd0d8;
+  --ok:#5ad58e;--ok-bg:#0f3a2a;--warn:#f5b84b;--warn-bg:#3b2d0b;--bad:#ff8a7e;--bad-bg:#3d1713;--idle:#b6c4d6;--idle-bg:#123c6c;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 36px -14px rgba(0,0,0,.5);
 }}
 *{box-sizing:border-box}
-html{color-scheme:dark light}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+html{color-scheme:light dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
 button,input{font:inherit;color:inherit}
-h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.01em}
 a{color:var(--brand)}
 .hidden{display:none!important}
 .muted{color:var(--muted)}
 .mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
-.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
 
-header{border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(10px);position:sticky;top:0;z-index:5}
-header .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:12px}
-.logo{display:flex;align-items:center;gap:10px;font-weight:700;text-decoration:none;color:var(--ink);font-size:17px}
-.logo svg{width:28px;height:28px}
-.who{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px}
+header{border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(12px);position:sticky;top:0;z-index:5}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:68px;gap:12px}
+.logo img{height:42px;width:auto;display:block}
+.who{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px;font-weight:500}
+.back{font-size:14px;font-weight:600;text-decoration:none}
 
-.btn{border:1px solid var(--line);background:var(--panel2);padding:9px 16px;border-radius:10px;cursor:pointer;font-weight:600}
-.btn:hover{filter:brightness(1.12)}
-.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
-.btn.small{padding:6px 12px;font-size:13px}
+.btn{border:1px solid var(--line);background:var(--panel);padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:700;transition:filter .15s,transform .15s}
+.btn:hover{filter:brightness(.97)}
+.btn.primary{background:linear-gradient(120deg,var(--brand),#0a6fcc);border-color:transparent;color:var(--brand-ink);box-shadow:0 12px 28px -14px rgba(0,91,174,.7)}
+.btn.primary:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.btn.small{padding:6px 14px;font-size:13px}
 .btn.danger{color:var(--bad)}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
 .btn:focus-visible,input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 label{display:grid;gap:6px;font-weight:600;font-size:13px}
-input{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;font-weight:400}
+input{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;width:100%;font-weight:500}
 .err{color:var(--bad);font-weight:600;min-height:1.3em;font-size:14px}
 
 .auth{display:grid;place-items:center;padding:56px 0}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px}
-.auth .card{width:100%;max-width:410px;display:grid;gap:14px}
-.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--panel2);border-radius:10px;padding:4px;gap:4px}
-.tabs button{all:unset;text-align:center;padding:8px;border-radius:8px;cursor:pointer;font-weight:600;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:28px}
+.auth .card{width:100%;max-width:430px;display:grid;gap:15px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--teal)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--panel2);border-radius:999px;padding:4px;gap:4px}
+.tabs button{all:unset;text-align:center;padding:9px;border-radius:999px;cursor:pointer;font-weight:700;color:var(--muted)}
 .tabs button[aria-selected=true]{background:var(--brand);color:var(--brand-ink)}
 
-main{padding:30px 0 70px;display:grid;gap:22px}
-.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:22px}
+main{padding:32px 0 80px;display:grid;gap:24px}
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:24px}
 @media (max-width:820px){.grid2{grid-template-columns:1fr}}
-.sec{display:grid;gap:14px}
+.sec{display:grid;gap:14px;align-content:start}
 .sec>h2{font-size:19px}
-.badge{display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:700}
+.badge{display:inline-block;padding:3px 12px;border-radius:99px;font-size:12px;font-weight:700}
 .badge.active,.badge.paid{background:var(--ok-bg);color:var(--ok)}
-.badge.expiring,.badge.pending{background:var(--warn-bg);color:var(--warn)}
+.badge.expiring,.badge.pending,.badge.trial{background:var(--warn-bg);color:var(--warn)}
 .badge.expired,.badge.revoked{background:var(--bad-bg);color:var(--bad)}
 .badge.suspended,.badge.released,.badge.cancelled{background:var(--idle-bg);color:var(--idle)}
-.big{font-size:30px;font-weight:700;line-height:1.1}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0}
-.kv dt{color:var(--muted)}.kv dd{margin:0}
-.keybox{background:var(--panel2);border:1px dashed var(--line);border-radius:12px;padding:14px;font-size:18px;font-weight:700;letter-spacing:.05em;text-align:center;word-break:break-all;user-select:all}
+.big{font-size:32px;font-weight:800;line-height:1.1;letter-spacing:-.02em}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0;font-weight:500}
+.keybox{background:var(--panel2);border:1.5px dashed var(--line);border-radius:14px;padding:15px;font-size:18px;font-weight:700;letter-spacing:.05em;text-align:center;word-break:break-all;user-select:all}
 .row{display:flex;gap:10px;flex-wrap:wrap}
 .tablewrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
-th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
-th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
 tr:last-child td{border-bottom:0}
-.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-.plan{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:20px;display:grid;gap:8px;align-content:start}
-.plan.best{border-color:var(--brand)}
-.plan .price{font-size:30px;font-weight:700}
-.plan .price small{font-size:14px;color:var(--muted);font-weight:500}
-.steps{margin:0;padding-left:20px;display:grid;gap:6px;color:var(--muted)}
+.tier{background:color-mix(in srgb,var(--teal) 10%,var(--panel));border:1px solid color-mix(in srgb,var(--teal) 38%,var(--line));border-radius:16px;padding:13px 16px;font-size:14px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-top:4px}
+.plan{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:22px;display:grid;gap:8px;align-content:start;position:relative}
+.plan.best{border-color:var(--brand);background:var(--panel);box-shadow:var(--shadow)}
+.plan .tag{position:absolute;top:-11px;left:18px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 11px;border-radius:99px;background:var(--brand);color:var(--brand-ink)}
+.plan .tag.teal{background:var(--teal);color:#031a35}
+.plan .price{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.plan .price small{font-size:13px;color:var(--muted);font-weight:500;letter-spacing:0}
+.steps{margin:0;padding-left:20px;display:grid;gap:8px;color:var(--muted)}
 .steps b{color:var(--ink)}
 .empty{padding:22px;text-align:center;color:var(--muted)}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px;z-index:20}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);width:100%;max-width:480px;padding:24px;display:grid;gap:14px}
+.overlay{position:fixed;inset:0;background:rgba(3,26,53,.62);display:grid;place-items:center;padding:16px;z-index:20}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);width:100%;max-width:480px;padding:26px;display:grid;gap:14px}
 .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:30;font-weight:600}
-.notice{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:12px 14px;font-weight:600}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;z-index:30;font-weight:600}
+.notice{background:var(--warn-bg);color:var(--warn);border-radius:14px;padding:12px 15px;font-weight:600;font-size:14px}
+.notice.info{background:color-mix(in srgb,var(--brand) 10%,var(--panel));color:var(--ink);font-weight:500}
 </style>
 </head>
 <body>
 
 <header>
   <div class="wrap">
-    <a class="logo" href="/" aria-label="BinFlow, inicio">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b9cff"/><stop offset="1" stop-color="#7c5cff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g)"/><path d="M9 22V10h7a4 4 0 0 1 0 8H9m7 0h1.5a4 4 0 0 1 0 8H9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -2) scale(.95)"/></svg>
-      BinFlow
+    <a class="logo" href="/" aria-label="BIM FLOW by Vertex, inicio">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="/brand/logo-header-white.png">
+        <img src="/brand/logo-header.png" alt="BIM FLOW by Vertex" width="760" height="226">
+      </picture>
     </a>
-    <div class="who hidden" id="who"><span id="whoName"></span><button class="btn small" id="logout">Salir</button></div>
+    <div class="who">
+      <a class="back" href="/">Inicio</a>
+      <span class="hidden" id="who"><span id="whoName"></span> <button class="btn small" id="logout">Salir</button></span>
+    </div>
   </div>
 </header>
 
@@ -103,17 +121,18 @@ tr:last-child td{border-bottom:0}
   <!-- acceso -->
   <section class="auth hidden" id="auth">
     <form class="card" id="authForm">
-      <h1 id="authTitle">Accede a tu cuenta</h1>
-      <p class="muted" style="margin:0">Compra y gestiona tu licencia de BinFlow para Revit.</p>
+      <p class="eyebrow" style="margin:0">Mi cuenta</p>
+      <h1 id="authTitle">Empieza tu prueba gratis</h1>
+      <p class="muted" style="margin:0" id="authLead">Crea tu cuenta y activa BIM FLOW en Revit durante 7 días. Sin tarjeta.</p>
       <div class="tabs" role="tablist">
-        <button type="button" role="tab" id="tabLogin" aria-selected="true">Ingresar</button>
-        <button type="button" role="tab" id="tabRegister" aria-selected="false">Crear cuenta</button>
+        <button type="button" role="tab" id="tabRegister" aria-selected="true">Crear cuenta</button>
+        <button type="button" role="tab" id="tabLogin" aria-selected="false">Ya tengo cuenta</button>
       </div>
-      <label id="nameRow" class="hidden">Nombre o empresa<input id="name" autocomplete="organization" maxlength="120"></label>
+      <label id="nameRow">Nombre o empresa<input id="name" autocomplete="organization" maxlength="120"></label>
       <label>Correo<input id="email" type="email" autocomplete="email" required maxlength="160"></label>
-      <label>Contraseña<input id="password" type="password" autocomplete="current-password" required minlength="8" maxlength="200"></label>
+      <label>Contraseña<input id="password" type="password" autocomplete="new-password" required minlength="8" maxlength="200" placeholder="Mínimo 8 caracteres"></label>
       <div class="err" id="authErr" role="alert"></div>
-      <button class="btn primary" type="submit" id="authBtn">Ingresar</button>
+      <button class="btn primary" type="submit" id="authBtn">Crear cuenta</button>
     </form>
   </section>
 
@@ -124,16 +143,17 @@ tr:last-child td{border-bottom:0}
       <section class="card sec">
         <h2>Cómo activarla</h2>
         <ol class="steps">
-          <li>Instala BinFlow y abre <b>Revit</b> con un proyecto.</li>
+          <li>Instala el plugin y abre <b>Revit</b> con un proyecto.</li>
           <li>Ve a la pestaña <b>Pyramid</b> y pulsa <b>Exportar Planos</b>.</li>
           <li>Pega tu <b>clave de licencia</b> y pulsa <b>Activar</b>.</li>
         </ol>
-        <p class="muted" style="margin:0">Cada licencia permite un número de equipos según tu plan. Puedes liberar un equipo aquí para usarla en otro.</p>
+        <p class="muted" style="margin:0">Cada licencia permite un número de equipos según tu plan. Puedes liberar un equipo desde aquí para usarla en otro.</p>
       </section>
     </div>
 
     <section class="card sec" id="comprar">
       <h2 id="plansTitle">Elige tu plan</h2>
+      <div id="tierBox"></div>
       <div class="plans" id="plans"></div>
     </section>
 
@@ -153,7 +173,6 @@ tr:last-child td{border-bottom:0}
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const DAY = 86400;
-const fmtDate = (s) => s ? new Date(s * 1000).toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
 const fmtDateTime = (s) => s ? new Date(s * 1000).toLocaleString('es', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const fmtLeft = (sec) => {
   if (sec <= 0) return 'vencida';
@@ -161,9 +180,9 @@ const fmtLeft = (sec) => {
   if (sec < DAY) return Math.ceil(sec / 3600) + ' h';
   return Math.ceil(sec / DAY) + ' días';
 };
-const money = (cents, cur) => (cents / 100).toLocaleString('es', { style: 'currency', currency: cur || 'USD' });
-const duration = (sec) => sec < 3600 ? Math.round(sec / 60) + ' minutos' : sec < DAY ? Math.round(sec / 3600) + ' horas' : sec % (30 * DAY) === 0 && sec < 365 * DAY ? (sec / (30 * DAY) === 1 ? '1 mes' : sec / (30 * DAY) + ' meses') : sec >= 365 * DAY ? (sec / (365 * DAY) === 1 ? '1 año' : (sec / (365 * DAY)).toFixed(1) + ' años') : Math.round(sec / DAY) + ' días';
-const STATE = { active: 'Activa', expiring: 'Por vencer', expired: 'Vencida', suspended: 'Suspendida', revoked: 'Revocada', released: 'Liberado' };
+const money = (cents, cur) => (cur || 'USD') + ' ' + (cents / 100).toLocaleString('es', { minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 });
+const duration = (sec) => { const d = Math.round(sec / DAY); return d >= 360 ? '1 año' : d === 30 ? '1 mes' : sec < 3600 ? Math.round(sec / 60) + ' minutos' : sec < DAY ? Math.round(sec / 3600) + ' horas' : d + ' días'; };
+const STATE = { trial: 'Prueba', active: 'Activa', expiring: 'Por vencer', expired: 'Vencida', suspended: 'Suspendida', revoked: 'Revocada', released: 'Liberado' };
 const ORDER = { pending: 'Pendiente de pago', paid: 'Pagado', cancelled: 'Cancelado' };
 
 async function api(path, { method = 'GET', body } = {}) {
@@ -179,7 +198,7 @@ async function api(path, { method = 'GET', body } = {}) {
 }
 function toast(msg) {
   const el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = msg;
-  $('#toastRoot').append(el); setTimeout(() => el.remove(), 2800);
+  $('#toastRoot').append(el); setTimeout(() => el.remove(), 3000);
 }
 function modal(html) {
   const root = document.createElement('div'); root.className = 'overlay';
@@ -203,12 +222,14 @@ function confirmDialog(message, okLabel, danger) {
 }
 
 /* ---------- acceso ---------- */
-let mode = 'login';
+let mode = 'register';
 function setMode(m) {
   mode = m;
   $('#tabLogin').setAttribute('aria-selected', m === 'login'); $('#tabRegister').setAttribute('aria-selected', m === 'register');
   $('#nameRow').classList.toggle('hidden', m === 'login');
   $('#authBtn').textContent = m === 'login' ? 'Ingresar' : 'Crear cuenta';
+  $('#authTitle').textContent = m === 'login' ? 'Accede a tu cuenta' : 'Empieza tu prueba gratis';
+  $('#authLead').textContent = m === 'login' ? 'Gestiona tu licencia, tus equipos y tus pedidos.' : 'Crea tu cuenta y activa BIM FLOW en Revit durante 7 días. Sin tarjeta.';
   $('#password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
   $('#authErr').textContent = '';
 }
@@ -227,31 +248,37 @@ $('#authForm').addEventListener('submit', async (e) => {
 $('#logout').onclick = async () => { await api('/logout', { method: 'POST' }).catch(() => {}); showAuth(); };
 
 /* ---------- cuenta ---------- */
-let plansCache = [];
+let plansCache = [], hasLicense = false, licenseIsTrial = false, paymentMode = 'manual';
 async function enter(customer) {
   $('#auth').classList.add('hidden'); $('#account').classList.remove('hidden');
   $('#who').classList.remove('hidden'); $('#whoName').textContent = customer.name;
-  await Promise.all([loadLicense(), loadPlans(), loadOrders()]);
+  await loadLicense();
+  await Promise.all([loadPlans(), loadOrders()]);
   if (location.hash === '#comprar') $('#comprar').scrollIntoView({ behavior: 'smooth' });
 }
 
 async function loadLicense() {
   const { license: l } = await api('/license');
+  hasLicense = !!l;
+  licenseIsTrial = !!(l && l.isTrial);
   const card = $('#licenseCard');
   if (!l) {
     $('#plansTitle').textContent = 'Elige tu plan';
-    card.innerHTML = `<h2>Mi licencia</h2><div class="notice">Aún no tienes una licencia. Elige un plan para empezar.</div>
-      <p class="muted" style="margin:0">Al confirmarse tu pago recibirás aquí tu clave.</p>`;
+    card.innerHTML = `<p class="eyebrow">Mi licencia</p><h2>Aún no tienes una licencia</h2>
+      <div class="notice info">Empieza con la prueba gratuita de 7 días o elige un plan. Tu clave aparecerá aquí.</div>`;
     return;
   }
-  $('#plansTitle').textContent = 'Renovar o ampliar';
+  $('#plansTitle').textContent = l.isTrial ? 'Elige un plan para continuar' : 'Renovar o ampliar';
   const active = l.devices.filter((d) => d.status === 'active');
+  const shownState = l.isTrial && l.state === 'expiring' ? 'trial' : l.state;
   card.innerHTML = `
-    <div class="row" style="justify-content:space-between;align-items:center"><h2>Mi licencia</h2><span class="badge ${esc(l.state)}">${esc(STATE[l.state] || l.state)}</span></div>
+    <div class="row" style="justify-content:space-between;align-items:center"><div><p class="eyebrow" style="margin:0 0 4px">Mi licencia</p><h2>${l.isTrial ? 'Prueba gratis' : esc(l.plan)}</h2></div><span class="badge ${esc(shownState)}">${esc(STATE[shownState] || shownState)}</span></div>
     <div><div class="big">${esc(fmtLeft(l.secondsLeft))}</div><div class="muted">restante · vence el ${esc(fmtDateTime(l.expiresAt))}</div></div>
-    ${l.state === 'expiring' ? '<div class="notice">Tu licencia está por vencer. Renuévala abajo para no interrumpir tu trabajo.</div>' : ''}
+    ${l.isTrial && l.state !== 'expired' ? '<div class="notice info">Estás en tu prueba gratuita. Elige un plan antes de que termine para no interrumpir tu trabajo.</div>' : ''}
+    ${l.state === 'expired' ? '<div class="notice">Tu licencia venció. Elige un plan abajo para reactivarla con la misma clave.</div>' : ''}
+    ${l.state === 'expiring' && !l.isTrial ? '<div class="notice">Tu licencia vence pronto. Renuévala abajo para no interrumpir tu trabajo.</div>' : ''}
     ${l.state === 'suspended' || l.state === 'revoked' ? '<div class="notice">Esta licencia fue bloqueada. Contacta a soporte.</div>' : ''}
-    <dl class="kv"><dt>Plan</dt><dd>${esc(l.plan)}</dd><dt>Equipos</dt><dd>${active.length} de ${l.maxDevices} en uso</dd></dl>
+    <dl class="kv"><dt>Plan</dt><dd>${esc(l.isTrial ? 'Prueba gratis' : l.plan)}</dd><dt>Equipos</dt><dd>${active.length} de ${l.maxDevices} en uso</dd></dl>
     ${l.key ? `<div><div class="muted" style="margin-bottom:6px;font-weight:600">Tu clave de licencia</div>
       <div class="keybox mono" id="keybox" data-key="${esc(l.key)}">••••• ••••• ••••• •••••</div>
       <div class="row" style="margin-top:10px"><button class="btn small" id="showKey">Mostrar</button><button class="btn small" id="copyKey">Copiar</button><button class="btn small danger" id="regen">Generar otra</button></div></div>` : '<div class="muted">La clave de esta licencia no está disponible en el portal. Contacta a soporte.</div>'}
@@ -276,26 +303,39 @@ async function loadLicense() {
 }
 
 async function loadPlans() {
-  const { plans, paymentMode } = await api('/plans');
+  const r = await api('/plans');
+  paymentMode = r.paymentMode;
+  const plans = r.plans.filter((p) => !(p.trial && r.trialAvailable === false));
   plansCache = plans;
-  $('#plans').innerHTML = plans.length ? plans.map((p, i) => `
-    <div class="plan ${i === plans.length - 1 && plans.length > 1 ? 'best' : ''}">
-      <h3>${esc(p.name)}</h3>
-      <div class="price">${p.priceCents === 0 ? 'Gratis' : money(p.priceCents, p.currency)} <small>/ ${esc(duration(p.seconds))}</small></div>
+  const t = r.tier;
+  const monthly = r.plans.find((p) => p.id === 'mensual');
+  $('#tierBox').innerHTML = t && t.slotsLeft !== null
+    ? `<div class="tier"><b>Precio de lanzamiento: quedan ${t.slotsLeft} cupo${t.slotsLeft === 1 ? '' : 's'}.</b> ${t.nextPrices && t.nextPrices.mensual && monthly ? `Después, el plan mensual pasa de ${esc(money(monthly.priceCents, monthly.currency))} a ${esc(money(t.nextPrices.mensual, monthly.currency))}. ` : ''}Quien compra ahora conserva su precio.</div>`
+    : '';
+  $('#plans').innerHTML = plans.length ? plans.map((p) => `
+    <div class="plan ${p.id === 'anual' ? 'best' : ''}">
+      ${p.trial ? '<span class="tag teal">Sin tarjeta</span>' : p.id === 'anual' ? '<span class="tag">Más conveniente</span>' : ''}
+      <h3>${p.trial ? 'Prueba de ' + esc(duration(p.seconds)) : esc(p.name)}</h3>
+      <div class="price">${p.priceCents === 0 ? 'Gratis' : esc(money(p.priceCents, p.currency))} ${p.priceCents === 0 ? '' : `<small>/ ${esc(duration(p.seconds))}</small>`}</div>
       <div class="muted">${esc(p.description)}</div>
       <div class="muted">Hasta <b>${p.devices}</b> equipo${p.devices === 1 ? '' : 's'}</div>
-      <button class="btn primary" data-plan="${esc(p.id)}">${paymentMode === 'test' ? 'Probar compra' : 'Comprar'}</button>
+      <button class="btn primary" data-plan="${esc(p.id)}">${p.trial ? 'Empezar prueba gratis' : paymentMode === 'test' ? 'Probar compra' : hasLicense && !licenseIsTrial ? 'Renovar con este plan' : 'Comprar este plan'}</button>
     </div>`).join('') : '<div class="empty">Los planes no están disponibles por ahora.</div>';
   $('#plans').querySelectorAll('[data-plan]').forEach((b) => b.onclick = () => buy(b.dataset.plan));
 }
 
 async function buy(planId) {
   const plan = plansCache.find((p) => p.id === planId);
-  if (!await confirmDialog(`Vas a pedir el plan ${plan.name} (${plan.priceCents === 0 ? 'gratis' : money(plan.priceCents, plan.currency)}).`, 'Continuar', false)) return;
+  const question = plan.trial
+    ? `Vas a activar tu prueba gratuita de ${duration(plan.seconds)}. Es una por cuenta y por equipo.`
+    : `Vas a pedir el plan ${plan.name} (${money(plan.priceCents, plan.currency)}).`;
+  if (!await confirmDialog(question, plan.trial ? 'Activar prueba' : 'Continuar', false)) return;
   try {
     const r = await api('/orders', { method: 'POST', body: { planId } });
     if (r.paid) {
-      const m = modal(`<h3>¡Listo!</h3><p style="margin:0">Tu pago se confirmó y tu licencia ya está activa. Pedido <b class="mono">${esc(r.order.code)}</b>.</p><div class="actions"><button class="btn primary" id="ok">Ver mi licencia</button></div>`);
+      const m = modal(`<h3>${plan.trial ? '¡Tu prueba está activa!' : '¡Listo!'}</h3>
+        <p style="margin:0">${plan.trial ? `Tienes ${esc(duration(plan.seconds))} con todas las funciones.` : 'Tu pago se confirmó y tu licencia ya está activa.'} Copia tu clave y pégala en Revit para activarla. Pedido <b class="mono">${esc(r.order.code)}</b>.</p>
+        <div class="actions"><button class="btn primary" id="ok">Ver mi clave</button></div>`);
       m.$('#ok').onclick = () => { m.close(); $('#licenseCard').scrollIntoView({ behavior: 'smooth' }); };
     } else {
       const m = modal(`<h3>Pedido creado</h3>
@@ -305,21 +345,22 @@ async function buy(planId) {
         <div class="actions"><button class="btn primary" id="ok">Entendido</button></div>`);
       m.$('#ok').onclick = m.close;
     }
-    await Promise.all([loadLicense(), loadOrders()]);
+    await loadLicense();
+    await Promise.all([loadPlans(), loadOrders()]);
   } catch (err) { toast(err.message); }
 }
 
 async function loadOrders() {
   const { orders } = await api('/orders');
   $('#orders').innerHTML = orders.length ? `<div class="tablewrap"><table><thead><tr><th>Código</th><th>Plan</th><th>Monto</th><th>Tipo</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>
-    ${orders.map((o) => `<tr><td class="mono"><b>${esc(o.code)}</b></td><td>${esc(o.planName)}</td><td>${esc(money(o.amountCents, o.currency))}</td><td>${o.kind === 'renew' ? 'Renovación' : 'Nueva'}</td><td><span class="badge ${esc(o.status)}">${esc(ORDER[o.status] || o.status)}</span></td><td>${esc(fmtDateTime(o.createdAt))}</td></tr>`).join('')}
+    ${orders.map((o) => `<tr><td class="mono"><b>${esc(o.code)}</b></td><td>${esc(o.planName)}</td><td>${o.amountCents === 0 ? 'Gratis' : esc(money(o.amountCents, o.currency))}</td><td>${o.kind === 'trial' ? 'Prueba' : o.kind === 'renew' ? 'Renovación' : 'Nueva'}</td><td><span class="badge ${esc(o.status)}">${esc(ORDER[o.status] || o.status)}</span></td><td>${esc(fmtDateTime(o.createdAt))}</td></tr>`).join('')}
   </tbody></table></div>` : '<div class="empty">Todavía no has hecho pedidos.</div>';
 }
 
 /* ---------- inicio ---------- */
 (async () => {
   try { const r = await api('/me'); await enter(r.customer); }
-  catch { showAuth(); if (location.hash === '#comprar') setMode('register'); }
+  catch { showAuth(); setMode(location.hash === '#comprar' ? 'register' : 'register'); }
 })();
 })();
 </script>

@@ -474,7 +474,7 @@ async function renderOrders(view) {
       ${data.orders.length ? `<div class="tablewrap"><table><thead><tr><th>Código</th><th>Cliente</th><th>Plan</th><th>Monto</th><th>Tipo</th><th>Estado</th><th>Creado</th><th></th></tr></thead><tbody>
         ${data.orders.map((o) => `<tr><td class="mono"><b>${esc(o.code)}</b></td>
           <td>${esc(o.customerName)}<div class="muted">${esc(o.customerEmail)}</div></td>
-          <td>${esc(o.planName)}</td><td>${fmtMoney(o.amountCents, o.currency)}</td><td>${o.kind === 'renew' ? 'Renovación' : 'Nueva'}</td>
+          <td>${esc(o.planName)}</td><td>${fmtMoney(o.amountCents, o.currency)}</td><td>${o.kind === 'trial' ? 'Prueba' : o.kind === 'renew' ? 'Renovación' : 'Nueva'}</td>
           <td>${orderBadge(o.status)}</td><td>${fmtDateTime(o.createdAt)}</td>
           <td>${o.status === 'pending' ? `<button class="btn small primary" data-ap="${esc(o.id)}">Aprobar pago</button> <button class="btn small" data-cx="${esc(o.id)}">Cancelar</button>` : (o.licenseId ? `<button class="btn small" data-lic="${esc(o.licenseId)}">Ver licencia</button>` : '')}</td></tr>`).join('')}
       </tbody></table></div>` : '<div class="empty">No hay pedidos en este estado.</div>'}

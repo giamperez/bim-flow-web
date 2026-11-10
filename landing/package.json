@@ -1,5 +1,5 @@
 {
-  "name": "bin-flow",
+  "name": "bim-flow-landing",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,16 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@react-three/drei": "^10.7.9",
-    "@react-three/fiber": "^9.8.2",
     "@tailwindcss/vite": "^4.3.5",
-    "@types/three": "^0.187.0",
     "lucide-react": "^1.71.0",
     "motion": "^14.12.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "tailwindcss": "^4.3.5",
-    "three": "^0.187.0"
+    "tailwindcss": "^4.3.5"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

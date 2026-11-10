@@ -33,33 +33,147 @@ function xp_decrypt_key(?string $blob): ?string
 }
 
 // ---------------------------------------------------------------- planes y licencias
+// Dominios de correo desechable: no se aceptan para crear cuentas (evita fabricar pruebas gratuitas sin fin).
+const XP_DISPOSABLE_DOMAINS = [
+    'mailinator.com', 'guerrillamail.com', 'guerrillamail.net', 'guerrillamail.org', 'sharklasers.com', '10minutemail.com',
+    '10minutemail.net', 'tempmail.com', 'temp-mail.org', 'temp-mail.io', 'tempail.com', 'yopmail.com', 'yopmail.net',
+    'trashmail.com', 'trashmail.net', 'getnada.com', 'nada.email', 'maildrop.cc', 'dispostable.com', 'fakeinbox.com',
+    'throwawaymail.com', 'mohmal.com', 'emailondeck.com', 'mintemail.com', 'spamgourmet.com', 'burnermail.io', 'moakt.com',
+    'tmpmail.org', 'tmpmail.net', 'mailnesia.com', 'mytemp.email', 'inboxkitten.com', 'discard.email', 'mailcatch.com',
+    'grr.la', 'guerrillamailblock.com', 'spam4.me', 'tempinbox.com', 'emailfake.com', 'fakemail.net', 'mail.tm', 'tmail.ws',
+    'getairmail.com', 'anonbox.net', 'mailforspam.com', 'harakirimail.com', 'tempr.email', 'dropmail.me', '33mail.com',
+];
+
+/** Forma canónica de un correo: minúsculas, sin "+etiqueta" y, en Gmail, sin puntos. Detecta alias de la misma bandeja. */
+function xp_normalize_email(string $email): string
+{
+    $email = strtolower(trim($email));
+    $at = strrpos($email, '@');
+    if ($at === false) {
+        return $email;
+    }
+    $local = substr($email, 0, $at);
+    $domain = substr($email, $at + 1);
+    $plus = strpos($local, '+');
+    if ($plus !== false) {
+        $local = substr($local, 0, $plus);
+    }
+    if ($domain === 'googlemail.com' || $domain === 'gmail.com') {
+        $domain = 'gmail.com';
+        $local = str_replace('.', '', $local);
+    }
+    return $local . '@' . $domain;
+}
+
+function xp_is_disposable_email(string $email): bool
+{
+    $domain = substr(strrchr($email, '@') ?: '@', 1);
+    $blocked = array_merge(XP_DISPOSABLE_DOMAINS, (array) (xp_config()['blocked_email_domains'] ?? []));
+    return in_array(strtolower($domain), $blocked, true);
+}
+
+// ---------------------------------------------------------------- tramos de precio
+/**
+ * Los precios y los días de prueba cambian según cuántos clientes de pago hay. `until` es el número de clientes de pago
+ * hasta el que rige el tramo (null = sin límite). Se editan en config.php (clave `pricing_tiers`).
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function xp_tiers(): array
+{
+    return xp_config()['pricing_tiers'] ?? [
+        ['name' => 'Lanzamiento', 'until' => 50, 'trial_days' => 7, 'prices' => ['mensual' => 1500, 'anual' => 15000]],
+        ['name' => 'Crecimiento', 'until' => 150, 'trial_days' => 7, 'prices' => ['mensual' => 1900, 'anual' => 19000]],
+        ['name' => 'Estándar', 'until' => null, 'trial_days' => 5, 'prices' => ['mensual' => 2500, 'anual' => 25000]],
+    ];
+}
+
+function xp_paying_customers(): int
+{
+    return (int) xp_one("SELECT COUNT(DISTINCT customer_id) AS n FROM orders WHERE status = 'paid' AND amount_cents > 0")['n'];
+}
+
+function xp_current_tier(): int
+{
+    $paying = xp_paying_customers();
+    $tiers = xp_tiers();
+    foreach ($tiers as $i => $t) {
+        if ($t['until'] === null || $paying < (int) $t['until']) {
+            return $i;
+        }
+    }
+    return count($tiers) - 1;
+}
+
+/** Con `price_lock` (por defecto sí) un cliente conserva el tramo en el que hizo su primera compra de pago. */
+function xp_effective_tier(?array $customer): int
+{
+    $current = xp_current_tier();
+    if (!$customer || !(xp_config()['price_lock'] ?? true)) {
+        return $current;
+    }
+    $row = xp_one("SELECT MIN(tier) AS t FROM orders WHERE customer_id = ? AND status = 'paid' AND amount_cents > 0", [$customer['id']]);
+    return $row['t'] === null ? $current : min($current, (int) $row['t']);
+}
+
+/** @return array<string,mixed> */
+function xp_tier_info(): array
+{
+    $tiers = xp_tiers();
+    $i = xp_current_tier();
+    $t = $tiers[$i];
+    $next = $tiers[$i + 1] ?? null;
+    return [
+        'index' => $i,
+        'name' => $t['name'],
+        'slotsLeft' => $t['until'] === null ? null : max(0, (int) $t['until'] - xp_paying_customers()),
+        'trialDays' => (int) $t['trial_days'],
+        'nextPrices' => $next ? array_map('intval', $next['prices']) : null,
+        'nextName' => $next ? $next['name'] : null,
+    ];
+}
+
 /** @return array<int,array<string,mixed>> */
-function xp_plans(): array
+function xp_plans(?array $customer = null): array
 {
     $c = xp_config();
     $raw = $c['plans'] ?? [
-        ['id' => 'mensual', 'name' => 'Mensual', 'days' => 30, 'devices' => 1, 'price_cents' => 1500, 'currency' => 'USD', 'description' => 'Un equipo, renovación mes a mes.'],
-        ['id' => 'anual', 'name' => 'Anual', 'days' => 365, 'devices' => 2, 'price_cents' => 15000, 'currency' => 'USD', 'description' => 'Dos equipos, el mejor precio.'],
-        ['id' => 'prueba', 'name' => 'Prueba de 10 minutos', 'minutes' => 10, 'devices' => 1, 'price_cents' => 0, 'currency' => 'USD', 'description' => 'Solo para pruebas internas.', 'test' => true],
+        ['id' => 'prueba', 'name' => 'Prueba gratis', 'trial' => true, 'devices' => 1, 'description' => 'Todas las funciones, sin tarjeta.'],
+        ['id' => 'mensual', 'name' => 'Mensual', 'days' => 30, 'devices' => 1, 'currency' => 'USD', 'price_cents' => 1500, 'description' => 'Un equipo. Renovación mes a mes.'],
+        ['id' => 'anual', 'name' => 'Anual', 'days' => 365, 'devices' => 2, 'currency' => 'USD', 'price_cents' => 15000, 'description' => 'Dos equipos. El mejor precio.'],
     ];
-    $testMode = ($c['payment_mode'] ?? 'manual') === 'test';
+    $tier = xp_tiers()[xp_effective_tier($customer)];
     $plans = [];
     foreach ($raw as $p) {
-        if (!empty($p['test']) && !$testMode) {
-            continue;
+        $trial = !empty($p['trial']);
+        if ($trial) {
+            $seconds = (int) $tier['trial_days'] * XP_DAY;
+            $price = 0;
+        } else {
+            $seconds = isset($p['minutes']) ? (int) $p['minutes'] * 60 : (int) ($p['days'] ?? 30) * XP_DAY;
+            $price = (int) ($tier['prices'][$p['id']] ?? $p['price_cents'] ?? 0);
         }
-        $seconds = isset($p['minutes']) ? (int) $p['minutes'] * 60 : (int) ($p['days'] ?? 30) * XP_DAY;
         $plans[] = [
             'id' => (string) $p['id'],
             'name' => (string) $p['name'],
+            'trial' => $trial,
             'seconds' => $seconds,
             'devices' => (int) ($p['devices'] ?? 1),
-            'priceCents' => (int) ($p['price_cents'] ?? 0),
+            'priceCents' => $price,
             'currency' => (string) ($p['currency'] ?? 'USD'),
             'description' => (string) ($p['description'] ?? ''),
         ];
     }
     return $plans;
+}
+
+/** La prueba gratuita es única por cliente: solo si nunca tuvo licencia ni pidió otra prueba. */
+function xp_trial_available(array $customer): bool
+{
+    if (xp_one('SELECT id FROM licenses WHERE customer_id = ? LIMIT 1', [$customer['id']])) {
+        return false;
+    }
+    return !xp_one("SELECT id FROM orders WHERE customer_id = ? AND kind = 'trial' LIMIT 1", [$customer['id']]);
 }
 
 /**
@@ -75,12 +189,12 @@ function xp_new_license(array $f): array
     $id = xp_uuid();
     $t = time();
     xp_exec(
-        "INSERT INTO licenses (id, key_hash, key_hint, customer_name, customer_email, plan, max_devices, status, expires_at, notes, created_at, updated_at, customer_id, key_enc)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO licenses (id, key_hash, key_hint, customer_name, customer_email, plan, max_devices, status, expires_at, notes, created_at, updated_at, customer_id, key_enc, is_trial)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?)",
         [
             $id, xp_sha256($key), substr($key, -5), $f['customer_name'], $f['customer_email'] ?? '', $f['plan'] ?? 'standard',
             (int) $f['max_devices'], (int) $f['expires_at'], $f['notes'] ?? '', $t, $t,
-            $f['customer_id'] ?? null, !empty($f['store_key']) ? xp_encrypt_key($key) : null,
+            $f['customer_id'] ?? null, !empty($f['store_key']) ? xp_encrypt_key($key) : null, !empty($f['is_trial']) ? 1 : 0,
         ]
     );
     return [$id, $key];
@@ -101,13 +215,13 @@ function xp_mark_order_paid(string $orderId, string $actor = 'system'): ?array
             [$licenseId] = xp_new_license([
                 'customer_name' => $cust['name'], 'customer_email' => $cust['email'], 'plan' => $o['plan_name'],
                 'max_devices' => (int) $o['devices'], 'expires_at' => $t + (int) $o['seconds'],
-                'customer_id' => $cust['id'], 'store_key' => true,
+                'customer_id' => $cust['id'], 'store_key' => true, 'is_trial' => $o['kind'] === 'trial',
             ]);
         } else {
             $licenseId = $lic['id'];
             $expires = max((int) $lic['expires_at'], $t) + (int) $o['seconds'];
             xp_exec(
-                'UPDATE licenses SET expires_at = ?, max_devices = ?, plan = ?, updated_at = ? WHERE id = ?',
+                'UPDATE licenses SET expires_at = ?, max_devices = ?, plan = ?, is_trial = 0, updated_at = ? WHERE id = ?',
                 [$expires, max((int) $lic['max_devices'], (int) $o['devices']), $o['plan_name'], $t, $licenseId]
             );
         }
@@ -169,7 +283,14 @@ function xp_count_events(string $type, string $where, array $params, int $second
 function xp_route_portal(string $method, string $route): void
 {
     if ($route === 'plans' && $method === 'GET') {
-        xp_json(200, ['ok' => true, 'plans' => xp_plans(), 'paymentMode' => xp_config()['payment_mode'] ?? 'manual']);
+$who = xp_current_customer();
+        xp_json(200, [
+            'ok' => true,
+            'plans' => xp_plans($who),
+            'tier' => xp_tier_info(),
+            'trialAvailable' => $who ? xp_trial_available($who) : null,
+            'paymentMode' => xp_config()['payment_mode'] ?? 'manual',
+        ]);
     }
     if ($route === 'lead' && $method === 'POST') {
         xp_portal_lead();
@@ -231,14 +352,18 @@ function xp_portal_register(): void
     if ($name === '') {
         xp_json(400, ['ok' => false, 'error' => 'Ingrese su nombre o el de su empresa.']);
     }
+    if (xp_is_disposable_email($email)) {
+        xp_json(400, ['ok' => false, 'error' => 'Use un correo personal o de su empresa; los correos temporales no se aceptan.']);
+    }
     if (strlen($password) < 8 || strlen($password) > 200) {
         xp_json(400, ['ok' => false, 'error' => 'La contraseña debe tener al menos 8 caracteres.']);
     }
-    if (xp_one('SELECT id FROM customers WHERE email = ?', [$email])) {
+    $norm = xp_normalize_email($email);
+    if (xp_one('SELECT id FROM customers WHERE email = ? OR email_norm = ?', [$email, $norm])) {
         xp_json(409, ['ok' => false, 'error' => 'Ya existe una cuenta con ese correo. Inicie sesión.']);
     }
     $id = xp_uuid();
-    xp_exec('INSERT INTO customers (id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)', [$id, $email, $name, password_hash($password, PASSWORD_DEFAULT), time()]);
+    xp_exec('INSERT INTO customers (id, email, email_norm, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)', [$id, $email, $norm, $name, password_hash($password, PASSWORD_DEFAULT), time()]);
     xp_log_event('portal_register', null, null, $email, $ip);
     xp_set_user_cookie($id);
     xp_json(201, ['ok' => true, 'customer' => ['id' => $id, 'email' => $email, 'name' => $name]]);
@@ -310,7 +435,7 @@ function xp_portal_create_order(array $customer): void
 {
     $b = xp_body() ?? [];
     $plan = null;
-    foreach (xp_plans() as $p) {
+    foreach (xp_plans($customer) as $p) {
         if ($p['id'] === ($b['planId'] ?? null)) {
             $plan = $p;
         }
@@ -318,23 +443,37 @@ function xp_portal_create_order(array $customer): void
     if (!$plan) {
         xp_json(400, ['ok' => false, 'error' => 'Plan no disponible.']);
     }
-    $pending = (int) xp_one("SELECT COUNT(*) AS n FROM orders WHERE customer_id = ? AND status = 'pending'", [$customer['id']])['n'];
-    if ($pending >= XP_MAX_PENDING_ORDERS) {
-        xp_json(409, ['ok' => false, 'error' => 'Ya tiene pedidos pendientes de pago. Espere su confirmación o cancélelos con soporte.']);
+    $ip = xp_ip();
+    if ($plan['trial']) {
+        if (!xp_trial_available($customer)) {
+            xp_json(409, ['ok' => false, 'error' => 'Ya usó su prueba gratuita. Elija un plan para continuar.']);
+        }
+        // Tope por red: una oficina puede compartir IP, pero no fabricar pruebas sin fin.
+        if ($ip !== '' && xp_count_events('trial_started', 'ip = ?', [$ip], 30 * XP_DAY) >= 3) {
+            xp_json(429, ['ok' => false, 'error' => 'Se alcanzó el límite de pruebas gratuitas desde su red. Contacte a soporte.']);
+        }
+    } else {
+        $pending = (int) xp_one("SELECT COUNT(*) AS n FROM orders WHERE customer_id = ? AND status = 'pending'", [$customer['id']])['n'];
+        if ($pending >= XP_MAX_PENDING_ORDERS) {
+            xp_json(409, ['ok' => false, 'error' => 'Ya tiene pedidos pendientes de pago. Espere su confirmación o cancélelos con soporte.']);
+        }
     }
-    $kind = xp_portal_license_row($customer) ? 'renew' : 'new';
+    $kind = $plan['trial'] ? 'trial' : (xp_portal_license_row($customer) ? 'renew' : 'new');
     $id = xp_uuid();
     $code = 'BF-' . substr(strtoupper(strtr(base64_encode(random_bytes(6)), '+/=', 'XYZ')), 0, 6);
     $mode = xp_config()['payment_mode'] ?? 'manual';
     xp_exec(
-        "INSERT INTO orders (id, code, customer_id, plan_id, plan_name, seconds, devices, kind, amount_cents, currency, status, provider, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)",
-        [$id, $code, $customer['id'], $plan['id'], $plan['name'], $plan['seconds'], $plan['devices'], $kind, $plan['priceCents'], $plan['currency'], $mode, time()]
+        "INSERT INTO orders (id, code, customer_id, plan_id, plan_name, seconds, devices, kind, amount_cents, currency, status, provider, tier, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)",
+        [$id, $code, $customer['id'], $plan['id'], $plan['name'], $plan['seconds'], $plan['devices'], $kind, $plan['priceCents'], $plan['currency'], $mode, xp_effective_tier($customer), time()]
     );
     xp_log_event('order_created', null, null, $code . ' · ' . $plan['name'] . ' · ' . $customer['email']);
     $paid = false;
-    if ($mode === 'test') {
-        $paid = xp_mark_order_paid($id, 'modo de prueba') !== null;
+    if ($plan['trial'] || $mode === 'test') {
+        $paid = xp_mark_order_paid($id, $plan['trial'] ? 'prueba gratuita' : 'modo de prueba') !== null;
+        if ($plan['trial'] && $paid) {
+            xp_log_event('trial_started', null, null, $customer['email'], $ip);
+        }
     }
     $order = xp_one('SELECT * FROM orders WHERE id = ?', [$id]);
     xp_json(201, [

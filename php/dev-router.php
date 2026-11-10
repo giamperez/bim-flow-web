@@ -7,7 +7,7 @@ if (preg_match('#^/(api/v1|admin/api|portal/api)(/|$)#', $path)) {
 }
 $types = ['html' => 'text/html; charset=utf-8', 'js' => 'text/javascript', 'css' => 'text/css', 'svg' => 'image/svg+xml', 'jpg' => 'image/jpeg', 'png' => 'image/png'];
 // Páginas estáticas: /admin/, /portal/ y (si existe) la landing compilada en site/.
-foreach ([__DIR__ . '/../public', __DIR__ . '/../site'] as $root) {
+foreach ([__DIR__ . '/../site', __DIR__ . '/../public'] as $root) {
     $rel = ltrim($path, '/');
     if ($rel === '' || substr($rel, -1) === '/') {
         $rel .= 'index.html';

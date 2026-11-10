@@ -124,6 +124,15 @@ function xp_lic_handle(bool $allowNew): void
             if (!$allowNew) {
                 return ['fail' => [409, 'device_not_activated', 'Este equipo no está activado para la licencia. Actívelo de nuevo.', []]];
             }
+            // Una prueba gratuita por equipo: un equipo que ya activó la prueba de otra cuenta no puede reutilizarla.
+            $seenTrial = null;
+            if (!empty($lic['is_trial'])) {
+                $seenTrial = xp_one('SELECT license_id FROM trial_devices WHERE device_hash = ?', [$dev['hash']]);
+                if ($seenTrial && $seenTrial['license_id'] !== $lic['id']) {
+                    xp_log_event('trial_reused', $lic['id'], null, $dev['name'], $ip);
+                    return ['fail' => [403, 'trial_used', 'Este equipo ya usó una prueba gratuita. Compre una licencia para continuar.', []]];
+                }
+            }
             $active = xp_all(
                 "SELECT id, device_name, last_seen FROM devices WHERE license_id = ? AND status = 'active' ORDER BY last_seen DESC",
                 [$lic['id']]
@@ -148,6 +157,13 @@ function xp_lic_handle(bool $allowNew): void
                     "INSERT INTO devices (id, license_id, device_hash, device_name, revit_version, app_version, status, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?)",
                     [$deviceId, $lic['id'], $dev['hash'], $dev['name'], $dev['revit'], $dev['app'], $t, $t]
                 );
+            }
+            if (!empty($lic['is_trial']) && !$seenTrial) {
+                try {
+                    xp_exec('INSERT INTO trial_devices (device_hash, license_id, first_at) VALUES (?, ?, ?)', [$dev['hash'], $lic['id'], $t]);
+                } catch (PDOException $e) {
+                    // Otra activación simultánea ya registró este equipo: se ignora.
+                }
             }
             xp_log_event('activated', $lic['id'], $deviceId, $dev['name'] . ' · Revit ' . $dev['revit'] . ' · v' . $dev['app'], $ip);
         }
