@@ -199,6 +199,19 @@ if (in_array('--reset-password', $flags, true)) {
 }
 
 foreach ($flags as $flag) {
+    if (strpos($flag, '--ip-header=') === 0) {
+        $header = substr($flag, strlen('--ip-header='));
+        if (!$exists || !in_array($header, ['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'], true)) {
+            fwrite(STDERR, "Uso: php app/bin/setup.php --ip-header=HTTP_CF_CONNECTING_IP|HTTP_X_FORWARDED_FOR|REMOTE_ADDR\n");
+            fwrite(STDERR, "  HTTP_CF_CONNECTING_IP: el sitio está detrás del proxy de Cloudflare (nube naranja)\n  HTTP_X_FORWARDED_FOR: sin proxy de Cloudflare, detrás de Cloudways (nube gris)\n");
+            exit(1);
+        }
+        $config = require $configFile;
+        $config['ip_header'] = $header;
+        write_config($configFile, $config);
+        echo "IP del cliente: se toma de $header (límites de intentos y auditoría).\n";
+        exit(0);
+    }
     if (strpos($flag, '--public-url=') === 0) {
         $url = rtrim(substr($flag, strlen('--public-url=')), '/');
         if (!$exists || !preg_match('#^https?://[^/\s]+$#', $url)) {
