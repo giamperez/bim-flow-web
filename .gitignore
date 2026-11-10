@@ -9,3 +9,4 @@ php/app/data/
 landing/node_modules/
 landing/dist/
 landing/Imagenes/
+php/public/downloads/

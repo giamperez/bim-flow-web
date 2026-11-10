@@ -203,7 +203,7 @@ function xp_new_license(array $f): array
 /** Idempotente: confirma un pedido pendiente y crea o renueva la licencia de su cliente. */
 function xp_mark_order_paid(string $orderId, string $actor = 'system'): ?array
 {
-    return xp_tx(function () use ($orderId, $actor) {
+    $result = xp_tx(function () use ($orderId, $actor) {
         $o = xp_one('SELECT * FROM orders WHERE id = ?' . xp_for_update(), [$orderId]);
         if (!$o || $o['status'] !== 'pending') {
             return null;
@@ -229,12 +229,16 @@ function xp_mark_order_paid(string $orderId, string $actor = 'system'): ?array
         xp_log_event('order_paid', $licenseId, null, $o['code'] . ' · ' . $o['plan_name'] . ' · ' . $actor);
         return ['licenseId' => $licenseId, 'code' => $o['code']];
     });
+    if ($result) {
+        xp_notify_license_ready($orderId);
+    }
+    return $result;
 }
 
 // ---------------------------------------------------------------- sesión del cliente
-function xp_user_cookie_create(string $customerId): string
+function xp_user_cookie_create(string $customerId, int $sessionVersion = 0): string
 {
-    $body = xp_b64u_enc(json_encode(['cid' => $customerId, 'exp' => time() + XP_USER_TTL]));
+    $body = xp_b64u_enc(json_encode(['cid' => $customerId, 'sv' => $sessionVersion, 'exp' => time() + XP_USER_TTL]));
     return $body . '.' . xp_b64u_enc(hash_hmac('sha256', $body, xp_user_cookie_key(), true));
 }
 
@@ -258,19 +262,21 @@ function xp_current_customer(): ?array
     if (!is_array($data) || ($data['exp'] ?? 0) <= time() || !is_string($data['cid'] ?? null)) {
         return null;
     }
-    return xp_one('SELECT * FROM customers WHERE id = ?', [$data['cid']]);
+    $c = xp_one('SELECT * FROM customers WHERE id = ?', [$data['cid']]);
+    // Al cambiar la contraseña sube la versión de sesión y las cookies anteriores dejan de valer.
+    return $c && (int) ($data['sv'] ?? 0) === (int) ($c['session_version'] ?? 0) ? $c : null;
 }
 
-function xp_set_user_cookie(string $customerId): void
+function xp_set_user_cookie(string $customerId, int $sessionVersion = 0): void
 {
-    setcookie(XP_USER_COOKIE, xp_user_cookie_create($customerId), [
+    setcookie(XP_USER_COOKIE, xp_user_cookie_create($customerId, $sessionVersion), [
         'expires' => time() + XP_USER_TTL, 'path' => '/', 'secure' => xp_is_https(), 'httponly' => true, 'samesite' => 'Strict',
     ]);
 }
 
 function xp_customer_public(array $c): array
 {
-    return ['id' => $c['id'], 'email' => $c['email'], 'name' => $c['name']];
+    return ['id' => $c['id'], 'email' => $c['email'], 'name' => $c['name'], 'verified' => !empty($c['email_verified_at'])];
 }
 
 function xp_count_events(string $type, string $where, array $params, int $seconds): int
@@ -295,6 +301,19 @@ $who = xp_current_customer();
     if ($route === 'lead' && $method === 'POST') {
         xp_portal_lead();
     }
+    if ($route === 'download' && $method === 'GET') {
+        $info = xp_installer_info();
+        xp_json(200, ['ok' => true, 'installer' => $info]);
+    }
+    if ($route === 'verify' && $method === 'POST') {
+        xp_portal_verify();
+    }
+    if ($route === 'forgot' && $method === 'POST') {
+        xp_portal_forgot();
+    }
+    if ($route === 'reset' && $method === 'POST') {
+        xp_portal_reset();
+    }
     if ($route === 'register' && $method === 'POST') {
         xp_portal_register();
     }
@@ -316,7 +335,10 @@ $who = xp_current_customer();
 
     $parts = explode('/', $route);
     if ($route === 'me' && $method === 'GET') {
-        xp_json(200, ['ok' => true, 'customer' => xp_customer_public($customer)]);
+        xp_json(200, ['ok' => true, 'customer' => xp_customer_public($customer), 'verificationRequired' => xp_verification_required()]);
+    }
+    if ($route === 'resend-verification' && $method === 'POST') {
+        xp_portal_resend($customer);
     }
     if ($route === 'license' && $method === 'GET') {
         xp_portal_license($customer);
@@ -363,10 +385,16 @@ function xp_portal_register(): void
         xp_json(409, ['ok' => false, 'error' => 'Ya existe una cuenta con ese correo. Inicie sesión.']);
     }
     $id = xp_uuid();
-    xp_exec('INSERT INTO customers (id, email, email_norm, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)', [$id, $email, $norm, $name, password_hash($password, PASSWORD_DEFAULT), time()]);
+    $needsVerification = xp_verification_required();
+    xp_exec(
+        'INSERT INTO customers (id, email, email_norm, name, password_hash, created_at, email_verified_at, session_version) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+        [$id, $email, $norm, $name, password_hash($password, PASSWORD_DEFAULT), time(), $needsVerification ? null : time()]
+    );
     xp_log_event('portal_register', null, null, $email, $ip);
-    xp_set_user_cookie($id);
-    xp_json(201, ['ok' => true, 'customer' => ['id' => $id, 'email' => $email, 'name' => $name]]);
+    $customer = xp_one('SELECT * FROM customers WHERE id = ?', [$id]);
+    $sent = $needsVerification ? xp_send_verification($customer) : null;
+    xp_set_user_cookie($id, 0);
+    xp_json(201, ['ok' => true, 'customer' => xp_customer_public($customer), 'verificationRequired' => $needsVerification, 'verificationSent' => $sent]);
 }
 
 function xp_portal_login(): void
@@ -388,8 +416,8 @@ function xp_portal_login(): void
         xp_log_event('portal_login_failed', null, null, $emailKey, $ip);
         xp_json(401, ['ok' => false, 'error' => 'Correo o contraseña incorrectos.']);
     }
-    xp_set_user_cookie($c['id']);
-    xp_json(200, ['ok' => true, 'customer' => xp_customer_public($c)]);
+    xp_set_user_cookie($c['id'], (int) ($c['session_version'] ?? 0));
+    xp_json(200, ['ok' => true, 'customer' => xp_customer_public($c), 'verificationRequired' => xp_verification_required()]);
 }
 
 function xp_portal_license_row(array $customer): ?array
@@ -433,6 +461,9 @@ function xp_portal_orders(array $customer): void
 
 function xp_portal_create_order(array $customer): void
 {
+    if (xp_verification_required() && empty($customer['email_verified_at'])) {
+        xp_json(403, ['ok' => false, 'code' => 'unverified', 'error' => 'Confirma tu correo para continuar. Te enviamos un enlace al registrarte.']);
+    }
     $b = xp_body() ?? [];
     $plan = null;
     foreach (xp_plans($customer) as $p) {
@@ -476,6 +507,9 @@ function xp_portal_create_order(array $customer): void
         }
     }
     $order = xp_one('SELECT * FROM orders WHERE id = ?', [$id]);
+    if (!$paid) {
+        xp_notify_order_pending($customer, $order);
+    }
     xp_json(201, [
         'ok' => true,
         'paid' => $paid,
@@ -526,4 +560,242 @@ function xp_portal_lead(): void
     }
     xp_log_event('demo_request', null, null, $email, $ip);
     xp_json(200, ['ok' => true]);
+}
+
+// ---------------------------------------------------------------- verificación de correo y recuperación de contraseña
+/** Se exige verificar el correo solo si el servidor puede enviarlo (hay SMTP y URL pública). */
+function xp_verification_required(): bool
+{
+    return xp_mail_enabled() && xp_base_url() !== '' && (bool) (xp_config()['require_email_verification'] ?? true);
+}
+
+function xp_money_text(int $cents, string $currency): string
+{
+    return $currency . ' ' . number_format($cents / 100, $cents % 100 === 0 ? 0 : 2, '.', ',');
+}
+
+/** Crea un enlace de un solo uso (se guarda su huella, no el valor) e invalida los anteriores del mismo tipo. */
+function xp_token_create(string $customerId, string $type, int $ttl): string
+{
+    xp_exec('UPDATE email_tokens SET used_at = ? WHERE customer_id = ? AND type = ? AND used_at IS NULL', [time(), $customerId, $type]);
+    $raw = xp_b64u_enc(random_bytes(32));
+    xp_exec(
+        'INSERT INTO email_tokens (id, customer_id, type, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [xp_uuid(), $customerId, $type, xp_sha256($raw), time() + $ttl, time()]
+    );
+    return $raw;
+}
+
+/** @return array<string,mixed>|null */
+function xp_token_row(string $raw, string $type): ?array
+{
+    if ($raw === '' || strlen($raw) > 100) {
+        return null;
+    }
+    return xp_one('SELECT * FROM email_tokens WHERE token_hash = ? AND type = ?', [xp_sha256($raw), $type]);
+}
+
+function xp_send_verification(array $customer): bool
+{
+    $base = xp_base_url();
+    if ($base === '') {
+        return false;
+    }
+    $token = xp_token_create($customer['id'], 'verify', 2 * XP_DAY);
+    xp_log_event('verify_sent', null, null, $customer['id'], xp_ip());
+    return xp_send_mail(
+        $customer['email'],
+        'Confirma tu correo en BIM FLOW',
+        xp_mail_template(
+            'Confirma tu correo',
+            '<p>Hola ' . htmlspecialchars($customer['name']) . ',</p><p>Gracias por crear tu cuenta en BIM FLOW. Confirma tu correo para activar tu prueba gratuita y gestionar tu licencia.</p><p>El enlace vale 48 horas.</p>',
+            $base . '/portal/#verify=' . $token,
+            'Confirmar mi correo'
+        )
+    );
+}
+
+function xp_portal_verify(): void
+{
+    $b = xp_body() ?? [];
+    $row = xp_token_row(is_string($b['token'] ?? null) ? $b['token'] : '', 'verify');
+    $c = $row ? xp_one('SELECT * FROM customers WHERE id = ?', [$row['customer_id']]) : null;
+    if (!$row || !$c) {
+        xp_json(400, ['ok' => false, 'error' => 'El enlace no es válido. Pide uno nuevo desde tu cuenta.']);
+    }
+    if (!empty($c['email_verified_at'])) {
+        xp_json(200, ['ok' => true, 'alreadyVerified' => true]);
+    }
+    if ($row['used_at'] !== null || (int) $row['expires_at'] < time()) {
+        xp_json(400, ['ok' => false, 'error' => 'El enlace venció. Inicia sesión y pide uno nuevo.']);
+    }
+    xp_exec('UPDATE email_tokens SET used_at = ? WHERE id = ?', [time(), $row['id']]);
+    xp_exec('UPDATE customers SET email_verified_at = ? WHERE id = ?', [time(), $c['id']]);
+    xp_log_event('email_verified', null, null, $c['email']);
+    xp_json(200, ['ok' => true]);
+}
+
+function xp_portal_resend(array $customer): void
+{
+    if (!empty($customer['email_verified_at'])) {
+        xp_json(200, ['ok' => true, 'alreadyVerified' => true]);
+    }
+    if (!xp_verification_required()) {
+        xp_json(503, ['ok' => false, 'error' => 'El envío de correos no está disponible por ahora. Contacta a soporte.']);
+    }
+    if (xp_count_events('verify_sent', 'detail = ?', [$customer['id']], 3600) >= 3) {
+        xp_json(429, ['ok' => false, 'error' => 'Ya te enviamos varios correos. Revisa tu bandeja y la carpeta de spam, o inténtalo en una hora.']);
+    }
+    $ok = xp_send_verification($customer);
+    xp_json($ok ? 200 : 502, $ok ? ['ok' => true] : ['ok' => false, 'error' => 'No pudimos enviar el correo. Inténtalo de nuevo en unos minutos.']);
+}
+
+function xp_portal_forgot(): void
+{
+    $ip = xp_ip();
+    $b = xp_body() ?? [];
+    $email = strtolower(xp_clip($b['email'] ?? '', 160));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        xp_json(400, ['ok' => false, 'error' => 'Ingresa un correo válido.']);
+    }
+    $emailKey = substr(xp_sha256($email), 0, 16);
+    if (($ip !== '' && xp_count_events('forgot_requested', 'ip = ?', [$ip], 3600) >= 5) || xp_count_events('forgot_requested', 'detail = ?', [$emailKey], 3600) >= 3) {
+        xp_json(429, ['ok' => false, 'error' => 'Demasiadas solicitudes. Inténtalo de nuevo en una hora.']);
+    }
+    xp_log_event('forgot_requested', null, null, $emailKey, $ip);
+    $c = xp_one('SELECT * FROM customers WHERE email = ?', [$email]);
+    $base = xp_base_url();
+    if ($c && xp_mail_enabled() && $base !== '') {
+        $token = xp_token_create($c['id'], 'reset', 3600);
+        xp_send_mail(
+            $c['email'],
+            'Restablece tu contraseña de BIM FLOW',
+            xp_mail_template(
+                'Restablece tu contraseña',
+                '<p>Hola ' . htmlspecialchars($c['name']) . ',</p><p>Recibimos una solicitud para restablecer la contraseña de tu cuenta. El enlace vale 1 hora y solo se puede usar una vez.</p><p>Si no fuiste tú, ignora este correo: tu contraseña no cambiará.</p>',
+                $base . '/portal/#reset=' . $token,
+                'Crear una contraseña nueva'
+            )
+        );
+    }
+    // Misma respuesta exista o no la cuenta, para no revelar quién está registrado.
+    xp_json(200, ['ok' => true, 'message' => 'Si existe una cuenta con ese correo, te enviamos un enlace para restablecer la contraseña. Revisa también la carpeta de spam.']);
+}
+
+function xp_portal_reset(): void
+{
+    $ip = xp_ip();
+    if ($ip !== '' && xp_count_events('reset_failed', 'ip = ?', [$ip], 3600) >= 10) {
+        xp_json(429, ['ok' => false, 'error' => 'Demasiados intentos. Inténtalo más tarde.']);
+    }
+    $b = xp_body() ?? [];
+    $password = is_string($b['password'] ?? null) ? $b['password'] : '';
+    if (strlen($password) < 8 || strlen($password) > 200) {
+        xp_json(400, ['ok' => false, 'error' => 'La contraseña debe tener al menos 8 caracteres.']);
+    }
+    $row = xp_token_row(is_string($b['token'] ?? null) ? $b['token'] : '', 'reset');
+    $c = $row ? xp_one('SELECT * FROM customers WHERE id = ?', [$row['customer_id']]) : null;
+    if (!$row || !$c || $row['used_at'] !== null || (int) $row['expires_at'] < time()) {
+        xp_log_event('reset_failed', null, null, '', $ip);
+        xp_json(400, ['ok' => false, 'error' => 'El enlace no es válido o venció. Pide uno nuevo.']);
+    }
+    xp_tx(function () use ($row, $c, $password) {
+        xp_exec('UPDATE email_tokens SET used_at = ? WHERE customer_id = ? AND type = ? AND used_at IS NULL', [time(), $c['id'], 'reset']);
+        xp_exec(
+            'UPDATE customers SET password_hash = ?, session_version = session_version + 1, email_verified_at = COALESCE(email_verified_at, ?) WHERE id = ?',
+            [password_hash($password, PASSWORD_DEFAULT), time(), $c['id']]
+        );
+    });
+    xp_log_event('password_reset', null, null, $c['email'], $ip);
+    xp_send_mail(
+        $c['email'],
+        'Tu contraseña de BIM FLOW fue cambiada',
+        xp_mail_template(
+            'Tu contraseña fue cambiada',
+            '<p>Hola ' . htmlspecialchars($c['name']) . ',</p><p>La contraseña de tu cuenta se cambió el ' . gmdate('d/m/Y H:i') . ' (UTC). Las sesiones abiertas se cerraron.</p><p><b>Si no fuiste tú</b>, restablece tu contraseña de nuevo ahora mismo y escríbenos.</p>',
+            xp_base_url() !== '' ? xp_base_url() . '/portal/' : null,
+            'Ir a mi cuenta'
+        )
+    );
+    xp_json(200, ['ok' => true]);
+}
+
+// ---------------------------------------------------------------- avisos de pedidos
+function xp_notify_order_pending(array $customer, array $order): void
+{
+    $base = xp_base_url();
+    $amount = xp_money_text((int) $order['amount_cents'], $order['currency']);
+    $instructions = (string) (xp_config()['payment_instructions'] ?? '');
+    xp_send_mail(
+        $customer['email'],
+        'Recibimos tu pedido ' . $order['code'],
+        xp_mail_template(
+            'Recibimos tu pedido',
+            '<p>Hola ' . htmlspecialchars($customer['name']) . ',</p><p>Pedido <b>' . htmlspecialchars($order['code']) . '</b>: plan ' . htmlspecialchars($order['plan_name']) . ' por <b>' . htmlspecialchars($amount) . '</b>.</p>'
+            . ($instructions !== '' ? '<p>' . htmlspecialchars($instructions) . '</p>' : '') . '<p>Te avisaremos por correo cuando confirmemos el pago y tu licencia esté lista.</p>',
+            $base !== '' ? $base . '/portal/' : null,
+            'Ver mi pedido'
+        )
+    );
+    $admin = (string) (xp_config()['admin_email'] ?? '');
+    if ($admin !== '') {
+        xp_send_mail(
+            $admin,
+            'Nuevo pedido por aprobar: ' . $order['code'],
+            xp_mail_template(
+                'Nuevo pedido por aprobar',
+                '<p><b>' . htmlspecialchars($customer['name']) . '</b> (' . htmlspecialchars($customer['email']) . ') pidió el plan ' . htmlspecialchars($order['plan_name']) . ' por <b>' . htmlspecialchars($amount) . '</b>.</p><p>Código de pedido: <b>' . htmlspecialchars($order['code']) . '</b>. Apruébalo en el panel cuando recibas el pago.</p>',
+                $base !== '' ? $base . '/admin/' : null,
+                'Abrir el panel'
+            )
+        );
+    }
+}
+
+function xp_notify_license_ready(string $orderId): void
+{
+    $o = xp_one('SELECT * FROM orders WHERE id = ?', [$orderId]);
+    $c = $o ? xp_one('SELECT * FROM customers WHERE id = ?', [$o['customer_id']]) : null;
+    $lic = $o && $o['license_id'] ? xp_one('SELECT expires_at FROM licenses WHERE id = ?', [$o['license_id']]) : null;
+    if (!$o || !$c || !$lic) {
+        return;
+    }
+    $base = xp_base_url();
+    $trial = $o['kind'] === 'trial';
+    xp_send_mail(
+        $c['email'],
+        $trial ? 'Tu prueba gratis de BIM FLOW está activa' : 'Tu licencia de BIM FLOW está lista',
+        xp_mail_template(
+            $trial ? 'Tu prueba gratis está activa' : 'Tu licencia está lista',
+            '<p>Hola ' . htmlspecialchars($c['name']) . ',</p><p>' . ($trial ? 'Tu prueba gratuita ya está activa.' : 'Confirmamos tu pago del pedido <b>' . htmlspecialchars($o['code']) . '</b>.')
+            . ' Tu licencia vence el <b>' . gmdate('d/m/Y', (int) $lic['expires_at']) . '</b>.</p><p>Entra a tu cuenta para ver tu clave, instalar el plugin y activarlo en Revit.</p>',
+            $base !== '' ? $base . '/portal/' : null,
+            'Ver mi licencia'
+        )
+    );
+}
+
+// ---------------------------------------------------------------- instalador publicado para los clientes
+function xp_downloads_dir(): string
+{
+    return rtrim((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''), '/\\') . '/downloads';
+}
+
+/** @return array<string,mixed>|null */
+function xp_installer_info(): ?array
+{
+    $dir = xp_downloads_dir();
+    $meta = @file_get_contents($dir . '/installer.json');
+    $file = $dir . '/XportBIM_Setup.exe';
+    $data = $meta ? json_decode($meta, true) : null;
+    if (!is_array($data) || !is_file($file)) {
+        return null;
+    }
+    return [
+        'url' => '/downloads/XportBIM_Setup.exe',
+        'version' => (string) ($data['version'] ?? ''),
+        'size' => (int) filesize($file),
+        'sha256' => (string) ($data['sha256'] ?? ''),
+        'uploadedAt' => (int) ($data['uploadedAt'] ?? 0),
+    ];
 }

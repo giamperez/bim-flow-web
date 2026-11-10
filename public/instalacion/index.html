@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalar BIM FLOW · Guía paso a paso</title>
+<meta name="description" content="Cómo instalar BIM FLOW en Revit y qué hacer si Windows muestra un aviso al abrir el instalador.">
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef6f9;--panel:#fff;--panel2:#f3f9fc;--ink:#031a35;--muted:#52677f;--line:#d9e6ee;--brand:#005bae;--brand-ink:#fff;--teal:#00afb7;
+  --ok:#0b7a46;--ok-bg:#dff5e8;--warn:#8f5200;--warn-bg:#fff0cf;
+  --shadow:0 1px 2px rgba(3,26,53,.06),0 14px 36px -14px rgba(3,26,53,.16);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#031a35;--panel:#072a52;--panel2:#0a3566;--ink:#eaf2fb;--muted:#a3b7cf;--line:#16427a;--brand:#2f93ee;--brand-ink:#031a35;--teal:#2fd0d8;
+  --ok:#5ad58e;--ok-bg:#0f3a2a;--warn:#f5b84b;--warn-bg:#3b2d0b;--shadow:0 1px 2px rgba(0,0,0,.4),0 14px 36px -14px rgba(0,0,0,.5);
+}}
+*{box-sizing:border-box}
+html{color-scheme:light dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--brand)}
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.01em}
+.wrap{max-width:820px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(12px);position:sticky;top:0;z-index:5}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:68px;max-width:1040px}
+.logo img{height:42px;width:auto;display:block}
+header a.nav{font-size:14px;font-weight:600;text-decoration:none;margin-left:18px}
+main{padding:40px 0 90px;display:grid;gap:22px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--teal);margin:0 0 10px}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.12}
+.lead{color:var(--muted);font-size:17px;margin:14px 0 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:26px}
+.step{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start}
+.num{width:38px;height:38px;border-radius:50%;background:linear-gradient(120deg,var(--brand),var(--teal));color:#fff;display:grid;place-items:center;font-weight:800}
+.step h2{font-size:19px;margin-bottom:4px}
+.step p{margin:0;color:var(--muted)}
+.btn{display:inline-block;text-decoration:none;border:0;background:linear-gradient(120deg,var(--brand),#0a6fcc);color:var(--brand-ink);padding:12px 22px;border-radius:999px;font-weight:700;margin-top:14px;box-shadow:0 12px 28px -14px rgba(0,91,174,.7)}
+.btn.ghost{background:var(--panel2);color:var(--brand);box-shadow:none;border:1px solid var(--line)}
+.meta{font-size:13px;color:var(--muted);margin-top:10px;word-break:break-all}
+.calm{background:var(--ok-bg);color:var(--ok);border-radius:16px;padding:14px 18px;font-weight:600;font-size:15px}
+details{border-top:1px solid var(--line);padding:4px 0}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:700;padding:14px 0;list-style:none;display:flex;justify-content:space-between;gap:12px;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:22px;color:var(--brand);line-height:1}
+details[open] summary::after{content:"–"}
+details .body{padding:0 0 16px;color:var(--muted);display:grid;gap:10px}
+details .body ol,details .body ul{margin:0;padding-left:22px;display:grid;gap:6px}
+details .body b{color:var(--ink)}
+.tip{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:11px 14px;font-size:14px;font-weight:500}
+code{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px 7px;font-size:13px;word-break:break-all}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:0 0 40px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="logo" href="/" aria-label="BIM FLOW by Vertex, inicio">
+      <picture><source media="(prefers-color-scheme: dark)" srcset="/brand/logo-header-white.png"><img src="/brand/logo-header.png" alt="BIM FLOW by Vertex" width="760" height="226"></picture>
+    </a>
+    <nav><a class="nav" href="/">Inicio</a><a class="nav" href="/portal/">Mi cuenta</a></nav>
+  </div>
+</header>
+
+<div class="wrap">
+<main>
+  <section>
+    <p class="eyebrow">Guía de instalación</p>
+    <h1>Instala BIM FLOW en 3 pasos</h1>
+    <p class="lead">Tarda un par de minutos. Si Windows muestra un aviso al abrir el instalador, es normal con programas nuevos: más abajo te explicamos cada uno, sin complicaciones.</p>
+  </section>
+
+  <section class="card step">
+    <div class="num">1</div>
+    <div>
+      <h2>Descarga el instalador</h2>
+      <p>Es un único archivo que incluye las versiones de Revit 2023 a 2027.</p>
+      <div id="dl"><a class="btn ghost" href="/portal/">Descargar desde Mi cuenta</a></div>
+    </div>
+  </section>
+
+  <section class="card step">
+    <div class="num">2</div>
+    <div>
+      <h2>Ejecútalo con Revit cerrado</h2>
+      <p>Abre el archivo, marca la versión de Revit que usas y pulsa <b>Instalar</b>. No necesitas permisos de administrador.</p>
+    </div>
+  </section>
+
+  <section class="card step">
+    <div class="num">3</div>
+    <div>
+      <h2>Actívalo en Revit</h2>
+      <p>Abre Revit con un proyecto, ve a la pestaña <b>Pyramid</b> y pulsa <b>Exportar Planos</b>. Pega tu clave de licencia y pulsa <b>Activar</b>. Tu clave está en <a href="/portal/">Mi cuenta</a>.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <p class="calm">¿Te salió un aviso de Windows? Tranquilo: es lo habitual con instaladores nuevos. Elige el que ves en pantalla.</p>
+    <div style="margin-top:8px">
+      <details>
+        <summary>«Windows protegió su PC» (pantalla azul)</summary>
+        <div class="body">
+          <p>Windows muestra este aviso con cualquier programa que todavía no usan muchas personas. No significa que haya un problema con tu equipo.</p>
+          <ol><li>Pulsa <b>Más información</b>.</li><li>Pulsa <b>Ejecutar de todas formas</b>.</li></ol>
+        </div>
+      </details>
+      <details>
+        <summary>«El Control inteligente de aplicaciones bloqueó una aplicación»</summary>
+        <div class="body">
+          <p>Es una protección de Windows 11 que, cuando está activa, solo deja ejecutar programas que Microsoft ya conoce. Como nuestro instalador es nuevo, aún no figura en esa lista, y esta pantalla <b>no tiene un botón para continuar</b>.</p>
+          <p><b>Opción 1 (recomendada en equipos de empresa):</b> pide a tu área de TI que permita la instalación.</p>
+          <p><b>Opción 2 (en tu propio equipo):</b> puedes desactivar esa protección:</p>
+          <ol>
+            <li>Abre el menú Inicio y escribe <b>Seguridad de Windows</b>.</li>
+            <li>Entra a <b>Control de aplicaciones y del navegador</b>.</li>
+            <li>Pulsa <b>Configuración del Control inteligente de aplicaciones</b> y elige <b>Desactivado</b>.</li>
+            <li>Vuelve a abrir el instalador.</li>
+          </ol>
+          <p class="tip">Ten en cuenta: una vez desactivada, Windows no permite volver a activarla sin restablecer el sistema. Si prefieres no hacerlo, usa la opción 1 o instálalo en otro equipo.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Mi navegador no deja descargar el archivo</summary>
+        <div class="body">
+          <p>Algunos navegadores piden confirmar las descargas de programas nuevos.</p>
+          <ul><li><b>Edge:</b> en la lista de descargas pulsa los tres puntos y elige <b>Conservar</b> y luego <b>Conservar de todas formas</b>.</li><li><b>Chrome:</b> pulsa la flecha junto al aviso y elige <b>Conservar</b>.</li></ul>
+        </div>
+      </details>
+      <details>
+        <summary>El archivo está en mi equipo pero no se abre</summary>
+        <div class="body">
+          <ol><li>Clic derecho sobre el instalador y <b>Propiedades</b>.</li><li>Abajo, en <b>Seguridad</b>, marca <b>Desbloquear</b> y pulsa <b>Aceptar</b>.</li><li>Ábrelo de nuevo.</li></ol>
+        </div>
+      </details>
+      <details>
+        <summary>Mi antivirus lo puso en cuarentena</summary>
+        <div class="body"><p>Restáuralo desde la cuarentena y agrega una excepción para ese archivo. Si quieres comprobar que es el original, usa la huella de abajo.</p></div>
+      </details>
+      <details>
+        <summary>Revit pregunta por un complemento sin firma</summary>
+        <div class="body"><p>La primera vez que abres Revit puede preguntar si confías en el complemento. Elige <b>Cargar siempre</b>.</p></div>
+      </details>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 style="font-size:19px">¿Cómo sé que el archivo es el original?</h2>
+    <p style="color:var(--muted);margin:10px 0 0">Cada versión tiene una huella SHA-256, una especie de «DNI» del archivo. Si la huella de tu archivo coincide con la de esta página, es el mismo que publicamos. Por ahora el instalador no cuenta con una firma digital comercial, y por eso Windows lo trata con cautela.</p>
+    <div id="hashBox" class="meta"></div>
+    <p style="color:var(--muted);margin:12px 0 0;font-size:14px">Para calcularla en tu equipo, abre PowerShell y escribe: <code>Get-FileHash "$env:USERPROFILE\Downloads\XportBIM_Setup.exe"</code></p>
+  </section>
+</main>
+<footer>© 2026 BIM FLOW · By Vertex</footer>
+</div>
+
+<script>
+(async () => {
+  try {
+    const r = await fetch('/portal/api/download', { credentials: 'same-origin' });
+    const { installer: i } = await r.json();
+    if (!i) return;
+    const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    document.getElementById('dl').innerHTML =
+      `<a class="btn" href="${esc(i.url)}" download>Descargar instalador${i.version ? ' v' + esc(i.version) : ''}</a>` +
+      `<div class="meta">${(i.size / 1048576).toFixed(1)} MB · Publicado el ${new Date(i.uploadedAt * 1000).toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' })}</div>`;
+    document.getElementById('hashBox').innerHTML = `<b>SHA-256:</b> <code>${esc(i.sha256)}</code>`;
+  } catch { /* se mantiene el enlace a Mi cuenta */ }
+})();
+</script>
+</body>
+</html>

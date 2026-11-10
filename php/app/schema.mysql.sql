@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS customers (
   password_hash VARCHAR(255) NOT NULL,
   created_at    BIGINT NOT NULL,
   email_norm    VARCHAR(160) NULL,
+  email_verified_at BIGINT NULL,
+  session_version INT NOT NULL DEFAULT 0,
   UNIQUE KEY uq_customers_email (email),
   KEY idx_customers_norm (email_norm)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -85,4 +87,16 @@ CREATE TABLE IF NOT EXISTS trial_devices (
   device_hash CHAR(64) NOT NULL PRIMARY KEY,
   license_id  CHAR(36) NOT NULL,
   first_at    BIGINT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS email_tokens (
+  id          CHAR(36) NOT NULL PRIMARY KEY,
+  customer_id CHAR(36) NOT NULL,
+  type        VARCHAR(10) NOT NULL,
+  token_hash  CHAR(64) NOT NULL,
+  expires_at  BIGINT NOT NULL,
+  used_at     BIGINT NULL,
+  created_at  BIGINT NOT NULL,
+  UNIQUE KEY uq_email_tokens_hash (token_hash),
+  KEY idx_email_tokens_customer (customer_id, type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

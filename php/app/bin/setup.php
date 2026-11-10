@@ -5,6 +5,10 @@
 //   php app/bin/setup.php --public-key       muestra la clave pública para compilar el complemento
 //   php app/bin/setup.php --migrate          aplica cambios de esquema tras actualizar el código (idempotente)
 //   php app/bin/setup.php --payment-mode=test|manual   test aprueba los pedidos al instante (solo pruebas)
+//   php app/bin/setup.php --setup-mail       configura el correo saliente (SMTP) para verificar correos y recuperar contraseñas
+//   php app/bin/setup.php --test-mail=a@b.c  envía un correo de prueba
+//   php app/bin/setup.php --public-url=https://dominio   URL base que usan los enlaces de los correos
+//   php app/bin/setup.php --admin-email=a@b.c   correo al que avisar de pedidos por aprobar
 //   php app/bin/setup.php --force            REGENERA la clave de firma (invalida todas las DLL ya repartidas)
 // Variables de entorno opcionales (modo no interactivo): XP_DRIVER=mysql|sqlite, XP_DB_HOST, XP_DB_NAME,
 // XP_DB_USER, XP_DB_PASS, XP_SQLITE_PATH, XP_IP_HEADER.
@@ -32,7 +36,7 @@ function ask(string $label, string $envName, string $default = '', bool $secret 
     if ($env !== false && $env !== '') {
         return $env;
     }
-    echo $label . ($default !== '' ? " [$default]" : '') . ': ';
+    echo $label . ($default !== '' && !$secret ? " [$default]" : '') . ': ';
     if ($secret && DIRECTORY_SEPARATOR === '/') {
         shell_exec('stty -echo');
     }
@@ -100,7 +104,11 @@ function migrate_schema(PDO $pdo, string $driver, string $appDir): void
             'key_enc' => $sqlite ? 'TEXT' : 'TEXT NULL',
             'is_trial' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'TINYINT NOT NULL DEFAULT 0',
         ],
-        'customers' => ['email_norm' => $sqlite ? 'TEXT' : 'VARCHAR(160) NULL'],
+        'customers' => [
+            'email_norm' => $sqlite ? 'TEXT' : 'VARCHAR(160) NULL',
+            'email_verified_at' => $sqlite ? 'INTEGER' : 'BIGINT NULL',
+            'session_version' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'INT NOT NULL DEFAULT 0',
+        ],
         'orders' => ['tier' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'INT NOT NULL DEFAULT 0'],
     ];
     foreach ($wanted as $table => $columns) {
@@ -118,6 +126,10 @@ function migrate_schema(PDO $pdo, string $driver, string $appDir): void
             if (!isset($have[$name])) {
                 $pdo->exec("ALTER TABLE $table ADD COLUMN $name $type");
                 echo "Columna agregada: $table.$name\n";
+                if ($table === 'customers' && $name === 'email_verified_at') {
+                    // Clientes anteriores a la verificación de correo: se consideran verificados para no bloquearlos.
+                    $pdo->exec('UPDATE customers SET email_verified_at = created_at');
+                }
             }
         }
     }
@@ -183,6 +195,82 @@ if (in_array('--reset-password', $flags, true)) {
     write_config($configFile, $config);
     echo "Nueva contraseña del panel (anótela ahora, no se vuelve a mostrar): $plain\n";
     exit(0);
+}
+
+foreach ($flags as $flag) {
+    if (strpos($flag, '--public-url=') === 0) {
+        $url = rtrim(substr($flag, strlen('--public-url=')), '/');
+        if (!$exists || !preg_match('#^https?://[^/\s]+$#', $url)) {
+            fwrite(STDERR, "Uso: php app/bin/setup.php --public-url=https://bimflow.midominio.com (sin ruta final)\n");
+            exit(1);
+        }
+        $config = require $configFile;
+        $config['public_url'] = $url;
+        write_config($configFile, $config);
+        echo "URL pública guardada: $url (se usa en los enlaces de los correos).\n";
+        exit(0);
+    }
+    if (strpos($flag, '--admin-email=') === 0) {
+        $addr = substr($flag, strlen('--admin-email='));
+        if (!$exists || !filter_var($addr, FILTER_VALIDATE_EMAIL)) {
+            fwrite(STDERR, "Uso: php app/bin/setup.php --admin-email=tu@correo.com\n");
+            exit(1);
+        }
+        $config = require $configFile;
+        $config['admin_email'] = $addr;
+        write_config($configFile, $config);
+        echo "Se te avisará a $addr cuando haya pedidos por aprobar.\n";
+        exit(0);
+    }
+}
+
+if (in_array('--setup-mail', $flags, true)) {
+    if (!$exists) {
+        fwrite(STDERR, "Aún no hay configuración. Ejecute primero el asistente sin opciones.\n");
+        exit(1);
+    }
+    $config = require $configFile;
+    echo "Configuración del correo saliente (SMTP). Déjelo en blanco para conservar el valor actual.\n";
+    $cur = $config['mail'] ?? [];
+    $mail = [
+        'driver' => 'smtp',
+        'host' => ask('Servidor SMTP (ej. smtp-relay.brevo.com, smtp.gmail.com)', 'XP_MAIL_HOST', $cur['host'] ?? ''),
+        'port' => (int) ask('Puerto', 'XP_MAIL_PORT', (string) ($cur['port'] ?? 587)),
+        'encryption' => strtolower(ask('Cifrado (tls = STARTTLS en 587, ssl = 465, none)', 'XP_MAIL_ENC', $cur['encryption'] ?? 'tls')),
+        'username' => ask('Usuario SMTP', 'XP_MAIL_USER', $cur['username'] ?? ''),
+        'password' => ask('Contraseña SMTP', 'XP_MAIL_PASS', $cur['password'] ?? '', true),
+        'from_email' => ask('Correo remitente (ej. no-reply@bimflow.midominio.com)', 'XP_MAIL_FROM', $cur['from_email'] ?? ''),
+        'from_name' => ask('Nombre del remitente', 'XP_MAIL_FROM_NAME', $cur['from_name'] ?? 'BIM FLOW'),
+    ];
+    if ($mail['host'] === '' || !filter_var($mail['from_email'], FILTER_VALIDATE_EMAIL) || !in_array($mail['encryption'], ['tls', 'ssl', 'none'], true)) {
+        fwrite(STDERR, "Datos incompletos o inválidos (servidor, remitente o cifrado).\n");
+        exit(1);
+    }
+    $config['mail'] = $mail;
+    if (empty($config['public_url'])) {
+        echo "Aviso: falta la URL pública de los enlaces. Ejecute: php app/bin/setup.php --public-url=https://su-dominio\n";
+    }
+    write_config($configFile, $config);
+    echo "Correo configurado. Pruébelo con: php app/bin/setup.php --test-mail=su@correo.com\n";
+    exit(0);
+}
+
+foreach ($flags as $flag) {
+    if (strpos($flag, '--test-mail=') === 0) {
+        $to = substr($flag, strlen('--test-mail='));
+        if (!$exists || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            fwrite(STDERR, "Uso: php app/bin/setup.php --test-mail=destino@correo.com\n");
+            exit(1);
+        }
+        require_once $appDir . '/bootstrap.php';
+        if (!xp_mail_enabled()) {
+            fwrite(STDERR, "El correo no está configurado. Ejecute: php app/bin/setup.php --setup-mail\n");
+            exit(1);
+        }
+        $ok = xp_send_mail($to, 'Prueba de correo de BIM FLOW', xp_mail_template('Prueba de correo', '<p>Si lees esto, el servidor ya puede enviar correos.</p>', null, null), 'Si lees esto, el servidor ya puede enviar correos.');
+        echo $ok ? "Correo de prueba enviado a $to. Revise también la carpeta de spam.\n" : "No se pudo enviar. Revise el error en el log de PHP de la aplicación (logs/*error*.log).\n";
+        exit($ok ? 0 : 1);
+    }
 }
 
 foreach ($flags as $flag) {
@@ -265,6 +353,10 @@ $config = [
     'offline_grace_days' => 7,
     // 'manual': el cliente paga fuera de línea y el administrador aprueba el pedido. 'test': aprueba al instante (solo pruebas).
     'payment_mode' => getenv('XP_PAYMENT_MODE') ?: 'manual',
+    'mail' => getenv('XP_MAIL_DRIVER') === 'log'
+        ? ['driver' => 'log', 'path' => getenv('XP_MAIL_LOG') ?: ($appDir . '/data/mail.log'), 'from_email' => 'no-reply@example.test', 'from_name' => 'BIM FLOW']
+        : ['driver' => 'none'],
+    'admin_email' => getenv('XP_ADMIN_EMAIL') ?: '',
     'payment_instructions' => 'Realice el pago indicando el código del pedido como referencia y envíe el comprobante a soporte. Activaremos su licencia en cuanto se confirme.',
     // Encabezado del que se toma la IP del cliente (detrás de Nginx/Varnish de Cloudways suele ser este).
     'ip_header' => getenv('XP_IP_HEADER') ?: 'HTTP_X_FORWARDED_FOR',

@@ -66,12 +66,17 @@ const steps = [
 
 const before = ['Abrir cada lámina', 'Configurar la impresora', 'Ajustar el formato', 'Exportar', 'Renombrar el archivo'];
 
-const faqs = [
+const faqs: { q: string; a: string; link?: { href: string; label: string } }[] = [
   { q: '¿Qué formatos y versiones de Revit soporta?', a: 'Exporta a PDF, DWG, DXF, PNG, JPG y TIFF, y hay una versión del plugin para Revit 2023, 2024, 2025, 2026 y 2027.' },
   { q: '¿Cómo funciona la prueba gratuita?', a: 'Creas tu cuenta, activas la clave en Revit y tienes todas las funciones durante 7 días, sin tarjeta. Es una prueba por cuenta y por equipo.' },
   { q: '¿Mis archivos salen de mi equipo?', a: 'No. La exportación ocurre en tu computadora. Lo único que viaja a internet es la validación de la licencia.' },
   { q: '¿Necesito internet para trabajar?', a: 'Solo para activar y para verificar la licencia. Si te quedas sin conexión puedes seguir trabajando hasta 7 días.' },
   { q: '¿En cuántos equipos puedo usarla?', a: 'Según tu plan. Desde tu cuenta puedes liberar un equipo para usarla en otro cuando cambies de computadora.' },
+  {
+    q: '¿Windows me muestra un aviso al instalar?',
+    a: 'Con programas nuevos es normal: Windows pide confirmar antes de abrirlos. Se resuelve en un par de clics y te explicamos cada aviso paso a paso.',
+    link: { href: '/instalacion/', label: 'Ver la guía de instalación' },
+  },
   { q: '¿Cómo pago y cómo recibo mi licencia?', a: 'Eliges tu plan en tu cuenta y haces el pedido. Cuando se confirma el pago, tu clave aparece en tu panel y puedes renovar desde ahí cuando quieras.' },
 ];
 
@@ -372,7 +377,15 @@ export function App() {
                           transition={{ duration: 0.3, ease }}
                           className="overflow-hidden"
                         >
-                          <p className="pb-5 leading-relaxed text-slate-600">{f.a}</p>
+                          <p className="pb-5 leading-relaxed text-slate-600">
+                            {f.a}
+                            {f.link && (
+                              <>
+                                {' '}
+                                <a href={f.link.href} className="font-semibold text-brand underline-offset-4 hover:underline">{f.link.label}</a>
+                              </>
+                            )}
+                          </p>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -431,6 +444,7 @@ export function App() {
           <img src="/brand/logo-header-white.png" alt="BIM FLOW by Vertex" width={760} height={226} className="h-9 w-auto" loading="lazy" />
           <nav className="flex items-center gap-6" aria-label="Enlaces del pie">
             <a href="#precios" className="transition-colors hover:text-white">Precios</a>
+            <a href="/instalacion/" className="transition-colors hover:text-white">Instalación</a>
             <a href="/portal/" className="transition-colors hover:text-white">Mi cuenta</a>
             <a href="#faq" className="transition-colors hover:text-white">Preguntas</a>
           </nav>

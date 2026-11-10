@@ -55,6 +55,27 @@ Otra contraseña: `php app/bin/setup.php --reset-password`. Ver la clave públic
 
 > La versión Cloudflare Worker (`src/`) solo cubre la API del complemento y el panel básico; el portal, los pedidos y las licencias por minutos están únicamente en la versión PHP.
 
+## Correo: verificar cuentas, recuperar contraseña y avisos
+Con el correo configurado el servidor:
+- **Exige confirmar el correo** antes de activar la prueba gratis o comprar (se acabaron las cuentas con correos falsos). Quien restablece su contraseña por correo también queda verificado.
+- Envía **"Olvidé mi contraseña"** (enlace de 1 hora, un solo uso, cierra las demás sesiones y avisa del cambio), **"Recibimos tu pedido"**, **"Tu licencia está lista"** al cliente y un **aviso de pedido por aprobar al administrador**.
+- Sin correo configurado todo sigue funcionando como antes (sin verificación ni recuperación).
+
+Configuración (por SSH, una vez; sirve cualquier proveedor SMTP):
+```bash
+cd ~/applications/<app>/public_html
+php app/bin/setup.php --public-url=https://bimflow.midominio.com   # URL que llevan los enlaces (obligatoria)
+php app/bin/setup.php --setup-mail                                 # servidor, puerto, usuario, contraseña y remitente
+php app/bin/setup.php --admin-email=tu@correo.com                  # a quién avisar de pedidos por aprobar
+php app/bin/setup.php --test-mail=tu@correo.com                    # correo de prueba
+```
+Proveedores: **Brevo** (gratis 300/día; `smtp-relay.brevo.com`, 587, `tls`), **Gmail/Google Workspace** con contraseña de aplicación (`smtp.gmail.com`, 587, `tls`, ~500/día) o el complemento de correo de Cloudways. Para que no caigan en spam, usa un remitente de tu dominio y configura SPF/DKIM según indique el proveedor. **`public_url` es obligatoria**: los enlaces nunca se arman con el encabezado Host de la petición (permitiría desviar los enlaces de recuperación a otro sitio).
+
+Pruebas: `test/e2e-mail.mjs` (44 comprobaciones, correo en modo `log`) y `test/smtp-test.mjs` (protocolo SMTP contra un servidor simulado; no cubre STARTTLS/SSL reales: usa `--test-mail` con tu proveedor).
+
+## Instalador para clientes
+En el panel de administración, **Resumen → Instalador para clientes → Publicar instalador**: sube el `.exe` que descargas de GitHub Actions. Queda en `/downloads/XportBIM_Setup.exe` con su versión y su **huella SHA-256**, y aparece en el portal y en `/instalacion/`, la guía amable con los pasos para cada aviso de Windows (SmartScreen, Control inteligente de aplicaciones, navegador, antivirus, Revit).
+
 ## Cloudflare Workers
 ```bash
 npm install

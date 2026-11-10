@@ -52,7 +52,9 @@ CREATE TABLE IF NOT EXISTS customers (
   name          TEXT NOT NULL,
   password_hash TEXT NOT NULL,
   created_at    INTEGER NOT NULL,
-  email_norm    TEXT
+  email_norm    TEXT,
+  email_verified_at INTEGER,
+  session_version INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_customers_norm ON customers (email_norm);
 
@@ -82,3 +84,14 @@ CREATE TABLE IF NOT EXISTS trial_devices (
   license_id  TEXT NOT NULL,
   first_at    INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS email_tokens (
+  id          TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL,
+  type        TEXT NOT NULL,
+  token_hash  TEXT NOT NULL UNIQUE,
+  expires_at  INTEGER NOT NULL,
+  used_at     INTEGER,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_email_tokens_customer ON email_tokens (customer_id, type);

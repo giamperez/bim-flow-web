@@ -38,6 +38,12 @@ function xp_route_admin(string $method, string $route): void
     if ($route === 'orders' && $method === 'GET') {
         xp_admin_orders();
     }
+    if ($route === 'installer' && $method === 'GET') {
+        xp_json(200, ['ok' => true, 'installer' => xp_installer_info()]);
+    }
+    if ($route === 'installer' && $method === 'POST') {
+        xp_admin_upload_installer();
+    }
     if ($n === 3 && $parts[0] === 'orders' && $method === 'POST') {
         if ($parts[2] === 'approve') {
             xp_admin_order_approve($parts[1]);
@@ -448,4 +454,46 @@ function xp_admin_order_cancel(string $id): void
     }
     xp_log_event('order_cancelled', null, null, $order['code']);
     xp_json(200, ['ok' => true]);
+}
+
+// ---------------------------------------------------------------- instalador para clientes
+/** Recibe el .exe como cuerpo crudo (`?name=` = nombre original) y lo publica en /downloads/XportBIM_Setup.exe. */
+function xp_admin_upload_installer(): void
+{
+    $limit = 40 * 1024 * 1024;
+    $name = xp_clip($_GET['name'] ?? '', 160);
+    if (!preg_match('/\.exe$/i', $name)) {
+        xp_json(400, ['ok' => false, 'error' => 'Seleccione el instalador (.exe).']);
+    }
+    $in = fopen('php://input', 'rb');
+    $data = $in ? stream_get_contents($in, $limit + 1) : '';
+    if ($in) {
+        fclose($in);
+    }
+    if ($data === '' || $data === false) {
+        xp_json(400, ['ok' => false, 'error' => 'No se recibió el archivo.']);
+    }
+    if (strlen($data) > $limit) {
+        xp_json(413, ['ok' => false, 'error' => 'El archivo supera 40 MB.']);
+    }
+    if (substr($data, 0, 2) !== 'MZ') {
+        xp_json(400, ['ok' => false, 'error' => 'El archivo no parece un ejecutable de Windows.']);
+    }
+    $dir = xp_downloads_dir();
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+        xp_json(500, ['ok' => false, 'error' => 'No se pudo crear la carpeta de descargas.']);
+    }
+    $tmp = $dir . '/.upload-' . bin2hex(random_bytes(6));
+    if (file_put_contents($tmp, $data) === false || !@rename($tmp, $dir . '/XportBIM_Setup.exe')) {
+        @unlink($tmp);
+        xp_json(500, ['ok' => false, 'error' => 'No se pudo guardar el instalador (permisos de la carpeta downloads).']);
+    }
+    @chmod($dir . '/XportBIM_Setup.exe', 0644);
+    $version = preg_match('/(\d+\.\d+(?:\.\d+)?)/', $name, $m) ? $m[1] : '';
+    file_put_contents($dir . '/installer.json', json_encode([
+        'version' => $version, 'sha256' => hash('sha256', $data), 'uploadedAt' => time(), 'originalName' => $name,
+    ]));
+    @chmod($dir . '/installer.json', 0644);
+    xp_log_event('installer_uploaded', null, null, $name . ' · ' . strlen($data) . ' bytes');
+    xp_json(200, ['ok' => true, 'installer' => xp_installer_info()]);
 }

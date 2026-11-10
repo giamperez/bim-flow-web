@@ -166,7 +166,7 @@ const EVENT_LABEL = {
   device_limit: 'Límite de equipos', bad_key: 'Clave inválida', admin_created: 'Licencia creada', admin_updated: 'Licencia editada',
   admin_extended: 'Licencia extendida', admin_key_regenerated: 'Clave regenerada', admin_deleted: 'Licencia eliminada',
   admin_released_device: 'Equipo liberado (admin)', order_created: 'Pedido creado', order_paid: 'Pedido pagado', order_cancelled: 'Pedido cancelado',
-  portal_register: 'Cliente registrado', demo_request: 'Solicitud de demo', released_by_owner: 'Equipo liberado por el cliente', owner_key_regenerated: 'Clave regenerada por el cliente', portal_login_failed: 'Login de cliente fallido', admin_login: 'Inicio de sesión', admin_login_failed: 'Intento de acceso fallido',
+  portal_register: 'Cliente registrado', verify_sent: 'Correo de verificación enviado', email_verified: 'Correo verificado', forgot_requested: 'Recuperación de contraseña pedida', password_reset: 'Contraseña restablecida', reset_failed: 'Restablecimiento fallido', installer_uploaded: 'Instalador publicado', trial_started: 'Prueba gratis iniciada', trial_reused: 'Prueba reutilizada (bloqueada)', demo_request: 'Solicitud de demo', released_by_owner: 'Equipo liberado por el cliente', owner_key_regenerated: 'Clave regenerada por el cliente', portal_login_failed: 'Login de cliente fallido', admin_login: 'Inicio de sesión', admin_login_failed: 'Intento de acceso fallido',
 };
 const badge = (state) => `<span class="badge ${esc(state)}">${esc(STATE_LABEL[state] || state)}</span>`;
 
@@ -292,6 +292,41 @@ async function renderDashboard(view) {
     </div>`;
   $('#newLic').onclick = () => openCreate();
   view.querySelectorAll('tr.click').forEach((tr) => tr.onclick = () => openDetail(tr.dataset.id));
+  view.insertAdjacentHTML('beforeend', '<div class="panel" id="instPanel" style="margin-top:22px"></div>');
+  loadInstaller();
+}
+
+/* Instalador que descargan los clientes (portal y guía de instalación) */
+async function loadInstaller() {
+  const panel = $('#instPanel');
+  if (!panel) return;
+  let info = null;
+  try { info = (await api('/installer')).installer; } catch { /* sin datos */ }
+  panel.innerHTML = `<h3>Instalador para clientes</h3><div style="padding:16px;display:grid;gap:14px">
+    ${info ? `<div>Publicado: <b>${info.version ? 'v' + esc(info.version) : 'sin versión'}</b> · ${(info.size / 1048576).toFixed(1)} MB · ${fmtDateTime(info.uploadedAt)}
+      <div class="muted mono" style="font-size:12px;word-break:break-all;margin-top:4px">SHA-256 ${esc(info.sha256)}</div>
+      <div style="margin-top:4px"><a href="${esc(info.url)}" target="_blank" rel="noopener">Descargar para comprobarlo</a></div></div>`
+      : '<div class="muted">Aún no hay un instalador publicado. Los clientes verán «estará disponible muy pronto».</div>'}
+    <div class="row"><input type="file" id="instFile" accept=".exe" style="max-width:420px"><button class="btn primary fixed" id="instUp">Publicar instalador</button></div>
+    <div class="muted" style="font-size:13px">Sube el archivo <b>XportBIM_Setup_vX.Y.Z_….exe</b> descargado de GitHub Actions. Reemplaza al anterior y calcula su huella SHA-256.</div>
+    <div class="err" id="instErr" role="alert"></div></div>`;
+  $('#instUp').onclick = async () => {
+    const f = $('#instFile').files[0];
+    $('#instErr').textContent = '';
+    if (!f) { $('#instErr').textContent = 'Seleccione el archivo .exe.'; return; }
+    if (!await confirmDialog('Se publicará «' + f.name + '» para todos los clientes y reemplazará al instalador actual.', { okLabel: 'Publicar' })) return;
+    $('#instUp').disabled = true; $('#instUp').textContent = 'Subiendo…';
+    try {
+      const res = await fetch('/admin/api/installer?name=' + encodeURIComponent(f.name), {
+        method: 'POST', credentials: 'same-origin', body: f,
+        headers: { 'Content-Type': 'application/octet-stream', 'X-Requested-With': 'bimflow' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.error || 'Error ' + res.status);
+      toast('Instalador publicado');
+      loadInstaller();
+    } catch (err) { $('#instErr').textContent = err.message; $('#instUp').disabled = false; $('#instUp').textContent = 'Publicar instalador'; }
+  };
 }
 
 /* ---------- licenses ---------- */

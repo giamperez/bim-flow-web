@@ -131,13 +131,49 @@ tr:last-child td{border-bottom:0}
       <label id="nameRow">Nombre o empresa<input id="name" autocomplete="organization" maxlength="120"></label>
       <label>Correo<input id="email" type="email" autocomplete="email" required maxlength="160"></label>
       <label>Contraseña<input id="password" type="password" autocomplete="new-password" required minlength="8" maxlength="200" placeholder="Mínimo 8 caracteres"></label>
+      <p class="hidden" id="forgotLink" style="margin:-4px 0 0;font-size:13px"><a href="#" id="goForgot">¿Olvidaste tu contraseña?</a></p>
       <div class="err" id="authErr" role="alert"></div>
       <button class="btn primary" type="submit" id="authBtn">Crear cuenta</button>
     </form>
   </section>
 
+  <!-- recuperar contraseña -->
+  <section class="auth hidden" id="forgot">
+    <form class="card" id="forgotForm">
+      <p class="eyebrow" style="margin:0">Recuperar acceso</p>
+      <h1>¿Olvidaste tu contraseña?</h1>
+      <p class="muted" style="margin:0">Escribe el correo de tu cuenta y te enviaremos un enlace para crear una contraseña nueva.</p>
+      <label>Correo<input id="forgotEmail" type="email" autocomplete="email" required maxlength="160"></label>
+      <div class="err" id="forgotErr" role="alert"></div>
+      <button class="btn primary" type="submit" id="forgotBtn">Enviarme el enlace</button>
+      <p style="margin:0;font-size:14px;text-align:center"><a href="#" id="forgotBack">Volver a ingresar</a></p>
+    </form>
+  </section>
+
+  <section class="auth hidden" id="reset">
+    <form class="card" id="resetForm">
+      <p class="eyebrow" style="margin:0">Recuperar acceso</p>
+      <h1>Crea una contraseña nueva</h1>
+      <label>Contraseña nueva<input id="resetPassword" type="password" autocomplete="new-password" required minlength="8" maxlength="200" placeholder="Mínimo 8 caracteres"></label>
+      <label>Repítela<input id="resetPassword2" type="password" autocomplete="new-password" required minlength="8" maxlength="200"></label>
+      <div class="err" id="resetErr" role="alert"></div>
+      <button class="btn primary" type="submit" id="resetBtn">Guardar contraseña</button>
+    </form>
+  </section>
+
+  <!-- mensajes (correo confirmado, enlace vencido...) -->
+  <section class="auth hidden" id="message">
+    <div class="card">
+      <p class="eyebrow" style="margin:0" id="msgEyebrow">Mi cuenta</p>
+      <h1 id="msgTitle"></h1>
+      <p class="muted" style="margin:0" id="msgText"></p>
+      <button class="btn primary" id="msgBtn">Continuar</button>
+    </div>
+  </section>
+
   <!-- cuenta -->
   <main class="hidden" id="account">
+    <div class="notice hidden" id="verifyBanner" role="status"></div>
     <div class="grid2">
       <section class="card sec" id="licenseCard"></section>
       <section class="card sec">
@@ -148,6 +184,7 @@ tr:last-child td{border-bottom:0}
           <li>Pega tu <b>clave de licencia</b> y pulsa <b>Activar</b>.</li>
         </ol>
         <p class="muted" style="margin:0">Cada licencia permite un número de equipos según tu plan. Puedes liberar un equipo desde aquí para usarla en otro.</p>
+        <div id="downloadBox"></div>
       </section>
     </div>
 
@@ -171,6 +208,8 @@ tr:last-child td{border-bottom:0}
 (() => {
 'use strict';
 const $ = (s, r = document) => r.querySelector(s);
+const SCREENS = ['auth', 'forgot', 'reset', 'message', 'account'];
+function showScreen(name) { SCREENS.forEach((id) => $('#' + id).classList.toggle('hidden', id !== name)); $('#who').classList.toggle('hidden', name !== 'account'); }
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const DAY = 86400;
 const fmtDateTime = (s) => s ? new Date(s * 1000).toLocaleString('es', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -231,27 +270,31 @@ function setMode(m) {
   $('#authTitle').textContent = m === 'login' ? 'Accede a tu cuenta' : 'Empieza tu prueba gratis';
   $('#authLead').textContent = m === 'login' ? 'Gestiona tu licencia, tus equipos y tus pedidos.' : 'Crea tu cuenta y activa BIM FLOW en Revit durante 7 días. Sin tarjeta.';
   $('#password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  $('#password').placeholder = m === 'login' ? '' : 'Mínimo 8 caracteres';
   $('#authErr').textContent = '';
+  $('#forgotLink').classList.toggle('hidden', m !== 'login');
 }
 $('#tabLogin').onclick = () => setMode('login'); $('#tabRegister').onclick = () => setMode('register');
-function showAuth() { $('#account').classList.add('hidden'); $('#who').classList.add('hidden'); $('#auth').classList.remove('hidden'); }
+function showAuth() { showScreen('auth'); }
 $('#authForm').addEventListener('submit', async (e) => {
   e.preventDefault(); $('#authErr').textContent = ''; $('#authBtn').disabled = true;
   try {
     const body = { email: $('#email').value, password: $('#password').value };
     if (mode === 'register') body.name = $('#name').value;
     const r = await api(mode === 'login' ? '/login' : '/register', { method: 'POST', body });
-    $('#password').value = ''; enter(r.customer);
+    $('#password').value = ''; enter(r.customer, r.verificationRequired);
   } catch (err) { $('#authErr').textContent = err.message; }
   finally { $('#authBtn').disabled = false; }
 });
 $('#logout').onclick = async () => { await api('/logout', { method: 'POST' }).catch(() => {}); showAuth(); };
 
 /* ---------- cuenta ---------- */
-let plansCache = [], hasLicense = false, licenseIsTrial = false, paymentMode = 'manual';
-async function enter(customer) {
-  $('#auth').classList.add('hidden'); $('#account').classList.remove('hidden');
-  $('#who').classList.remove('hidden'); $('#whoName').textContent = customer.name;
+let plansCache = [], hasLicense = false, licenseIsTrial = false, paymentMode = 'manual', needsVerification = false;
+async function enter(customer, verificationRequired) {
+  showScreen('account'); $('#whoName').textContent = customer.name;
+  needsVerification = !!verificationRequired && customer.verified === false;
+  renderVerifyBanner(customer);
+  loadDownload();
   await loadLicense();
   await Promise.all([loadPlans(), loadOrders()]);
   if (location.hash === '#comprar') $('#comprar').scrollIntoView({ behavior: 'smooth' });
@@ -319,7 +362,7 @@ async function loadPlans() {
       <div class="price">${p.priceCents === 0 ? 'Gratis' : esc(money(p.priceCents, p.currency))} ${p.priceCents === 0 ? '' : `<small>/ ${esc(duration(p.seconds))}</small>`}</div>
       <div class="muted">${esc(p.description)}</div>
       <div class="muted">Hasta <b>${p.devices}</b> equipo${p.devices === 1 ? '' : 's'}</div>
-      <button class="btn primary" data-plan="${esc(p.id)}">${p.trial ? 'Empezar prueba gratis' : paymentMode === 'test' ? 'Probar compra' : hasLicense && !licenseIsTrial ? 'Renovar con este plan' : 'Comprar este plan'}</button>
+      <button class="btn primary" data-plan="${esc(p.id)}" ${needsVerification ? 'disabled title="Confirma tu correo para continuar"' : ''}>${needsVerification ? 'Confirma tu correo primero' : p.trial ? 'Empezar prueba gratis' : paymentMode === 'test' ? 'Probar compra' : hasLicense && !licenseIsTrial ? 'Renovar con este plan' : 'Comprar este plan'}</button>
     </div>`).join('') : '<div class="empty">Los planes no están disponibles por ahora.</div>';
   $('#plans').querySelectorAll('[data-plan]').forEach((b) => b.onclick = () => buy(b.dataset.plan));
 }
@@ -357,10 +400,84 @@ async function loadOrders() {
   </tbody></table></div>` : '<div class="empty">Todavía no has hecho pedidos.</div>';
 }
 
+/* ---------- verificar correo ---------- */
+function renderVerifyBanner(customer) {
+  const b = $('#verifyBanner');
+  if (!needsVerification) { b.classList.add('hidden'); return; }
+  b.classList.remove('hidden');
+  b.innerHTML = `<b>Confirma tu correo para continuar.</b> Te enviamos un enlace a <b>${esc(customer.email)}</b>. Revisa también la carpeta de spam. <button class="btn small" id="resendBtn" style="margin-left:6px">Reenviar correo</button>`;
+  $('#resendBtn').onclick = async () => {
+    $('#resendBtn').disabled = true;
+    try { await api('/resend-verification', { method: 'POST' }); toast('Correo enviado. Revisa tu bandeja.'); }
+    catch (err) { toast(err.message); }
+    finally { setTimeout(() => { const x = $('#resendBtn'); if (x) x.disabled = false; }, 4000); }
+  };
+}
+
+function showMessage(eyebrow, title, text, buttonLabel, onClick) {
+  $('#msgEyebrow').textContent = eyebrow; $('#msgTitle').textContent = title; $('#msgText').textContent = text;
+  $('#msgBtn').textContent = buttonLabel; $('#msgBtn').onclick = onClick;
+  showScreen('message');
+}
+function clearHash() { try { history.replaceState(null, '', location.pathname); } catch { /* sin historial */ } }
+async function boot() {
+  try { const r = await api('/me'); await enter(r.customer, r.verificationRequired); return true; } catch { return false; }
+}
+
+async function handleVerify(token) {
+  clearHash();
+  try {
+    await api('/verify', { method: 'POST', body: { token } });
+    showMessage('Correo confirmado', '¡Listo, tu correo está confirmado!', 'Ya puedes activar tu prueba gratis o elegir un plan.', 'Ir a mi cuenta', async () => { if (!await boot()) { setMode('login'); showAuth(); } });
+  } catch (err) {
+    showMessage('Enlace no válido', 'No pudimos confirmar tu correo', err.message, 'Ir a mi cuenta', async () => { if (!await boot()) { setMode('login'); showAuth(); } });
+  }
+}
+
+/* ---------- olvidé mi contraseña ---------- */
+$('#goForgot').onclick = (e) => { e.preventDefault(); $('#forgotEmail').value = $('#email').value; $('#forgotErr').textContent = ''; showScreen('forgot'); };
+$('#forgotBack').onclick = (e) => { e.preventDefault(); setMode('login'); showAuth(); };
+$('#forgotForm').addEventListener('submit', async (e) => {
+  e.preventDefault(); $('#forgotErr').textContent = ''; $('#forgotBtn').disabled = true;
+  try {
+    const r = await api('/forgot', { method: 'POST', body: { email: $('#forgotEmail').value } });
+    showMessage('Revisa tu correo', 'Te enviamos un enlace', r.message, 'Volver a ingresar', () => { setMode('login'); showAuth(); });
+  } catch (err) { $('#forgotErr').textContent = err.message; }
+  finally { $('#forgotBtn').disabled = false; }
+});
+let resetToken = '';
+function showReset(token) { resetToken = token; clearHash(); $('#resetErr').textContent = ''; showScreen('reset'); $('#resetPassword').focus(); }
+$('#resetForm').addEventListener('submit', async (e) => {
+  e.preventDefault(); $('#resetErr').textContent = '';
+  if ($('#resetPassword').value !== $('#resetPassword2').value) { $('#resetErr').textContent = 'Las contraseñas no coinciden.'; return; }
+  $('#resetBtn').disabled = true;
+  try {
+    await api('/reset', { method: 'POST', body: { token: resetToken, password: $('#resetPassword').value } });
+    $('#resetPassword').value = $('#resetPassword2').value = '';
+    showMessage('Contraseña actualizada', '¡Tu contraseña fue cambiada!', 'Inicia sesión con tu contraseña nueva. Por seguridad cerramos las sesiones abiertas y te enviamos un aviso por correo.', 'Ingresar', () => { setMode('login'); showAuth(); });
+  } catch (err) { $('#resetErr').textContent = err.message; }
+  finally { $('#resetBtn').disabled = false; }
+});
+
+/* ---------- instalador ---------- */
+async function loadDownload() {
+  const box = $('#downloadBox');
+  try {
+    const { installer: i } = await api('/download');
+    const mb = i ? (i.size / 1048576).toFixed(1) : '';
+    box.innerHTML = (i
+      ? `<a class="btn primary" style="display:inline-block;text-decoration:none;text-align:center" href="${esc(i.url)}" download>Descargar instalador${i.version ? ' v' + esc(i.version) : ''} (${esc(mb)} MB)</a>`
+      : '<div class="notice info">El instalador estará disponible muy pronto.</div>')
+      + '<p style="margin:10px 0 0;font-size:13px"><a href="/instalacion/">¿Windows muestra un aviso al instalar? Te explicamos qué hacer</a></p>';
+  } catch { box.innerHTML = '<p style="margin:0;font-size:13px"><a href="/instalacion/">Guía de instalación</a></p>'; }
+}
+
 /* ---------- inicio ---------- */
 (async () => {
-  try { const r = await api('/me'); await enter(r.customer); }
-  catch { showAuth(); setMode(location.hash === '#comprar' ? 'register' : 'register'); }
+  const link = location.hash.match(/^#(verify|reset)=([A-Za-z0-9_-]{20,100})$/);
+  if (link && link[1] === 'verify') { await handleVerify(link[2]); return; }
+  if (link && link[1] === 'reset') { showReset(link[2]); return; }
+  if (!await boot()) { showAuth(); setMode('register'); }
 })();
 })();
 </script>
