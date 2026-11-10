@@ -1,0 +1,23 @@
+name = "bim-flow-web"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/admin/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bimflow"
+# Reemplazar con el id real tras: npx wrangler d1 create bimflow
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[vars]
+OFFLINE_GRACE_DAYS = "7"
+
+# Secretos (npx wrangler secret put <NOMBRE>):
+#   SIGNING_KEY_JWK  clave privada ECDSA P-256 (salida de `npm run keys`)
+#   ADMIN_PASSWORD   contraseña del panel
+#   SESSION_SECRET   cadena aleatoria larga para firmar cookies

@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>XportBIM · Licencias</title>
+<style>
+:root{
+  --bg:#f4f6f9;--panel:#fff;--ink:#17212b;--muted:#5d6b7a;--line:#e1e6ec;--brand:#0b6bcb;--brand-ink:#fff;
+  --ok:#14804a;--ok-bg:#e3f5ea;--warn:#a15c00;--warn-bg:#fff1d6;--bad:#b42318;--bad-bg:#fde7e4;--idle:#475467;--idle-bg:#eaecf0;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 16px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#0e141b;--panel:#161e27;--ink:#e6ebf1;--muted:#98a5b3;--line:#273341;--brand:#4aa3ff;--brand-ink:#04121f;
+  --ok:#5ad58e;--ok-bg:#12301f;--warn:#f5b84b;--warn-bg:#3a2a0b;--bad:#ff8a7e;--bad-bg:#3c1713;--idle:#b6c0cc;--idle-bg:#222d39;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.35);
+}}
+*{box-sizing:border-box}
+html{color-scheme:light dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;font-weight:650}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+
+/* login */
+.login{min-height:100vh;display:grid;place-items:center;padding:16px}
+.login form{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:28px;width:100%;max-width:360px;display:grid;gap:14px}
+.login h1{font-size:20px}
+
+/* layout */
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh}
+.brand{font-weight:700;font-size:16px;padding:0 10px 14px}
+.brand small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{all:unset;cursor:pointer;padding:9px 12px;border-radius:8px;color:var(--muted);font-weight:550}
+.nav button:hover{background:var(--idle-bg)}
+.nav button[aria-current=page]{background:var(--brand);color:var(--brand-ink)}
+.nav button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.spacer{flex:1}
+main{padding:28px;max-width:1200px;width:100%}
+.head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.head h2{font-size:22px}
+
+/* controls */
+.btn{border:1px solid var(--line);background:var(--panel);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:550}
+.btn:hover{background:var(--idle-bg)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+label{display:grid;gap:5px;font-weight:550;font-size:13px}
+input,select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;font-weight:400}
+textarea{resize:vertical;min-height:70px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.row>*{flex:1 1 140px}
+.row>.fixed{flex:0 0 auto}
+.err{color:var(--bad);font-weight:550;min-height:1.2em}
+
+/* cards & table */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+.card .n{font-size:30px;font-weight:700;line-height:1.1;margin-top:4px}
+.card .l{color:var(--muted);font-weight:550;font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.panel>h3{padding:14px 16px;border-bottom:1px solid var(--line);font-size:15px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+tr:last-child td{border-bottom:0}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--idle-bg)}
+.empty{padding:36px;text-align:center;color:var(--muted)}
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:650}
+.badge.active{background:var(--ok-bg);color:var(--ok)}
+.badge.expiring{background:var(--warn-bg);color:var(--warn)}
+.badge.expired,.badge.revoked{background:var(--bad-bg);color:var(--bad)}
+.badge.suspended,.badge.released{background:var(--idle-bg);color:var(--idle)}
+.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar input{max-width:280px}
+.toolbar select{max-width:200px}
+.pager{display:flex;justify-content:flex-end;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
+
+/* modal / drawer */
+.overlay{position:fixed;inset:0;background:rgba(10,15,22,.55);display:grid;place-items:center;padding:16px;z-index:10}
+.drawer{place-items:stretch end;padding:0}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);width:100%;max-width:520px;max-height:92vh;overflow:auto;padding:22px;display:grid;gap:14px}
+.drawer .modal{max-width:640px;max-height:none;height:100%;border-radius:0;border-width:0 0 0 1px}
+.modal h3{font-size:18px}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.keybox{background:var(--idle-bg);border-radius:10px;padding:14px;text-align:center;font-size:20px;font-weight:700;letter-spacing:.06em;user-select:all;word-break:break-all}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+.section-title{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:650;margin-top:6px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:30;font-weight:550}
+
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  aside{position:static;height:auto;flex-direction:row;align-items:center;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line)}
+  .brand{padding:0 8px 0 4px}
+  .nav{flex-direction:row}
+  .spacer{display:none}
+  main{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<section id="login" class="login hidden">
+  <form id="loginForm">
+    <h1>XportBIM · Licencias</h1>
+    <label>Contraseña de administrador
+      <input id="password" type="password" autocomplete="current-password" required autofocus>
+    </label>
+    <div id="loginErr" class="err" role="alert"></div>
+    <button class="btn primary" type="submit">Entrar</button>
+  </form>
+</section>
+
+<div id="app" class="app hidden">
+  <aside>
+    <div class="brand">XportBIM<small>Panel de licencias</small></div>
+    <nav class="nav" aria-label="Secciones">
+      <button data-view="dashboard">Resumen</button>
+      <button data-view="licenses">Licencias</button>
+      <button data-view="events">Actividad</button>
+    </nav>
+    <div class="spacer"></div>
+    <button class="btn small" id="logout">Cerrar sesión</button>
+  </aside>
+  <main id="view"></main>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DAY = 86400;
+const fmtDate = (s) => s ? new Date(s * 1000).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtDateTime = (s) => s ? new Date(s * 1000).toLocaleString('es', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+const daysLeft = (s) => Math.ceil((s - Date.now() / 1000) / DAY);
+const STATE_LABEL = { active: 'Activa', expiring: 'Por vencer', expired: 'Vencida', suspended: 'Suspendida', revoked: 'Revocada', released: 'Liberado' };
+const EVENT_LABEL = {
+  activated: 'Equipo activado', released_by_device: 'Liberado desde el equipo', released_self_service: 'Liberado por el cliente',
+  device_limit: 'Límite de equipos', bad_key: 'Clave inválida', admin_created: 'Licencia creada', admin_updated: 'Licencia editada',
+  admin_extended: 'Licencia extendida', admin_key_regenerated: 'Clave regenerada', admin_deleted: 'Licencia eliminada',
+  admin_released_device: 'Equipo liberado (admin)', admin_login: 'Inicio de sesión', admin_login_failed: 'Intento de acceso fallido',
+};
+const badge = (state) => `<span class="badge ${esc(state)}">${esc(STATE_LABEL[state] || state)}</span>`;
+
+async function api(path, { method = 'GET', body } = {}) {
+  const res = await fetch('/admin/api' + path, {
+    method,
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'bimflow' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (res.status === 401 && path !== '/login') { showLogin(); throw new Error('Sesión expirada'); }
+  const data = await res.json().catch(() => ({ ok: false, error: 'Respuesta inválida' }));
+  if (!res.ok || data.ok === false) throw new Error(data.error || 'Error ' + res.status);
+  return data;
+}
+
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = msg;
+  $('#toastRoot').append(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+
+function confirmDialog(message, { danger = false, okLabel = 'Confirmar' } = {}) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const m = openModal(`<h3>Confirmar</h3><p>${esc(message)}</p>
+      <div class="actions"><button class="btn" id="no">Cancelar</button><button class="btn ${danger ? 'danger' : 'primary'}" id="yes">${esc(okLabel)}</button></div>`,
+      { onClose: () => { if (!settled) resolve(false); } });
+    m.$('#no').onclick = () => m.close();
+    m.$('#yes').onclick = () => { settled = true; m.close(); resolve(true); };
+  });
+}
+function askDays() {
+  return new Promise((resolve) => {
+    let settled = false;
+    const m = openModal(`<h3>Extender licencia</h3>
+      <p class="muted">Los días se suman a la fecha de vencimiento actual, o a hoy si ya venció.</p>
+      <label>Días <input id="days" type="number" min="1" max="3650" value="365"></label>
+      <div class="actions"><button class="btn" id="no">Cancelar</button><button class="btn primary" id="yes">Extender</button></div>`,
+      { onClose: () => { if (!settled) resolve(null); } });
+    m.$('#no').onclick = () => m.close();
+    m.$('#yes').onclick = () => { settled = true; const v = Number(m.$('#days').value); m.close(); resolve(v > 0 ? v : null); };
+  });
+}
+
+/* ---------- modal helper ---------- */
+function openModal(html, { drawer = false, onClose } = {}) {
+  const root = document.createElement('div');
+  root.className = 'overlay' + (drawer ? ' drawer' : '');
+  root.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
+  const close = () => { root.remove(); document.removeEventListener('keydown', onKey); onClose && onClose(); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  root.addEventListener('mousedown', (e) => { if (e.target === root) close(); });
+  document.addEventListener('keydown', onKey);
+  $('#modalRoot').append(root);
+  const first = root.querySelector('input,select,textarea,button');
+  first && first.focus();
+  return { root, close, $: (s) => root.querySelector(s) };
+}
+
+function showKey(key, title) {
+  const m = openModal(`
+    <h3>${esc(title)}</h3>
+    <p class="muted">Copie la clave ahora y envíela al cliente. <b>No se vuelve a mostrar</b>: en el sistema solo queda su huella.</p>
+    <div class="keybox mono">${esc(key)}</div>
+    <div class="actions"><button class="btn" id="copyKey">Copiar clave</button><button class="btn primary" id="doneKey">Listo</button></div>`);
+  m.$('#copyKey').onclick = async () => { try { await navigator.clipboard.writeText(key); toast('Clave copiada'); } catch { toast('Seleccione y copie manualmente'); } };
+  m.$('#doneKey').onclick = m.close;
+}
+
+/* ---------- auth ---------- */
+function showLogin() { $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#password').focus(); }
+function showApp() { $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); }
+$('#loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('#loginErr').textContent = '';
+  try {
+    await api('/login', { method: 'POST', body: { password: $('#password').value } });
+    $('#password').value = '';
+    showApp(); route();
+  } catch (err) { $('#loginErr').textContent = err.message; }
+});
+$('#logout').onclick = async () => { await api('/logout', { method: 'POST' }).catch(() => {}); showLogin(); };
+
+/* ---------- router ---------- */
+const state = { view: 'dashboard', lic: { q: '', state: '', page: 0 }, ev: { type: '', page: 0 } };
+document.querySelectorAll('.nav button').forEach((b) => b.addEventListener('click', () => { state.view = b.dataset.view; route(); }));
+
+async function route() {
+  document.querySelectorAll('.nav button').forEach((b) => { if (b.dataset.view === state.view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  const view = $('#view');
+  view.innerHTML = '<p class="muted">Cargando…</p>';
+  try {
+    if (state.view === 'dashboard') await renderDashboard(view);
+    else if (state.view === 'licenses') await renderLicenses(view);
+    else await renderEvents(view);
+  } catch (err) { if (err.message !== 'Sesión expirada') view.innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+}
+
+/* ---------- dashboard ---------- */
+async function renderDashboard(view) {
+  const s = await api('/stats');
+  const L = s.licenses;
+  view.innerHTML = `
+    <div class="head"><h2>Resumen</h2><button class="btn primary" id="newLic">Nueva licencia</button></div>
+    <div class="cards">
+      <div class="card"><div class="l">Licencias activas</div><div class="n">${L.active}</div></div>
+      <div class="card"><div class="l">Vencen en 30 días</div><div class="n">${L.expiring}</div></div>
+      <div class="card"><div class="l">Vencidas</div><div class="n">${L.expired}</div></div>
+      <div class="card"><div class="l">Suspendidas / revocadas</div><div class="n">${L.blocked}</div></div>
+      <div class="card"><div class="l">Equipos activos</div><div class="n">${s.devicesActive}</div></div>
+      <div class="card"><div class="l">Alertas (7 días)</div><div class="n">${s.suspiciousLast7d}</div></div>
+    </div>
+    <div class="panel"><h3>Próximos vencimientos</h3>
+      ${s.nextToExpire.length ? `<div class="tablewrap"><table><thead><tr><th>Cliente</th><th>Clave</th><th>Vence</th><th>Días</th></tr></thead><tbody>
+        ${s.nextToExpire.map((r) => `<tr class="click" data-id="${esc(r.id)}"><td>${esc(r.customerName)}</td><td class="mono">…${esc(r.keyHint)}</td><td>${fmtDate(r.expiresAt)}</td><td>${daysLeft(r.expiresAt)}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="empty">Sin licencias activas todavía.</div>'}
+    </div>`;
+  $('#newLic').onclick = () => openCreate();
+  view.querySelectorAll('tr.click').forEach((tr) => tr.onclick = () => openDetail(tr.dataset.id));
+}
+
+/* ---------- licenses ---------- */
+async function renderLicenses(view) {
+  const f = state.lic;
+  const qs = new URLSearchParams({ q: f.q, state: f.state, page: f.page });
+  const data = await api('/licenses?' + qs);
+  view.innerHTML = `
+    <div class="head"><h2>Licencias</h2><button class="btn primary" id="newLic">Nueva licencia</button></div>
+    <div class="toolbar">
+      <input id="q" type="search" placeholder="Buscar cliente, correo o fin de clave" value="${esc(f.q)}" aria-label="Buscar">
+      <select id="st" aria-label="Estado">
+        ${[['', 'Todos los estados'], ['active', 'Activas'], ['expiring', 'Por vencer (30 d)'], ['expired', 'Vencidas'], ['suspended', 'Suspendidas'], ['revoked', 'Revocadas']].map(([v, l]) => `<option value="${v}" ${f.state === v ? 'selected' : ''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div class="panel">
+      ${data.licenses.length ? `<div class="tablewrap"><table><thead><tr><th>Cliente</th><th>Clave</th><th>Estado</th><th>Vence</th><th>Equipos</th><th>Último uso</th></tr></thead><tbody>
+        ${data.licenses.map((l) => `<tr class="click" data-id="${esc(l.id)}">
+          <td><b>${esc(l.customerName)}</b><div class="muted">${esc(l.customerEmail)}</div></td>
+          <td class="mono">…${esc(l.keyHint)}</td><td>${badge(l.state)}</td>
+          <td>${fmtDate(l.expiresAt)}</td><td>${l.devicesActive} / ${l.maxDevices}</td><td>${l.lastSeen ? fmtDateTime(l.lastSeen) : '<span class="muted">Nunca</span>'}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="empty">No hay licencias que coincidan.</div>'}
+      <div class="pager">
+        <button class="btn small" id="prev" ${f.page === 0 ? 'disabled' : ''}>Anterior</button>
+        <button class="btn small" id="next" ${data.hasMore ? '' : 'disabled'}>Siguiente</button>
+      </div>
+    </div>`;
+  $('#newLic').onclick = () => openCreate();
+  let timer; $('#q').oninput = (e) => { clearTimeout(timer); timer = setTimeout(() => { f.q = e.target.value; f.page = 0; route().then(() => { const q = $('#q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }); }, 350); };
+  $('#st').onchange = (e) => { f.state = e.target.value; f.page = 0; route(); };
+  $('#prev').onclick = () => { f.page--; route(); };
+  $('#next').onclick = () => { f.page++; route(); };
+  view.querySelectorAll('tr.click').forEach((tr) => tr.onclick = () => openDetail(tr.dataset.id));
+}
+
+function toDateInput(sec) { return new Date(sec * 1000).toISOString().slice(0, 10); }
+function endOfDay(dateStr) { return Math.floor(new Date(dateStr + 'T23:59:59Z').getTime() / 1000); }
+
+function openCreate() {
+  const m = openModal(`
+    <h3>Nueva licencia</h3>
+    <form id="f" style="display:grid;gap:12px">
+      <label>Cliente <input name="customerName" required maxlength="120"></label>
+      <label>Correo <input name="customerEmail" type="email" maxlength="160"></label>
+      <div class="row">
+        <label>Equipos permitidos <input name="maxDevices" type="number" min="1" max="100" value="2" required></label>
+        <label>Plan <input name="plan" value="standard" maxlength="40"></label>
+      </div>
+      <div class="row">
+        <label>Vence el <input name="expires" type="date" required value="${toDateInput(Date.now() / 1000 + 365 * DAY)}"></label>
+        <div class="fixed" style="display:flex;gap:6px;align-items:end">
+          <button type="button" class="btn small" data-d="30">1 mes</button>
+          <button type="button" class="btn small" data-d="90">3 meses</button>
+          <button type="button" class="btn small" data-d="365">1 año</button>
+        </div>
+      </div>
+      <label>Notas internas <textarea name="notes" maxlength="1000"></textarea></label>
+      <div class="err" id="e" role="alert"></div>
+      <div class="actions"><button type="button" class="btn" id="cancel">Cancelar</button><button class="btn primary" type="submit">Crear licencia</button></div>
+    </form>`);
+  m.root.querySelectorAll('[data-d]').forEach((b) => b.onclick = () => { m.$('[name=expires]').value = toDateInput(Date.now() / 1000 + Number(b.dataset.d) * DAY); });
+  m.$('#cancel').onclick = m.close;
+  m.$('#f').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target));
+    try {
+      const r = await api('/licenses', { method: 'POST', body: { ...fd, maxDevices: Number(fd.maxDevices), expiresAt: endOfDay(fd.expires) } });
+      m.close(); showKey(r.key, 'Licencia creada'); route();
+    } catch (err) { m.$('#e').textContent = err.message; }
+  };
+}
+
+async function openDetail(id) {
+  const m = openModal('<p class="muted">Cargando…</p>', { drawer: true });
+  const render = async () => {
+    const d = await api('/licenses/' + id);
+    const l = d.license;
+    m.root.querySelector('.modal').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px">
+        <div><h3>${esc(l.customerName)}</h3><div class="muted">${esc(l.customerEmail) || 'Sin correo'}</div></div>
+        <div>${badge(l.state)}</div>
+      </div>
+      <dl class="kv">
+        <dt>Clave</dt><dd class="mono">XPBM-…${esc(l.keyHint)}</dd>
+        <dt>Plan</dt><dd>${esc(l.plan)}</dd>
+        <dt>Vence</dt><dd>${fmtDate(l.expiresAt)} <span class="muted">(${daysLeft(l.expiresAt) > 0 ? daysLeft(l.expiresAt) + ' días' : 'vencida'})</span></dd>
+        <dt>Equipos</dt><dd>${d.devices.filter((x) => x.status === 'active').length} de ${l.maxDevices}</dd>
+        <dt>Creada</dt><dd>${fmtDateTime(l.createdAt)}</dd>
+      </dl>
+      ${l.notes ? `<div class="muted">${esc(l.notes)}</div>` : ''}
+      <div class="actions" style="justify-content:flex-start">
+        <button class="btn small" id="aEdit">Editar</button>
+        <button class="btn small" id="aExt">Extender…</button>
+        ${l.status === 'active' ? '<button class="btn small" id="aSusp">Suspender</button>' : '<button class="btn small" id="aReact">Reactivar</button>'}
+        ${l.status !== 'revoked' ? '<button class="btn small danger" id="aRevoke">Revocar</button>' : ''}
+        <button class="btn small" id="aKey">Regenerar clave</button>
+      </div>
+      <div class="section-title">Equipos</div>
+      ${d.devices.length ? `<div class="tablewrap"><table><thead><tr><th>Equipo</th><th>Revit</th><th>Versión</th><th>Último uso</th><th></th></tr></thead><tbody>
+        ${d.devices.map((x) => `<tr><td>${esc(x.name) || '<span class="muted">Sin nombre</span>'} ${x.status === 'released' ? badge('released') : ''}</td><td>${esc(x.revitVersion)}</td><td>${esc(x.appVersion)}</td><td>${fmtDateTime(x.lastSeen)}</td>
+        <td>${x.status === 'active' ? `<button class="btn small" data-rel="${esc(x.id)}">Liberar</button>` : ''}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="empty">Aún no se ha activado en ningún equipo.</div>'}
+      <div class="section-title">Historial</div>
+      ${d.events.length ? `<div class="tablewrap"><table><tbody>${d.events.map((e) => `<tr><td>${fmtDateTime(e.created_at)}</td><td>${esc(EVENT_LABEL[e.type] || e.type)}</td><td class="muted">${esc(e.detail)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Sin eventos.</div>'}
+      <div class="actions"><button class="btn danger small" id="aDel">Eliminar</button><button class="btn" id="aClose">Cerrar</button></div>`;
+    wire(d);
+  };
+  const act = async (fn, okMsg) => { try { await fn(); if (okMsg) toast(okMsg); await render(); route(); } catch (err) { toast(err.message); } };
+  const wire = (d) => {
+    const l = d.license, q = (s) => m.root.querySelector(s);
+    q('#aClose').onclick = m.close;
+    q('#aEdit').onclick = () => openEdit(l, () => act(async () => {}, 'Guardado'));
+    q('#aExt').onclick = async () => {
+      const days = await askDays();
+      if (days) act(() => api(`/licenses/${id}/extend`, { method: 'POST', body: { days } }), 'Licencia extendida');
+    };
+    const ask = async (msg, fn, opts) => { if (await confirmDialog(msg, opts)) fn(); };
+    q('#aSusp')?.addEventListener('click', () => ask('¿Suspender? El cliente perderá acceso en su próxima validación.', () => act(() => api('/licenses/' + id, { method: 'PATCH', body: { status: 'suspended' } }), 'Suspendida'), { okLabel: 'Suspender' }));
+    q('#aReact')?.addEventListener('click', () => act(() => api('/licenses/' + id, { method: 'PATCH', body: { status: 'active' } }), 'Reactivada'));
+    q('#aRevoke')?.addEventListener('click', () => ask('¿Revocar definitivamente esta licencia?', () => act(() => api('/licenses/' + id, { method: 'PATCH', body: { status: 'revoked' } }), 'Revocada'), { danger: true, okLabel: 'Revocar' }));
+    q('#aKey').onclick = () => ask('La clave actual dejará de funcionar. Los equipos deberán volver a activarse con la nueva. ¿Continuar?', async () => {
+      try { const r = await api(`/licenses/${id}/regenerate-key`, { method: 'POST' }); showKey(r.key, 'Nueva clave'); await render(); route(); } catch (err) { toast(err.message); }
+    }, { okLabel: 'Regenerar' });
+    q('#aDel').onclick = () => ask('Se eliminará la licencia y sus equipos. Esta acción no se puede deshacer.', () => act(async () => { await api('/licenses/' + id, { method: 'DELETE' }); m.close(); }, 'Eliminada'), { danger: true, okLabel: 'Eliminar' });
+    m.root.querySelectorAll('[data-rel]').forEach((b) => b.onclick = () => ask('¿Liberar este equipo? Podrá activarse otro en su lugar.', () => act(() => api(`/licenses/${id}/devices/${b.dataset.rel}/release`, { method: 'POST' }), 'Equipo liberado'), { okLabel: 'Liberar' }));
+  };
+  try { await render(); } catch (err) { m.root.querySelector('.modal').innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+}
+
+function openEdit(l, done) {
+  const m = openModal(`
+    <h3>Editar licencia</h3>
+    <form id="f" style="display:grid;gap:12px">
+      <label>Cliente <input name="customerName" required maxlength="120" value="${esc(l.customerName)}"></label>
+      <label>Correo <input name="customerEmail" type="email" maxlength="160" value="${esc(l.customerEmail)}"></label>
+      <div class="row">
+        <label>Equipos permitidos <input name="maxDevices" type="number" min="1" max="100" value="${l.maxDevices}" required></label>
+        <label>Plan <input name="plan" maxlength="40" value="${esc(l.plan)}"></label>
+      </div>
+      <label>Vence el <input name="expires" type="date" required value="${toDateInput(l.expiresAt)}"></label>
+      <label>Notas internas <textarea name="notes" maxlength="1000">${esc(l.notes)}</textarea></label>
+      <div class="err" id="e" role="alert"></div>
+      <div class="actions"><button type="button" class="btn" id="cancel">Cancelar</button><button class="btn primary" type="submit">Guardar</button></div>
+    </form>`);
+  m.$('#cancel').onclick = m.close;
+  m.$('#f').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target));
+    const expiresAt = fd.expires === toDateInput(l.expiresAt) ? l.expiresAt : endOfDay(fd.expires);
+    try {
+      await api('/licenses/' + l.id, { method: 'PATCH', body: { customerName: fd.customerName, customerEmail: fd.customerEmail, plan: fd.plan, notes: fd.notes, maxDevices: Number(fd.maxDevices), expiresAt } });
+      m.close(); done();
+    } catch (err) { m.$('#e').textContent = err.message; }
+  };
+}
+
+/* ---------- events ---------- */
+async function renderEvents(view) {
+  const f = state.ev;
+  const data = await api('/events?' + new URLSearchParams({ type: f.type, page: f.page }));
+  view.innerHTML = `
+    <div class="head"><h2>Actividad</h2></div>
+    <div class="toolbar">
+      <select id="type" aria-label="Tipo de evento">
+        <option value="">Todos los eventos</option>
+        ${Object.entries(EVENT_LABEL).map(([k, v]) => `<option value="${k}" ${f.type === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="panel">
+      ${data.events.length ? `<div class="tablewrap"><table><thead><tr><th>Fecha</th><th>Evento</th><th>Licencia</th><th>Detalle</th><th>IP</th></tr></thead><tbody>
+        ${data.events.map((e) => `<tr><td>${fmtDateTime(e.created_at)}</td><td>${esc(EVENT_LABEL[e.type] || e.type)}</td>
+        <td>${e.license_id ? `<a href="#" data-lic="${esc(e.license_id)}">${esc(e.customer_name || '')}</a>` : '—'}</td><td class="muted">${esc(e.detail)}</td><td class="mono muted">${esc(e.ip)}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="empty">Sin eventos.</div>'}
+      <div class="pager"><button class="btn small" id="prev" ${f.page === 0 ? 'disabled' : ''}>Anterior</button><button class="btn small" id="next" ${data.hasMore ? '' : 'disabled'}>Siguiente</button></div>
+    </div>`;
+  $('#type').onchange = (e) => { f.type = e.target.value; f.page = 0; route(); };
+  $('#prev').onclick = () => { f.page--; route(); };
+  $('#next').onclick = () => { f.page++; route(); };
+  view.querySelectorAll('[data-lic]').forEach((a) => a.onclick = (e) => { e.preventDefault(); openDetail(a.dataset.lic); });
+}
+
+/* ---------- boot ---------- */
+(async () => {
+  try { await api('/me'); showApp(); route(); } catch { showLogin(); }
+})();
+})();
+</script>
+</body>
+</html>
