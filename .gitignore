@@ -6,3 +6,6 @@ dist/
 *.log
 php/app/config.php
 php/app/data/
+landing/node_modules/
+landing/dist/
+landing/Imagenes/

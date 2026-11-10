@@ -35,6 +35,17 @@ function xp_route_admin(string $method, string $route): void
     if ($route === 'events' && $method === 'GET') {
         xp_admin_events();
     }
+    if ($route === 'orders' && $method === 'GET') {
+        xp_admin_orders();
+    }
+    if ($n === 3 && $parts[0] === 'orders' && $method === 'POST') {
+        if ($parts[2] === 'approve') {
+            xp_admin_order_approve($parts[1]);
+        }
+        if ($parts[2] === 'cancel') {
+            xp_admin_order_cancel($parts[1]);
+        }
+    }
     if ($parts && $parts[0] === 'licenses') {
         if ($n === 1 && $method === 'GET') {
             xp_admin_list();
@@ -108,6 +119,7 @@ function xp_admin_stats(): void
         [$t, $t, $t + 30 * XP_DAY, $t]
     );
     $dev = xp_one("SELECT COUNT(*) AS n FROM devices WHERE status = 'active'");
+    $pendingOrders = xp_one("SELECT COUNT(*) AS n FROM orders WHERE status = 'pending'");
     $ev = xp_one("SELECT COUNT(*) AS n FROM events WHERE created_at > ? AND type IN ('bad_key','device_limit')", [$t - 7 * XP_DAY]);
     $next = xp_all(
         "SELECT id, key_hint, customer_name, expires_at FROM licenses WHERE status = 'active' AND expires_at > ? ORDER BY expires_at ASC LIMIT 5",
@@ -123,6 +135,7 @@ function xp_admin_stats(): void
             'total' => (int) $lic['total'],
         ],
         'devicesActive' => (int) $dev['n'],
+        'pendingOrders' => (int) $pendingOrders['n'],
         'suspiciousLast7d' => (int) $ev['n'],
         'nextToExpire' => array_map(function ($r) {
             return ['id' => $r['id'], 'keyHint' => $r['key_hint'], 'customerName' => $r['customer_name'], 'expiresAt' => (int) $r['expires_at']];
@@ -180,6 +193,11 @@ function xp_expiry_from(array $body, int $base): ?int
     if (isset($body['expiresAt']) && is_numeric($body['expiresAt']) && $body['expiresAt'] > 0) {
         return (int) $body['expiresAt'];
     }
+    // Licencias de prueba de pocos minutos (1 minuto a 1 año).
+    $minutes = isset($body['minutes']) && is_numeric($body['minutes']) ? (int) floor((float) $body['minutes']) : 0;
+    if ($minutes > 0) {
+        return $minutes <= 525600 ? $base + $minutes * 60 : null;
+    }
     $days = isset($body['days']) && is_numeric($body['days']) ? (int) floor((float) $body['days']) : 0;
     return ($days > 0 && $days <= 3650) ? $base + $days * XP_DAY : null;
 }
@@ -200,13 +218,14 @@ function xp_admin_create(): void
     if (!$expires || $expires <= $t) {
         xp_json(400, ['ok' => false, 'error' => 'Indique un vencimiento futuro.']);
     }
-    $key = xp_generate_key();
-    $id = xp_uuid();
-    xp_exec(
-        "INSERT INTO licenses (id, key_hash, key_hint, customer_name, customer_email, plan, max_devices, status, expires_at, notes, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)",
-        [$id, xp_sha256($key), substr($key, -5), $name, xp_clip($body['customerEmail'] ?? '', 160), xp_clip($body['plan'] ?? '', 40) ?: 'standard', $maxDevices, $expires, xp_clip($body['notes'] ?? '', 1000), $t, $t]
-    );
+    [$id, $key] = xp_new_license([
+        'customer_name' => $name,
+        'customer_email' => xp_clip($body['customerEmail'] ?? '', 160),
+        'plan' => xp_clip($body['plan'] ?? '', 40) ?: 'standard',
+        'max_devices' => $maxDevices,
+        'expires_at' => $expires,
+        'notes' => xp_clip($body['notes'] ?? '', 1000),
+    ]);
     xp_log_event('admin_created', $id, null, $name);
     // The key is shown once; only its hash is stored.
     xp_json(201, ['ok' => true, 'key' => $key, 'license' => xp_license_public(xp_one('SELECT * FROM licenses WHERE id = ?', [$id]))]);
@@ -294,16 +313,27 @@ function xp_admin_extend(string $id): void
 {
     $body = xp_body() ?? [];
     $days = (int) floor((float) ($body['days'] ?? 0));
-    if ($days < 1 || $days > 3650) {
-        xp_json(400, ['ok' => false, 'error' => 'Días: 1 a 3650.']);
+    $minutes = (int) floor((float) ($body['minutes'] ?? 0));
+    if ($minutes > 0) {
+        if ($minutes > 525600) {
+            xp_json(400, ['ok' => false, 'error' => 'Minutos: 1 a 525600.']);
+        }
+        $seconds = $minutes * 60;
+        $label = "+$minutes min";
+    } else {
+        if ($days < 1 || $days > 3650) {
+            xp_json(400, ['ok' => false, 'error' => 'Días: 1 a 3650.']);
+        }
+        $seconds = $days * XP_DAY;
+        $label = "+$days días";
     }
     $lic = xp_one('SELECT * FROM licenses WHERE id = ?', [$id]);
     if (!$lic) {
         xp_json(404, ['ok' => false, 'error' => 'No encontrada.']);
     }
-    $expires = max((int) $lic['expires_at'], time()) + $days * XP_DAY;
+    $expires = max((int) $lic['expires_at'], time()) + $seconds;
     xp_exec('UPDATE licenses SET expires_at = ?, updated_at = ? WHERE id = ?', [$expires, time(), $id]);
-    xp_log_event('admin_extended', $id, null, "+$days días");
+    xp_log_event('admin_extended', $id, null, $label);
     xp_json(200, ['ok' => true, 'expiresAt' => $expires]);
 }
 
@@ -363,4 +393,59 @@ function xp_admin_events(): void
         return $e;
     }, array_slice($rows, 0, $size));
     xp_json(200, ['ok' => true, 'page' => $page, 'hasMore' => count($rows) > $size, 'events' => $events]);
+}
+
+// ---------------------------------------------------------------- pedidos del portal
+function xp_admin_orders(): void
+{
+    $status = xp_clip($_GET['status'] ?? '', 12);
+    $page = max(0, (int) ($_GET['page'] ?? 0));
+    $size = 25;
+    $limit = $size + 1;
+    $offset = $page * $size;
+    $rows = xp_all(
+        'SELECT o.*, c.email AS customer_email, c.name AS customer_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id '
+        . ($status !== '' ? 'WHERE o.status = ? ' : '') . "ORDER BY o.created_at DESC LIMIT $limit OFFSET $offset",
+        $status !== '' ? [$status] : []
+    );
+    $orders = array_map(function ($o) {
+        $out = xp_order_public($o);
+        $out['id'] = $o['id'];
+        $out['licenseId'] = $o['license_id'];
+        $out['customerName'] = $o['customer_name'];
+        $out['customerEmail'] = $o['customer_email'];
+        $out['provider'] = $o['provider'];
+        return $out;
+    }, array_slice($rows, 0, $size));
+    xp_json(200, ['ok' => true, 'page' => $page, 'hasMore' => count($rows) > $size, 'orders' => $orders]);
+}
+
+function xp_admin_order_approve(string $id): void
+{
+    $order = xp_one('SELECT code, status FROM orders WHERE id = ?', [$id]);
+    if (!$order) {
+        xp_json(404, ['ok' => false, 'error' => 'Pedido no encontrado.']);
+    }
+    if ($order['status'] !== 'pending') {
+        xp_json(409, ['ok' => false, 'error' => 'El pedido ya no está pendiente.']);
+    }
+    $result = xp_mark_order_paid($id, 'aprobado por el administrador');
+    if (!$result) {
+        xp_json(409, ['ok' => false, 'error' => 'No se pudo aprobar el pedido.']);
+    }
+    xp_json(200, ['ok' => true, 'licenseId' => $result['licenseId']]);
+}
+
+function xp_admin_order_cancel(string $id): void
+{
+    $order = xp_one('SELECT code FROM orders WHERE id = ?', [$id]);
+    if (!$order) {
+        xp_json(404, ['ok' => false, 'error' => 'Pedido no encontrado.']);
+    }
+    $n = xp_exec("UPDATE orders SET status = 'cancelled' WHERE id = ? AND status = 'pending'", [$id]);
+    if ($n === 0) {
+        xp_json(409, ['ok' => false, 'error' => 'El pedido ya no está pendiente.']);
+    }
+    xp_log_event('order_cancelled', null, null, $order['code']);
+    xp_json(200, ['ok' => true]);
 }

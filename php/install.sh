@@ -25,7 +25,14 @@ else
 fi
 mkdir -p "$WEB/admin"
 
-cp -r "$HERE/app/." "$APPDIR/"   && cp "$HERE/public/index.php" "$HERE/public/.htaccess" "$WEB/"   && cp "$ROOT/public/admin/index.html" "$WEB/admin/index.html"   || { echo "No se pudieron copiar los archivos (permisos). Revise que el usuario pueda escribir en $WEB"; exit 1; }
+mkdir -p "$WEB/portal"
+
+cp -r "$HERE/app/." "$APPDIR/" \
+  && cp "$HERE/public/index.php" "$HERE/public/.htaccess" "$WEB/" \
+  && cp "$ROOT/public/admin/index.html" "$WEB/admin/index.html" \
+  && cp "$ROOT/public/portal/index.html" "$WEB/portal/index.html" \
+  && cp -r "$ROOT/site/." "$WEB/" \
+  || { echo "No se pudieron copiar los archivos (permisos). Revise que el usuario pueda escribir en $WEB"; exit 1; }
 echo "Archivos copiados: código en $APPDIR, sitio en $WEB"
 
 if [ ! -f "$APPDIR/config.php" ]; then
@@ -33,4 +40,8 @@ if [ ! -f "$APPDIR/config.php" ]; then
   php "$APPDIR/bin/setup.php"
 else
   echo "Ya existe config.php: se conserva la configuración y las claves."
+  php "$APPDIR/bin/setup.php" --migrate
 fi
+
+echo
+echo "Listo. Landing:  /    Portal de clientes:  /portal/    Administración:  /admin/"

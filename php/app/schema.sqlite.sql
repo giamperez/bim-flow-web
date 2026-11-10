@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS licenses (
   expires_at     INTEGER NOT NULL,
   notes          TEXT NOT NULL DEFAULT '',
   created_at     INTEGER NOT NULL,
-  updated_at     INTEGER NOT NULL
+  updated_at     INTEGER NOT NULL,
+  customer_id    TEXT,
+  key_enc        TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_licenses_expires ON licenses (expires_at);
 CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses (status);
@@ -42,3 +44,31 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS idx_events_license ON events (license_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_events_rate ON events (type, ip, created_at);
 CREATE INDEX IF NOT EXISTS idx_events_time ON events (created_at);
+
+CREATE TABLE IF NOT EXISTS customers (
+  id            TEXT PRIMARY KEY,
+  email         TEXT NOT NULL UNIQUE,
+  name          TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at    INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id           TEXT PRIMARY KEY,
+  code         TEXT NOT NULL UNIQUE,
+  customer_id  TEXT NOT NULL,
+  license_id   TEXT,
+  plan_id      TEXT NOT NULL,
+  plan_name    TEXT NOT NULL,
+  seconds      INTEGER NOT NULL,
+  devices      INTEGER NOT NULL,
+  kind         TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  currency     TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'pending',
+  provider     TEXT NOT NULL DEFAULT 'manual',
+  created_at   INTEGER NOT NULL,
+  paid_at      INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders (customer_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders (status, created_at);

@@ -3,6 +3,7 @@
 //   php app/bin/setup.php                    asistente interactivo
 //   php app/bin/setup.php --reset-password   genera otra contraseña de administrador
 //   php app/bin/setup.php --public-key       muestra la clave pública para compilar el complemento
+//   php app/bin/setup.php --migrate          aplica cambios de esquema tras actualizar el código (idempotente)
 //   php app/bin/setup.php --force            REGENERA la clave de firma (invalida todas las DLL ya repartidas)
 // Variables de entorno opcionales (modo no interactivo): XP_DRIVER=mysql|sqlite, XP_DB_HOST, XP_DB_NAME,
 // XP_DB_USER, XP_DB_PASS, XP_SQLITE_PATH, XP_IP_HEADER.
@@ -84,6 +85,41 @@ function allow_web_user_to_read(string $file): void
 ";
 }
 
+/** Crea tablas faltantes y agrega columnas nuevas. Seguro de repetir. */
+function migrate_schema(PDO $pdo, string $driver, string $appDir): void
+{
+    $schema = file_get_contents($appDir . '/schema.' . $driver . '.sql');
+    foreach (array_filter(array_map('trim', explode(';', $schema))) as $statement) {
+        $pdo->exec($statement);
+    }
+    $have = [];
+    if ($driver === 'sqlite') {
+        foreach ($pdo->query('PRAGMA table_info(licenses)') as $row) {
+            $have[$row['name']] = true;
+        }
+    } else {
+        foreach ($pdo->query('SHOW COLUMNS FROM licenses') as $row) {
+            $have[$row['Field']] = true;
+        }
+    }
+    $columns = ['customer_id' => $driver === 'sqlite' ? 'TEXT' : 'CHAR(36) NULL', 'key_enc' => $driver === 'sqlite' ? 'TEXT' : 'TEXT NULL'];
+    foreach ($columns as $name => $type) {
+        if (!isset($have[$name])) {
+            $pdo->exec("ALTER TABLE licenses ADD COLUMN $name $type");
+            echo "Columna agregada: licenses.$name\n";
+        }
+    }
+}
+
+function open_pdo(array $db): PDO
+{
+    $pdo = $db['driver'] === 'sqlite'
+        ? new PDO('sqlite:' . $db['path'])
+        : new PDO('mysql:host=' . $db['host'] . ';dbname=' . $db['name'] . ';charset=utf8mb4', $db['user'], $db['pass']);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    return $pdo;
+}
+
 function public_key_info(string $pem): array
 {
     $key = openssl_pkey_get_private($pem);
@@ -131,6 +167,17 @@ if (in_array('--reset-password', $flags, true)) {
     exit(0);
 }
 
+if (in_array('--migrate', $flags, true)) {
+    if (!$exists) {
+        fwrite(STDERR, "Aún no hay configuración. Ejecute primero el asistente sin opciones.\n");
+        exit(1);
+    }
+    $config = require $configFile;
+    migrate_schema(open_pdo($config['db']), $config['db']['driver'], $appDir);
+    echo "Esquema al día.\n";
+    exit(0);
+}
+
 if ($exists && !in_array('--force', $flags, true)) {
     fwrite(STDERR, "Ya existe $configFile.\nNo se sobrescribe para no perder la clave de firma. Use --reset-password o --public-key.\n");
     exit(1);
@@ -156,22 +203,14 @@ if ($driver === 'sqlite') {
 }
 
 try {
-    if ($db['driver'] === 'sqlite') {
-        $pdo = new PDO('sqlite:' . $db['path']);
-    } else {
-        $pdo = new PDO('mysql:host=' . $db['host'] . ';dbname=' . $db['name'] . ';charset=utf8mb4', $db['user'], $db['pass']);
-    }
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = open_pdo($db);
 } catch (Throwable $e) {
     fwrite(STDERR, 'No se pudo conectar a la base de datos: ' . $e->getMessage() . "\n");
     exit(1);
 }
 
 // ---- esquema
-$schema = file_get_contents($appDir . '/schema.' . $db['driver'] . '.sql');
-foreach (array_filter(array_map('trim', explode(';', $schema))) as $statement) {
-    $pdo->exec($statement);
-}
+migrate_schema($pdo, $db['driver'], $appDir);
 echo "Tablas listas.\n";
 
 // ---- claves y secretos
@@ -189,6 +228,9 @@ $config = [
     'session_secret' => bin2hex(random_bytes(32)),
     'admin_password_hash' => $hash,
     'offline_grace_days' => 7,
+    // 'manual': el cliente paga fuera de línea y el administrador aprueba el pedido. 'test': aprueba al instante (solo pruebas).
+    'payment_mode' => getenv('XP_PAYMENT_MODE') ?: 'manual',
+    'payment_instructions' => 'Realice el pago indicando el código del pedido como referencia y envíe el comprobante a soporte. Activaremos su licencia en cuanto se confirme.',
     // Encabezado del que se toma la IP del cliente (detrás de Nginx/Varnish de Cloudways suele ser este).
     'ip_header' => getenv('XP_IP_HEADER') ?: 'HTTP_X_FORWARDED_FOR',
 ];

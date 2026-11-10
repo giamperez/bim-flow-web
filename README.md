@@ -35,6 +35,23 @@ Otra contraseña: `php app/bin/setup.php --reset-password`. Ver la clave públic
 
 > Si cambias la clave de firma (`--force`), todas las DLL repartidas dejan de aceptar licencias. No lo hagas salvo que sea imprescindible.
 
+## Qué incluye el sitio (versión PHP)
+| Ruta | Qué es |
+|---|---|
+| `/` | Landing (código en `landing/`, compilada en `site/`) |
+| `/portal/` | **Portal del cliente**: crear cuenta, comprar o renovar, ver y copiar su clave, liberar equipos, regenerar la clave |
+| `/admin/` | Panel de administración: licencias, **pedidos por aprobar**, actividad |
+| `/api/v1/*` | API del complemento de Revit |
+
+- **Licencias de prueba por minutos:** en el panel, *Nueva licencia* → campo **Prueba corta: minutos** (2, 10 min, 1 hora…). *Extender* admite días o minutos.
+- **Compra:** el cliente elige un plan en el portal y se crea un pedido con un código `BF-XXXXXX`. Con `payment_mode: 'manual'` (por defecto) el cliente paga fuera de línea y el administrador pulsa **Aprobar pago** en *Pedidos*; ahí se crea o renueva su licencia. Con `payment_mode: 'test'` el pago se aprueba al instante (solo pruebas; instalar con `XP_PAYMENT_MODE=test`). Para conectar una pasarela, su webhook debe llamar a `xp_mark_order_paid($orderId)` (idempotente).
+- **Planes y precios:** se definen en `app/config.php` (clave `plans`; si falta se usan los de `php/app/portal_api.php`, que son de ejemplo: Mensual 30 días / 1 equipo y Anual 365 días / 2 equipos). `payment_instructions` es el texto que ve el cliente tras pedir.
+- La clave de las licencias **compradas** se guarda cifrada (AES-256-GCM) para que su dueño la vea en el portal; las creadas desde el panel solo muestran la clave una vez.
+- La landing se recompila con `cd landing && npm install && npm run build`, copiando `landing/dist` a `site/` (se versiona para no necesitar Node en el servidor). El formulario "Solicitar demo" guarda el correo como evento visible en *Actividad*.
+- Tras actualizar el código, `bash php/install.sh <app>` también migra la base de datos (`app/bin/setup.php --migrate`). Con MySQL no hace falta ninguna otra acción.
+
+> La versión Cloudflare Worker (`src/`) solo cubre la API del complemento y el panel básico; el portal, los pedidos y las licencias por minutos están únicamente en la versión PHP.
+
 ## Cloudflare Workers
 ```bash
 npm install

@@ -8,7 +8,6 @@ DirectoryIndex index.html index.php
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  # La API (complemento y panel) la atiende index.php; el panel estático lo sirve Apache directamente.
-  RewriteRule ^(api/v1|admin/api)(/|$) index.php [L]
-  RewriteRule ^$ index.php [L]
+  # La API (complemento, panel y portal) la atiende index.php; las páginas estáticas las sirve Apache.
+  RewriteRule ^(api/v1|admin/api|portal/api)(/|$) index.php [L]
 </IfModule>

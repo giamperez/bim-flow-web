@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi cuenta · BinFlow</title>
+<meta name="description" content="Compra, renueva y gestiona tu licencia de BinFlow para Revit.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+:root{
+  --bg:#070b12;--panel:#0e1521;--panel2:#121b2a;--ink:#e8eef7;--muted:#93a1b5;--line:#1d2a3d;
+  --brand:#3b9cff;--brand-ink:#04121f;--ok:#4ad08a;--ok-bg:#0f2b1e;--warn:#f5b84b;--warn-bg:#33260a;--bad:#ff8a7e;--bad-bg:#371511;--idle:#aab6c6;--idle-bg:#1a2535;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme:light){:root:not([data-theme=dark]){
+  --bg:#f3f6fa;--panel:#fff;--panel2:#f7f9fc;--ink:#142033;--muted:#5b6b80;--line:#dfe6ef;
+  --brand:#0b6bcb;--brand-ink:#fff;--ok:#14804a;--ok-bg:#e3f5ea;--warn:#a15c00;--warn-bg:#fff1d6;--bad:#b42318;--bad-bg:#fde7e4;--idle:#475467;--idle-bg:#eaecf0;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 28px rgba(16,24,40,.08);
+}}
+*{box-sizing:border-box}
+html{color-scheme:dark light}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+button,input{font:inherit;color:inherit}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+a{color:var(--brand)}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+
+header{border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(10px);position:sticky;top:0;z-index:5}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;text-decoration:none;color:var(--ink);font-size:17px}
+.logo svg{width:28px;height:28px}
+.who{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px}
+
+.btn{border:1px solid var(--line);background:var(--panel2);padding:9px 16px;border-radius:10px;cursor:pointer;font-weight:600}
+.btn:hover{filter:brightness(1.12)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.small{padding:6px 12px;font-size:13px}
+.btn.danger{color:var(--bad)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn:focus-visible,input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+label{display:grid;gap:6px;font-weight:600;font-size:13px}
+input{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;font-weight:400}
+.err{color:var(--bad);font-weight:600;min-height:1.3em;font-size:14px}
+
+.auth{display:grid;place-items:center;padding:56px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px}
+.auth .card{width:100%;max-width:410px;display:grid;gap:14px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--panel2);border-radius:10px;padding:4px;gap:4px}
+.tabs button{all:unset;text-align:center;padding:8px;border-radius:8px;cursor:pointer;font-weight:600;color:var(--muted)}
+.tabs button[aria-selected=true]{background:var(--brand);color:var(--brand-ink)}
+
+main{padding:30px 0 70px;display:grid;gap:22px}
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:22px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+.sec{display:grid;gap:14px}
+.sec>h2{font-size:19px}
+.badge{display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:700}
+.badge.active,.badge.paid{background:var(--ok-bg);color:var(--ok)}
+.badge.expiring,.badge.pending{background:var(--warn-bg);color:var(--warn)}
+.badge.expired,.badge.revoked{background:var(--bad-bg);color:var(--bad)}
+.badge.suspended,.badge.released,.badge.cancelled{background:var(--idle-bg);color:var(--idle)}
+.big{font-size:30px;font-weight:700;line-height:1.1}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.keybox{background:var(--panel2);border:1px dashed var(--line);border-radius:12px;padding:14px;font-size:18px;font-weight:700;letter-spacing:.05em;text-align:center;word-break:break-all;user-select:all}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+tr:last-child td{border-bottom:0}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.plan{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:20px;display:grid;gap:8px;align-content:start}
+.plan.best{border-color:var(--brand)}
+.plan .price{font-size:30px;font-weight:700}
+.plan .price small{font-size:14px;color:var(--muted);font-weight:500}
+.steps{margin:0;padding-left:20px;display:grid;gap:6px;color:var(--muted)}
+.steps b{color:var(--ink)}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px;z-index:20}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);width:100%;max-width:480px;padding:24px;display:grid;gap:14px}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:30;font-weight:600}
+.notice{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:12px 14px;font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="logo" href="/" aria-label="BinFlow, inicio">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b9cff"/><stop offset="1" stop-color="#7c5cff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g)"/><path d="M9 22V10h7a4 4 0 0 1 0 8H9m7 0h1.5a4 4 0 0 1 0 8H9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -2) scale(.95)"/></svg>
+      BinFlow
+    </a>
+    <div class="who hidden" id="who"><span id="whoName"></span><button class="btn small" id="logout">Salir</button></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- acceso -->
+  <section class="auth hidden" id="auth">
+    <form class="card" id="authForm">
+      <h1 id="authTitle">Accede a tu cuenta</h1>
+      <p class="muted" style="margin:0">Compra y gestiona tu licencia de BinFlow para Revit.</p>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tabLogin" aria-selected="true">Ingresar</button>
+        <button type="button" role="tab" id="tabRegister" aria-selected="false">Crear cuenta</button>
+      </div>
+      <label id="nameRow" class="hidden">Nombre o empresa<input id="name" autocomplete="organization" maxlength="120"></label>
+      <label>Correo<input id="email" type="email" autocomplete="email" required maxlength="160"></label>
+      <label>Contraseña<input id="password" type="password" autocomplete="current-password" required minlength="8" maxlength="200"></label>
+      <div class="err" id="authErr" role="alert"></div>
+      <button class="btn primary" type="submit" id="authBtn">Ingresar</button>
+    </form>
+  </section>
+
+  <!-- cuenta -->
+  <main class="hidden" id="account">
+    <div class="grid2">
+      <section class="card sec" id="licenseCard"></section>
+      <section class="card sec">
+        <h2>Cómo activarla</h2>
+        <ol class="steps">
+          <li>Instala BinFlow y abre <b>Revit</b> con un proyecto.</li>
+          <li>Ve a la pestaña <b>Pyramid</b> y pulsa <b>Exportar Planos</b>.</li>
+          <li>Pega tu <b>clave de licencia</b> y pulsa <b>Activar</b>.</li>
+        </ol>
+        <p class="muted" style="margin:0">Cada licencia permite un número de equipos según tu plan. Puedes liberar un equipo aquí para usarla en otro.</p>
+      </section>
+    </div>
+
+    <section class="card sec" id="comprar">
+      <h2 id="plansTitle">Elige tu plan</h2>
+      <div class="plans" id="plans"></div>
+    </section>
+
+    <section class="card sec">
+      <h2>Mis pedidos</h2>
+      <div id="orders"></div>
+    </section>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const DAY = 86400;
+const fmtDate = (s) => s ? new Date(s * 1000).toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+const fmtDateTime = (s) => s ? new Date(s * 1000).toLocaleString('es', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmtLeft = (sec) => {
+  if (sec <= 0) return 'vencida';
+  if (sec < 3600) return Math.max(1, Math.ceil(sec / 60)) + ' min';
+  if (sec < DAY) return Math.ceil(sec / 3600) + ' h';
+  return Math.ceil(sec / DAY) + ' días';
+};
+const money = (cents, cur) => (cents / 100).toLocaleString('es', { style: 'currency', currency: cur || 'USD' });
+const duration = (sec) => sec < 3600 ? Math.round(sec / 60) + ' minutos' : sec < DAY ? Math.round(sec / 3600) + ' horas' : sec % (30 * DAY) === 0 && sec < 365 * DAY ? (sec / (30 * DAY) === 1 ? '1 mes' : sec / (30 * DAY) + ' meses') : sec >= 365 * DAY ? (sec / (365 * DAY) === 1 ? '1 año' : (sec / (365 * DAY)).toFixed(1) + ' años') : Math.round(sec / DAY) + ' días';
+const STATE = { active: 'Activa', expiring: 'Por vencer', expired: 'Vencida', suspended: 'Suspendida', revoked: 'Revocada', released: 'Liberado' };
+const ORDER = { pending: 'Pendiente de pago', paid: 'Pagado', cancelled: 'Cancelado' };
+
+async function api(path, { method = 'GET', body } = {}) {
+  const res = await fetch('/portal/api' + path, {
+    method, credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'bimflow' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({ ok: false, error: 'Respuesta inválida del servidor.' }));
+  if (res.status === 401 && !path.startsWith('/login') && !path.startsWith('/register')) { showAuth(); throw new Error('Sesión expirada'); }
+  if (!res.ok || data.ok === false) throw new Error(data.error || 'Error ' + res.status);
+  return data;
+}
+function toast(msg) {
+  const el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = msg;
+  $('#toastRoot').append(el); setTimeout(() => el.remove(), 2800);
+}
+function modal(html) {
+  const root = document.createElement('div'); root.className = 'overlay';
+  root.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
+  const close = () => { root.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  root.addEventListener('mousedown', (e) => { if (e.target === root) close(); });
+  document.addEventListener('keydown', onKey);
+  $('#modalRoot').append(root);
+  const f = root.querySelector('button'); f && f.focus();
+  return { root, close, $: (s) => root.querySelector(s) };
+}
+function confirmDialog(message, okLabel, danger) {
+  return new Promise((resolve) => {
+    let done = false;
+    const m = modal(`<h3>Confirmar</h3><p style="margin:0">${esc(message)}</p><div class="actions"><button class="btn" id="no">Cancelar</button><button class="btn ${danger ? 'danger' : 'primary'}" id="yes">${esc(okLabel)}</button></div>`);
+    const finish = (v) => { if (done) return; done = true; m.close(); resolve(v); };
+    m.$('#no').onclick = () => finish(false); m.$('#yes').onclick = () => finish(true);
+    m.root.addEventListener('mousedown', (e) => { if (e.target === m.root) finish(false); });
+  });
+}
+
+/* ---------- acceso ---------- */
+let mode = 'login';
+function setMode(m) {
+  mode = m;
+  $('#tabLogin').setAttribute('aria-selected', m === 'login'); $('#tabRegister').setAttribute('aria-selected', m === 'register');
+  $('#nameRow').classList.toggle('hidden', m === 'login');
+  $('#authBtn').textContent = m === 'login' ? 'Ingresar' : 'Crear cuenta';
+  $('#password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  $('#authErr').textContent = '';
+}
+$('#tabLogin').onclick = () => setMode('login'); $('#tabRegister').onclick = () => setMode('register');
+function showAuth() { $('#account').classList.add('hidden'); $('#who').classList.add('hidden'); $('#auth').classList.remove('hidden'); }
+$('#authForm').addEventListener('submit', async (e) => {
+  e.preventDefault(); $('#authErr').textContent = ''; $('#authBtn').disabled = true;
+  try {
+    const body = { email: $('#email').value, password: $('#password').value };
+    if (mode === 'register') body.name = $('#name').value;
+    const r = await api(mode === 'login' ? '/login' : '/register', { method: 'POST', body });
+    $('#password').value = ''; enter(r.customer);
+  } catch (err) { $('#authErr').textContent = err.message; }
+  finally { $('#authBtn').disabled = false; }
+});
+$('#logout').onclick = async () => { await api('/logout', { method: 'POST' }).catch(() => {}); showAuth(); };
+
+/* ---------- cuenta ---------- */
+let plansCache = [];
+async function enter(customer) {
+  $('#auth').classList.add('hidden'); $('#account').classList.remove('hidden');
+  $('#who').classList.remove('hidden'); $('#whoName').textContent = customer.name;
+  await Promise.all([loadLicense(), loadPlans(), loadOrders()]);
+  if (location.hash === '#comprar') $('#comprar').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function loadLicense() {
+  const { license: l } = await api('/license');
+  const card = $('#licenseCard');
+  if (!l) {
+    $('#plansTitle').textContent = 'Elige tu plan';
+    card.innerHTML = `<h2>Mi licencia</h2><div class="notice">Aún no tienes una licencia. Elige un plan para empezar.</div>
+      <p class="muted" style="margin:0">Al confirmarse tu pago recibirás aquí tu clave.</p>`;
+    return;
+  }
+  $('#plansTitle').textContent = 'Renovar o ampliar';
+  const active = l.devices.filter((d) => d.status === 'active');
+  card.innerHTML = `
+    <div class="row" style="justify-content:space-between;align-items:center"><h2>Mi licencia</h2><span class="badge ${esc(l.state)}">${esc(STATE[l.state] || l.state)}</span></div>
+    <div><div class="big">${esc(fmtLeft(l.secondsLeft))}</div><div class="muted">restante · vence el ${esc(fmtDateTime(l.expiresAt))}</div></div>
+    ${l.state === 'expiring' ? '<div class="notice">Tu licencia está por vencer. Renuévala abajo para no interrumpir tu trabajo.</div>' : ''}
+    ${l.state === 'suspended' || l.state === 'revoked' ? '<div class="notice">Esta licencia fue bloqueada. Contacta a soporte.</div>' : ''}
+    <dl class="kv"><dt>Plan</dt><dd>${esc(l.plan)}</dd><dt>Equipos</dt><dd>${active.length} de ${l.maxDevices} en uso</dd></dl>
+    ${l.key ? `<div><div class="muted" style="margin-bottom:6px;font-weight:600">Tu clave de licencia</div>
+      <div class="keybox mono" id="keybox" data-key="${esc(l.key)}">••••• ••••• ••••• •••••</div>
+      <div class="row" style="margin-top:10px"><button class="btn small" id="showKey">Mostrar</button><button class="btn small" id="copyKey">Copiar</button><button class="btn small danger" id="regen">Generar otra</button></div></div>` : '<div class="muted">La clave de esta licencia no está disponible en el portal. Contacta a soporte.</div>'}
+    <div><div class="muted" style="margin:6px 0;font-weight:600">Mis equipos</div>
+    ${active.length ? `<div class="tablewrap"><table><thead><tr><th>Equipo</th><th>Revit</th><th>Último uso</th><th></th></tr></thead><tbody>
+      ${active.map((d) => `<tr><td>${esc(d.name) || 'Sin nombre'}</td><td>${esc(d.revitVersion)}</td><td>${esc(fmtDateTime(d.lastSeen))}</td><td><button class="btn small" data-rel="${esc(d.id)}">Liberar</button></td></tr>`).join('')}
+    </tbody></table></div>` : '<div class="empty">Aún no la has activado en ningún equipo.</div>'}</div>`;
+  const kb = $('#keybox');
+  if (kb) {
+    let shown = false;
+    $('#showKey').onclick = () => { shown = !shown; kb.textContent = shown ? kb.dataset.key : '••••• ••••• ••••• •••••'; $('#showKey').textContent = shown ? 'Ocultar' : 'Mostrar'; };
+    $('#copyKey').onclick = async () => { try { await navigator.clipboard.writeText(kb.dataset.key); toast('Clave copiada'); } catch { toast('Pulsa Mostrar y copia la clave'); } };
+    $('#regen').onclick = async () => {
+      if (!await confirmDialog('La clave actual dejará de funcionar y tendrás que activar de nuevo con la nueva en cada equipo. ¿Continuar?', 'Generar otra', true)) return;
+      try { await api('/license/regenerate-key', { method: 'POST' }); toast('Nueva clave generada'); loadLicense(); } catch (err) { toast(err.message); }
+    };
+  }
+  card.querySelectorAll('[data-rel]').forEach((b) => b.onclick = async () => {
+    if (!await confirmDialog('¿Liberar este equipo? Podrás activar la licencia en otro.', 'Liberar', false)) return;
+    try { await api(`/license/devices/${b.dataset.rel}/release`, { method: 'POST' }); toast('Equipo liberado'); loadLicense(); } catch (err) { toast(err.message); }
+  });
+}
+
+async function loadPlans() {
+  const { plans, paymentMode } = await api('/plans');
+  plansCache = plans;
+  $('#plans').innerHTML = plans.length ? plans.map((p, i) => `
+    <div class="plan ${i === plans.length - 1 && plans.length > 1 ? 'best' : ''}">
+      <h3>${esc(p.name)}</h3>
+      <div class="price">${p.priceCents === 0 ? 'Gratis' : money(p.priceCents, p.currency)} <small>/ ${esc(duration(p.seconds))}</small></div>
+      <div class="muted">${esc(p.description)}</div>
+      <div class="muted">Hasta <b>${p.devices}</b> equipo${p.devices === 1 ? '' : 's'}</div>
+      <button class="btn primary" data-plan="${esc(p.id)}">${paymentMode === 'test' ? 'Probar compra' : 'Comprar'}</button>
+    </div>`).join('') : '<div class="empty">Los planes no están disponibles por ahora.</div>';
+  $('#plans').querySelectorAll('[data-plan]').forEach((b) => b.onclick = () => buy(b.dataset.plan));
+}
+
+async function buy(planId) {
+  const plan = plansCache.find((p) => p.id === planId);
+  if (!await confirmDialog(`Vas a pedir el plan ${plan.name} (${plan.priceCents === 0 ? 'gratis' : money(plan.priceCents, plan.currency)}).`, 'Continuar', false)) return;
+  try {
+    const r = await api('/orders', { method: 'POST', body: { planId } });
+    if (r.paid) {
+      const m = modal(`<h3>¡Listo!</h3><p style="margin:0">Tu pago se confirmó y tu licencia ya está activa. Pedido <b class="mono">${esc(r.order.code)}</b>.</p><div class="actions"><button class="btn primary" id="ok">Ver mi licencia</button></div>`);
+      m.$('#ok').onclick = () => { m.close(); $('#licenseCard').scrollIntoView({ behavior: 'smooth' }); };
+    } else {
+      const m = modal(`<h3>Pedido creado</h3>
+        <p style="margin:0">Código de pedido: <b class="mono" style="font-size:20px">${esc(r.order.code)}</b></p>
+        <div class="notice" style="font-weight:500">${esc(r.instructions)}</div>
+        <p class="muted" style="margin:0">Total: <b>${esc(money(r.order.amountCents, r.order.currency))}</b>. Tu licencia aparecerá aquí cuando se confirme el pago.</p>
+        <div class="actions"><button class="btn primary" id="ok">Entendido</button></div>`);
+      m.$('#ok').onclick = m.close;
+    }
+    await Promise.all([loadLicense(), loadOrders()]);
+  } catch (err) { toast(err.message); }
+}
+
+async function loadOrders() {
+  const { orders } = await api('/orders');
+  $('#orders').innerHTML = orders.length ? `<div class="tablewrap"><table><thead><tr><th>Código</th><th>Plan</th><th>Monto</th><th>Tipo</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>
+    ${orders.map((o) => `<tr><td class="mono"><b>${esc(o.code)}</b></td><td>${esc(o.planName)}</td><td>${esc(money(o.amountCents, o.currency))}</td><td>${o.kind === 'renew' ? 'Renovación' : 'Nueva'}</td><td><span class="badge ${esc(o.status)}">${esc(ORDER[o.status] || o.status)}</span></td><td>${esc(fmtDateTime(o.createdAt))}</td></tr>`).join('')}
+  </tbody></table></div>` : '<div class="empty">Todavía no has hecho pedidos.</div>';
+}
+
+/* ---------- inicio ---------- */
+(async () => {
+  try { const r = await api('/me'); await enter(r.customer); }
+  catch { showAuth(); if (location.hash === '#comprar') setMode('register'); }
+})();
+})();
+</script>
+</body>
+</html>

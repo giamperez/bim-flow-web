@@ -1,0 +1,227 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  /* Deep electric navy surfaces */
+  --color-ink: #040a1f;
+  --color-ink-2: #0a1838;
+  --color-ink-3: #10224d;
+  --color-line: rgb(125 180 255 / 0.13);
+  /* Brand: cyan → electric blue */
+  --color-accent: #22d3ee;
+  --color-accent-2: #3b82f6;
+  --color-glow: #a5f3fc;
+  /* Text on navy (AA contrast) */
+  --color-muted: #a9bcd9;
+  --color-subtle: #8197bd;
+  --color-faint: #60769e;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: #e6edf7;
+    overflow-x: hidden;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-ink);
+  }
+}
+
+/* Subtle blueprint grid, faded at the edges */
+.grid-fade {
+  background-size: 64px 64px;
+  background-image:
+    linear-gradient(to right, rgb(56 189 248 / 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(56 189 248 / 0.08) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%);
+}
+
+/* Brand button: cyan → electric blue with glow */
+.btn-brand {
+  position: relative;
+  color: var(--color-ink);
+  background: linear-gradient(120deg, #22d3ee 0%, #38bdf8 45%, #3b82f6 100%);
+  box-shadow: 0 10px 40px -10px rgb(34 211 238 / 0.65), inset 0 1px 0 rgb(255 255 255 / 0.4);
+  transition: transform 0.25s, box-shadow 0.25s, filter 0.25s;
+}
+.btn-brand:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 16px 50px -10px rgb(59 130 246 / 0.75), inset 0 1px 0 rgb(255 255 255 / 0.5);
+}
+.btn-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.55) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: sheen 3.2s ease-in-out infinite;
+}
+@keyframes sheen {
+  0%, 55% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+
+.text-brand {
+  background: linear-gradient(110deg, #22d3ee, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Section surfaces */
+.surface-glow {
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 0%, rgb(59 130 246 / 0.16), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, rgb(34 211 238 / 0.1), transparent 70%),
+    var(--color-ink);
+}
+.surface-raised {
+  background: linear-gradient(180deg, var(--color-ink-2) 0%, var(--color-ink) 100%);
+}
+
+/* Cursor-following light (vars set from JS) */
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+  background: radial-gradient(360px circle at var(--x, 50%) var(--y, 50%), rgb(34 211 238 / 0.1), transparent 70%);
+}
+.spotlight:hover::before {
+  opacity: 1;
+}
+
+/* Animated gradient on the hero accent word */
+.shimmer-text {
+  background: linear-gradient(100deg, #22d3ee 0%, #3b82f6 30%, #a5f3fc 50%, #3b82f6 70%, #22d3ee 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 6s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%, 100% { background-position: 100% 0; }
+  50% { background-position: 0% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .shimmer-text,
+  .btn-sheen,
+  .animate-ping,
+  .animate-pulse {
+    animation: none;
+  }
+}
+
+/* Real photos, toned to the brand: grayscale + navy/blue duotone */
+/* No `position` here: each usage sets relative/absolute with Tailwind
+   (unlayered CSS would otherwise override the utility classes). */
+.photo {
+  overflow: hidden;
+  isolation: isolate;
+}
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.08) brightness(0.9);
+}
+.photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, #0a1838 0%, #1e40af 55%, #0e7490 100%);
+  mix-blend-mode: color;
+  opacity: 0.85;
+}
+.photo-shade::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(4 10 31 / 0.35) 0%, rgb(4 10 31 / 0.85) 100%);
+}
+/* Brand HD images in natural color: never stretched (object-cover), smooth hover zoom */
+.media {
+  overflow: hidden;
+  isolation: isolate;
+}
+.media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1), filter 0.6s;
+}
+.media-hover:hover img {
+  transform: scale(1.05);
+  filter: brightness(1.06) saturate(1.05);
+}
+@media (prefers-reduced-motion: reduce) {
+  .media img { transition: none; }
+  .media-hover:hover img { transform: none; }
+}
+
+/* Plan sheet inverted into a blueprint (dark paper, light lines) */
+.photo-blueprint img {
+  filter: grayscale(1) invert(1) contrast(1.25) brightness(0.8);
+}
+
+/* Very slow zoom so the photo feels alive without distracting */
+.ken-burns {
+  animation: kenburns 24s ease-in-out infinite alternate;
+  transform-origin: 60% 40%;
+}
+@keyframes kenburns {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ken-burns { animation: none; }
+}
+
+/* Painfully slow manual progress bar */
+.manual-crawl {
+  width: 4%;
+  animation: crawl 14s cubic-bezier(0.3, 0, 0.2, 1) infinite;
+}
+@keyframes crawl {
+  0% { width: 4%; }
+  85% { width: 14%; }
+  100% { width: 14%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .manual-crawl { animation: none; width: 12%; }
+}
+
+/* Scanner sweeping over a plan */
+.scan-line {
+  top: 0;
+  animation: scan 3.6s ease-in-out infinite;
+}
+@keyframes scan {
+  0%, 100% { transform: translateY(-20%); }
+  50% { transform: translateY(560%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scan-line { animation: none; opacity: 0; }
+}

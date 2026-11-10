@@ -259,12 +259,12 @@ function xp_session_valid(?string $cookie): bool
 }
 
 // ---------------------------------------------------------------- shapes
-function xp_license_public(array $l): array
+function xp_license_public(array $l, int $expiringDays = 30): array
 {
     $t = time();
     $expires = (int) $l['expires_at'];
     $state = $l['status'] !== 'active' ? $l['status']
-        : ($expires <= $t ? 'expired' : ($expires - $t <= 30 * XP_DAY ? 'expiring' : 'active'));
+        : ($expires <= $t ? 'expired' : ($expires - $t <= $expiringDays * XP_DAY ? 'expiring' : 'active'));
     $out = [
         'id' => $l['id'],
         'keyHint' => $l['key_hint'],
@@ -297,6 +297,7 @@ function xp_uuid(): string
 
 require_once __DIR__ . '/license_api.php';
 require_once __DIR__ . '/admin_api.php';
+require_once __DIR__ . '/portal_api.php';
 
 // ---------------------------------------------------------------- dispatch
 function xp_dispatch(): void
@@ -308,8 +309,10 @@ function xp_dispatch(): void
             xp_route_license($method, $m[1]);
         } elseif (preg_match('#/admin/api/(.*?)/?$#', $path, $m)) {
             xp_route_admin($method, $m[1]);
+        } elseif (preg_match('#/portal/api/(.*?)/?$#', $path, $m)) {
+            xp_route_portal($method, $m[1]);
         } elseif (rtrim($path, '/') === '' || $path === '/index.php') {
-            header('Location: admin/');
+            header('Location: portal/');
             exit;
         }
         xp_json(404, ['ok' => false, 'error' => 'not_found']);

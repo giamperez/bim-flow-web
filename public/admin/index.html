@@ -129,6 +129,7 @@ tbody tr.click:hover{background:var(--idle-bg)}
     <nav class="nav" aria-label="Secciones">
       <button data-view="dashboard">Resumen</button>
       <button data-view="licenses">Licencias</button>
+      <button data-view="orders">Pedidos <span id="pendingBadge" class="badge expiring hidden"></span></button>
       <button data-view="events">Actividad</button>
     </nav>
     <div class="spacer"></div>
@@ -149,12 +150,23 @@ const DAY = 86400;
 const fmtDate = (s) => s ? new Date(s * 1000).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const fmtDateTime = (s) => s ? new Date(s * 1000).toLocaleString('es', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const daysLeft = (s) => Math.ceil((s - Date.now() / 1000) / DAY);
+const fmtLeft = (s) => {
+  const sec = Math.floor(s - Date.now() / 1000);
+  if (sec <= 0) return 'vencida';
+  if (sec < 3600) return Math.max(1, Math.ceil(sec / 60)) + ' min';
+  if (sec < DAY) return Math.ceil(sec / 3600) + ' h';
+  return Math.ceil(sec / DAY) + ' días';
+};
+const fmtMoney = (cents, cur) => (cents / 100).toLocaleString('es', { style: 'currency', currency: cur || 'USD' });
+const ORDER_LABEL = { pending: 'Pendiente', paid: 'Pagado', cancelled: 'Cancelado' };
+const orderBadge = (st) => `<span class="badge ${st === 'paid' ? 'active' : st === 'pending' ? 'expiring' : 'suspended'}">${esc(ORDER_LABEL[st] || st)}</span>`;
 const STATE_LABEL = { active: 'Activa', expiring: 'Por vencer', expired: 'Vencida', suspended: 'Suspendida', revoked: 'Revocada', released: 'Liberado' };
 const EVENT_LABEL = {
   activated: 'Equipo activado', released_by_device: 'Liberado desde el equipo', released_self_service: 'Liberado por el cliente',
   device_limit: 'Límite de equipos', bad_key: 'Clave inválida', admin_created: 'Licencia creada', admin_updated: 'Licencia editada',
   admin_extended: 'Licencia extendida', admin_key_regenerated: 'Clave regenerada', admin_deleted: 'Licencia eliminada',
-  admin_released_device: 'Equipo liberado (admin)', admin_login: 'Inicio de sesión', admin_login_failed: 'Intento de acceso fallido',
+  admin_released_device: 'Equipo liberado (admin)', order_created: 'Pedido creado', order_paid: 'Pedido pagado', order_cancelled: 'Pedido cancelado',
+  portal_register: 'Cliente registrado', demo_request: 'Solicitud de demo', released_by_owner: 'Equipo liberado por el cliente', owner_key_regenerated: 'Clave regenerada por el cliente', portal_login_failed: 'Login de cliente fallido', admin_login: 'Inicio de sesión', admin_login_failed: 'Intento de acceso fallido',
 };
 const badge = (state) => `<span class="badge ${esc(state)}">${esc(STATE_LABEL[state] || state)}</span>`;
 
@@ -193,12 +205,13 @@ function askDays() {
   return new Promise((resolve) => {
     let settled = false;
     const m = openModal(`<h3>Extender licencia</h3>
-      <p class="muted">Los días se suman a la fecha de vencimiento actual, o a hoy si ya venció.</p>
-      <label>Días <input id="days" type="number" min="1" max="3650" value="365"></label>
+      <p class="muted">Se suma a la fecha de vencimiento actual, o a ahora si ya venció.</p>
+      <div class="row"><label>Cantidad <input id="amount" type="number" min="1" value="365"></label>
+      <label>Unidad <select id="unit"><option value="days">Días</option><option value="minutes">Minutos</option></select></label></div>
       <div class="actions"><button class="btn" id="no">Cancelar</button><button class="btn primary" id="yes">Extender</button></div>`,
       { onClose: () => { if (!settled) resolve(null); } });
     m.$('#no').onclick = () => m.close();
-    m.$('#yes').onclick = () => { settled = true; const v = Number(m.$('#days').value); m.close(); resolve(v > 0 ? v : null); };
+    m.$('#yes').onclick = () => { settled = true; const v = Number(m.$('#amount').value); const u = m.$('#unit').value; m.close(); resolve(v > 0 ? { [u]: v } : null); };
   });
 }
 
@@ -242,7 +255,7 @@ $('#loginForm').addEventListener('submit', async (e) => {
 $('#logout').onclick = async () => { await api('/logout', { method: 'POST' }).catch(() => {}); showLogin(); };
 
 /* ---------- router ---------- */
-const state = { view: 'dashboard', lic: { q: '', state: '', page: 0 }, ev: { type: '', page: 0 } };
+const state = { view: 'dashboard', lic: { q: '', state: '', page: 0 }, ev: { type: '', page: 0 }, ord: { status: 'pending', page: 0 } };
 document.querySelectorAll('.nav button').forEach((b) => b.addEventListener('click', () => { state.view = b.dataset.view; route(); }));
 
 async function route() {
@@ -252,6 +265,7 @@ async function route() {
   try {
     if (state.view === 'dashboard') await renderDashboard(view);
     else if (state.view === 'licenses') await renderLicenses(view);
+    else if (state.view === 'orders') await renderOrders(view);
     else await renderEvents(view);
   } catch (err) { if (err.message !== 'Sesión expirada') view.innerHTML = `<p class="err">${esc(err.message)}</p>`; }
 }
@@ -268,11 +282,12 @@ async function renderDashboard(view) {
       <div class="card"><div class="l">Vencidas</div><div class="n">${L.expired}</div></div>
       <div class="card"><div class="l">Suspendidas / revocadas</div><div class="n">${L.blocked}</div></div>
       <div class="card"><div class="l">Equipos activos</div><div class="n">${s.devicesActive}</div></div>
+      <div class="card"><div class="l">Pedidos por aprobar</div><div class="n">${s.pendingOrders ?? 0}</div></div>
       <div class="card"><div class="l">Alertas (7 días)</div><div class="n">${s.suspiciousLast7d}</div></div>
     </div>
     <div class="panel"><h3>Próximos vencimientos</h3>
-      ${s.nextToExpire.length ? `<div class="tablewrap"><table><thead><tr><th>Cliente</th><th>Clave</th><th>Vence</th><th>Días</th></tr></thead><tbody>
-        ${s.nextToExpire.map((r) => `<tr class="click" data-id="${esc(r.id)}"><td>${esc(r.customerName)}</td><td class="mono">…${esc(r.keyHint)}</td><td>${fmtDate(r.expiresAt)}</td><td>${daysLeft(r.expiresAt)}</td></tr>`).join('')}
+      ${s.nextToExpire.length ? `<div class="tablewrap"><table><thead><tr><th>Cliente</th><th>Clave</th><th>Vence</th><th>Restante</th></tr></thead><tbody>
+        ${s.nextToExpire.map((r) => `<tr class="click" data-id="${esc(r.id)}"><td>${esc(r.customerName)}</td><td class="mono">…${esc(r.keyHint)}</td><td>${fmtDate(r.expiresAt)}</td><td>${fmtLeft(r.expiresAt)}</td></tr>`).join('')}
       </tbody></table></div>` : '<div class="empty">Sin licencias activas todavía.</div>'}
     </div>`;
   $('#newLic').onclick = () => openCreate();
@@ -333,17 +348,28 @@ function openCreate() {
           <button type="button" class="btn small" data-d="365">1 año</button>
         </div>
       </div>
+      <div class="row">
+        <label>Prueba corta: minutos <input name="minutes" type="number" min="1" max="525600" placeholder="vacío = usar la fecha"></label>
+        <div class="fixed" style="display:flex;gap:6px;align-items:end">
+          <button type="button" class="btn small" data-m="2">2 min</button>
+          <button type="button" class="btn small" data-m="10">10 min</button>
+          <button type="button" class="btn small" data-m="60">1 hora</button>
+        </div>
+      </div>
       <label>Notas internas <textarea name="notes" maxlength="1000"></textarea></label>
       <div class="err" id="e" role="alert"></div>
       <div class="actions"><button type="button" class="btn" id="cancel">Cancelar</button><button class="btn primary" type="submit">Crear licencia</button></div>
     </form>`);
+  m.root.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => { m.$('[name=minutes]').value = b.dataset.m; });
   m.root.querySelectorAll('[data-d]').forEach((b) => b.onclick = () => { m.$('[name=expires]').value = toDateInput(Date.now() / 1000 + Number(b.dataset.d) * DAY); });
   m.$('#cancel').onclick = m.close;
   m.$('#f').onsubmit = async (e) => {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target));
     try {
-      const r = await api('/licenses', { method: 'POST', body: { ...fd, maxDevices: Number(fd.maxDevices), expiresAt: endOfDay(fd.expires) } });
+      const body = { ...fd, maxDevices: Number(fd.maxDevices) };
+      if (Number(fd.minutes) > 0) body.minutes = Number(fd.minutes); else body.expiresAt = endOfDay(fd.expires);
+      const r = await api('/licenses', { method: 'POST', body });
       m.close(); showKey(r.key, 'Licencia creada'); route();
     } catch (err) { m.$('#e').textContent = err.message; }
   };
@@ -362,7 +388,7 @@ async function openDetail(id) {
       <dl class="kv">
         <dt>Clave</dt><dd class="mono">XPBM-…${esc(l.keyHint)}</dd>
         <dt>Plan</dt><dd>${esc(l.plan)}</dd>
-        <dt>Vence</dt><dd>${fmtDate(l.expiresAt)} <span class="muted">(${daysLeft(l.expiresAt) > 0 ? daysLeft(l.expiresAt) + ' días' : 'vencida'})</span></dd>
+        <dt>Vence</dt><dd>${fmtDateTime(l.expiresAt)} <span class="muted">(${fmtLeft(l.expiresAt)})</span></dd>
         <dt>Equipos</dt><dd>${d.devices.filter((x) => x.status === 'active').length} de ${l.maxDevices}</dd>
         <dt>Creada</dt><dd>${fmtDateTime(l.createdAt)}</dd>
       </dl>
@@ -390,8 +416,8 @@ async function openDetail(id) {
     q('#aClose').onclick = m.close;
     q('#aEdit').onclick = () => openEdit(l, () => act(async () => {}, 'Guardado'));
     q('#aExt').onclick = async () => {
-      const days = await askDays();
-      if (days) act(() => api(`/licenses/${id}/extend`, { method: 'POST', body: { days } }), 'Licencia extendida');
+      const amount = await askDays();
+      if (amount) act(() => api(`/licenses/${id}/extend`, { method: 'POST', body: amount }), 'Licencia extendida');
     };
     const ask = async (msg, fn, opts) => { if (await confirmDialog(msg, opts)) fn(); };
     q('#aSusp')?.addEventListener('click', () => ask('¿Suspender? El cliente perderá acceso en su próxima validación.', () => act(() => api('/licenses/' + id, { method: 'PATCH', body: { status: 'suspended' } }), 'Suspendida'), { okLabel: 'Suspender' }));
@@ -433,6 +459,41 @@ function openEdit(l, done) {
   };
 }
 
+/* ---------- orders ---------- */
+async function renderOrders(view) {
+  const f = state.ord;
+  const data = await api('/orders?' + new URLSearchParams({ status: f.status, page: f.page }));
+  view.innerHTML = `
+    <div class="head"><h2>Pedidos</h2></div>
+    <div class="toolbar">
+      <select id="ost" aria-label="Estado del pedido">
+        ${[['pending', 'Pendientes de pago'], ['paid', 'Pagados'], ['cancelled', 'Cancelados'], ['', 'Todos']].map(([v, l]) => `<option value="${v}" ${f.status === v ? 'selected' : ''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div class="panel">
+      ${data.orders.length ? `<div class="tablewrap"><table><thead><tr><th>Código</th><th>Cliente</th><th>Plan</th><th>Monto</th><th>Tipo</th><th>Estado</th><th>Creado</th><th></th></tr></thead><tbody>
+        ${data.orders.map((o) => `<tr><td class="mono"><b>${esc(o.code)}</b></td>
+          <td>${esc(o.customerName)}<div class="muted">${esc(o.customerEmail)}</div></td>
+          <td>${esc(o.planName)}</td><td>${fmtMoney(o.amountCents, o.currency)}</td><td>${o.kind === 'renew' ? 'Renovación' : 'Nueva'}</td>
+          <td>${orderBadge(o.status)}</td><td>${fmtDateTime(o.createdAt)}</td>
+          <td>${o.status === 'pending' ? `<button class="btn small primary" data-ap="${esc(o.id)}">Aprobar pago</button> <button class="btn small" data-cx="${esc(o.id)}">Cancelar</button>` : (o.licenseId ? `<button class="btn small" data-lic="${esc(o.licenseId)}">Ver licencia</button>` : '')}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="empty">No hay pedidos en este estado.</div>'}
+      <div class="pager"><button class="btn small" id="prev" ${f.page === 0 ? 'disabled' : ''}>Anterior</button><button class="btn small" id="next" ${data.hasMore ? '' : 'disabled'}>Siguiente</button></div>
+    </div>`;
+  $('#ost').onchange = (e) => { f.status = e.target.value; f.page = 0; route(); };
+  $('#prev').onclick = () => { f.page--; route(); };
+  $('#next').onclick = () => { f.page++; route(); };
+  view.querySelectorAll('[data-lic]').forEach((b) => b.onclick = () => openDetail(b.dataset.lic));
+  view.querySelectorAll('[data-ap]').forEach((b) => b.onclick = async () => {
+    if (!await confirmDialog('Confirme que recibió el pago. Se creará o renovará la licencia del cliente.', { okLabel: 'Aprobar pago' })) return;
+    try { await api(`/orders/${b.dataset.ap}/approve`, { method: 'POST' }); toast('Pago aprobado'); route(); } catch (err) { toast(err.message); }
+  });
+  view.querySelectorAll('[data-cx]').forEach((b) => b.onclick = async () => {
+    if (!await confirmDialog('¿Cancelar este pedido?', { danger: true, okLabel: 'Cancelar pedido' })) return;
+    try { await api(`/orders/${b.dataset.cx}/cancel`, { method: 'POST' }); toast('Pedido cancelado'); route(); } catch (err) { toast(err.message); }
+  });
+}
+
 /* ---------- events ---------- */
 async function renderEvents(view) {
   const f = state.ev;
@@ -459,8 +520,17 @@ async function renderEvents(view) {
 }
 
 /* ---------- boot ---------- */
+async function refreshPending() {
+  try {
+    const st = await api('/stats');
+    const el = $('#pendingBadge');
+    el.textContent = st.pendingOrders || '';
+    el.classList.toggle('hidden', !st.pendingOrders);
+  } catch { /* sin insignia */ }
+}
+setInterval(() => { if (!$('#app').classList.contains('hidden')) refreshPending(); }, 60000);
 (async () => {
-  try { await api('/me'); showApp(); route(); } catch { showLogin(); }
+  try { await api('/me'); showApp(); route(); refreshPending(); } catch { showLogin(); }
 })();
 })();
 </script>
