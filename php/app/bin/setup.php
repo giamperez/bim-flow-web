@@ -44,9 +44,44 @@ function ask(string $label, string $envName, string $default = '', bool $secret 
 
 function write_config(string $file, array $config): void
 {
-    $php = "<?php\n// Generado por app/bin/setup.php. Contiene secretos: no lo suba a git ni lo exponga.\nreturn " . var_export($config, true) . ";\n";
+    $php = "<?php
+// Generado por app/bin/setup.php. Contiene secretos: no lo suba a git ni lo exponga.
+return " . var_export($config, true) . ";
+";
     file_put_contents($file, $php);
     @chmod($file, 0600);
+    allow_web_user_to_read($file);
+}
+
+/**
+ * En hosting con usuarios separados (Cloudways) el asistente corre como un usuario y PHP-FPM como el dueño de la
+ * aplicación. Se le concede lectura solo a ese usuario (ACL); si no hay ACL, se usa el grupo del sitio.
+ */
+function allow_web_user_to_read(string $file): void
+{
+    $site = dirname($file, 2);
+    if (basename($site) !== 'public_html' && is_dir($site . '/public_html')) {
+        $site .= '/public_html';
+    }
+    $uid = @fileowner($site);
+    if ($uid === false || $uid === @fileowner($file)) {
+        return; // mismo usuario: nada que hacer
+    }
+    $owner = function_exists('posix_getpwuid') ? (posix_getpwuid($uid)['name'] ?? '') : '';
+    if ($owner === '' && function_exists('shell_exec')) {
+        $owner = trim((string) @shell_exec('stat -c %U ' . escapeshellarg($site) . ' 2>/dev/null'));
+    }
+    if ($owner !== '' && function_exists('exec')) {
+        @exec('setfacl -m u:' . escapeshellarg($owner) . ':r ' . escapeshellarg($file) . ' 2>/dev/null', $out, $rc);
+        if ($rc === 0) {
+            return;
+        }
+    }
+    @chgrp($file, (int) @filegroup($site));
+    @chmod($file, 0640);
+    echo "Aviso: si el sitio responde con error 500, concédale lectura a '" . ($owner ?: 'el usuario de la aplicación') . "':
+  setfacl -m u:" . ($owner ?: 'USUARIO') . ":r $file
+";
 }
 
 function public_key_info(string $pem): array
