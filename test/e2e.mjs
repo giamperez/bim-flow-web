@@ -1,15 +1,26 @@
 // Prueba de integración contra `wrangler dev` (puerto 8787) con D1 local.
-//   Terminal 1: npm run db:migrate:local && npm run dev
-//   Terminal 2: node test/e2e.mjs
+//   Worker:  npm run db:migrate:local && npm run dev   (otra terminal: node test/e2e.mjs)
+//   PHP:     BASE_URL=http://127.0.0.1:8788 ADMIN_PASSWORD=... PUBLIC_KEY_X=... PUBLIC_KEY_Y=... node test/e2e.mjs
 import { readFileSync } from 'node:fs';
 import { webcrypto as crypto } from 'node:crypto';
 
 const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:8787';
-const vars = Object.fromEntries(
-  readFileSync('.dev.vars', 'utf8').split('\n').filter(Boolean).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).replace(/^'|'$/g, '')]),
-);
-const priv = JSON.parse(vars.SIGNING_KEY_JWK);
-const pub = await crypto.subtle.importKey('jwk', { kty: priv.kty, crv: priv.crv, x: priv.x, y: priv.y }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+// Credenciales: variables de entorno (servidor PHP o remoto) o, por defecto, .dev.vars del Worker local.
+//   ADMIN_PASSWORD, PUBLIC_KEY_X, PUBLIC_KEY_Y (base64 estándar, salida de `php app/bin/setup.php --public-key`)
+let adminPassword = process.env.ADMIN_PASSWORD;
+let jwkPub;
+if (process.env.PUBLIC_KEY_X && process.env.PUBLIC_KEY_Y) {
+  const b64u = (b) => Buffer.from(b, 'base64').toString('base64url');
+  jwkPub = { kty: 'EC', crv: 'P-256', x: b64u(process.env.PUBLIC_KEY_X), y: b64u(process.env.PUBLIC_KEY_Y) };
+} else {
+  const vars = Object.fromEntries(
+    readFileSync('.dev.vars', 'utf8').split('\n').filter(Boolean).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).replace(/^'|'$/g, '')]),
+  );
+  const priv = JSON.parse(vars.SIGNING_KEY_JWK);
+  jwkPub = { kty: priv.kty, crv: priv.crv, x: priv.x, y: priv.y };
+  adminPassword ??= vars.ADMIN_PASSWORD;
+}
+const pub = await crypto.subtle.importKey('jwk', jwkPub, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
 
 let cookie = '';
 let pass = 0;
@@ -22,7 +33,7 @@ const tag = (s) => console.log('\n' + s);
 
 async function call(method, path, body, { ip, admin = false, csrf = true } = {}) {
   const headers = { 'Content-Type': 'application/json' };
-  if (ip) headers['CF-Connecting-IP'] = ip;
+  if (ip) { headers['CF-Connecting-IP'] = ip; headers['X-Forwarded-For'] = ip; }
   if (admin && cookie) headers.Cookie = cookie;
   if (admin && csrf) headers['X-Requested-With'] = 'bimflow';
   const res = await fetch(BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -44,11 +55,11 @@ async function tokenOk(token, deviceHash) {
 tag('Admin: autenticación');
 check('sin sesión → 401', (await A('GET', '/stats')).status === 401);
 check('login incorrecto → 401', (await call('POST', '/admin/api/login', { password: 'x' }, { ip: '10.0.0.1' })).status === 401);
-const login = await call('POST', '/admin/api/login', { password: vars.ADMIN_PASSWORD }, { ip: '10.0.0.1' });
+const login = await call('POST', '/admin/api/login', { password: adminPassword }, { ip: '10.0.0.1' });
 check('login correcto', login.status === 200 && cookie.startsWith('bf_admin='));
 check('mutación sin cabecera CSRF → 403', (await A('POST', '/licenses', { customerName: 'x', days: 5 }, { csrf: false })).status === 403);
 for (let i = 0; i < 5; i++) await call('POST', '/admin/api/login', { password: 'bad' }, { ip: '10.9.9.9' });
-check('bloqueo tras 5 logins fallidos → 429', (await call('POST', '/admin/api/login', { password: vars.ADMIN_PASSWORD }, { ip: '10.9.9.9' })).status === 429);
+check('bloqueo tras 5 logins fallidos → 429', (await call('POST', '/admin/api/login', { password: adminPassword }, { ip: '10.9.9.9' })).status === 429);
 
 tag('Licencias: creación y validaciones');
 check('nombre obligatorio', (await A('POST', '/licenses', { customerName: '', days: 30 })).status === 400);

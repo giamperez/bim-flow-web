@@ -4,3 +4,5 @@ node_modules/
 .env
 dist/
 *.log
+php/app/config.php
+php/app/data/
