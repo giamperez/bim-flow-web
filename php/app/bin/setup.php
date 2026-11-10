@@ -7,6 +7,7 @@
 //   php app/bin/setup.php --payment-mode=test|manual   test aprueba los pedidos al instante (solo pruebas)
 //   php app/bin/setup.php --setup-mail       configura el correo saliente (SMTP) para verificar correos y recuperar contraseñas
 //   php app/bin/setup.php --test-mail=a@b.c  envía un correo de prueba
+//   php app/bin/setup.php --ip-header=HTTP_CF_CONNECTING_IP|HTTP_X_FORWARDED_FOR|REMOTE_ADDR   de dónde tomar la IP del cliente
 //   php app/bin/setup.php --public-url=https://dominio   URL base que usan los enlaces de los correos
 //   php app/bin/setup.php --admin-email=a@b.c   correo al que avisar de pedidos por aprobar
 //   php app/bin/setup.php --force            REGENERA la clave de firma (invalida todas las DLL ya repartidas)
