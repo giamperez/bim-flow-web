@@ -57,9 +57,9 @@ const tokenLast = linkToken(sentTo(emailA, 'Confirma tu correo')[2], 'verify');
 check('verificar con el enlace', (await por('none', 'POST', '/verify', { token: tokenLast })).status === 200);
 check('el mismo enlace otra vez sigue dando OK (ya verificado)', (await por('none', 'POST', '/verify', { token: tokenLast })).json?.alreadyVerified === true);
 check('me: ahora está verificado', (await por('a', 'GET', '/me')).json.customer.verified === true);
-const trial = await por('a', 'POST', '/orders', { planId: 'prueba' }, { ip: '9.8.0.1' });
-check('ya puede activar la prueba gratis', trial.status === 201 && trial.json.paid === true);
-check('recibe el aviso "prueba activa"', sentTo(emailA, 'prueba gratis de BIM FLOW está activa').length === 1);
+const trial = await por('a', 'GET', '/license');
+check('el mes gratuito se activa al confirmar correo', trial.status === 200 && trial.json.license.isTrial && trial.json.license.dailyLimit === 1);
+check('recibe el aviso del mes gratuito', sentTo(emailA, 'mes gratuito de BIM FLOW está activo').length === 1);
 
 tag('Olvidé mi contraseña');
 const before = mails().length;

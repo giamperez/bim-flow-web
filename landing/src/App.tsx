@@ -72,7 +72,7 @@ const before = ['Abrir cada lámina', 'Configurar la impresora', 'Ajustar el for
 
 const faqs: { q: string; a: string; link?: { href: string; label: string } }[] = [
   { q: '¿Qué formatos y versiones de Revit soporta?', a: 'Exporta a PDF, DWG, DXF, PNG, JPG y TIFF, y hay una versión del plugin para Revit 2023, 2024, 2025, 2026 y 2027.' },
-  { q: '¿Cómo funciona la prueba gratuita?', a: 'Creas tu cuenta, activas la clave en Revit y tienes todas las funciones durante 7 días, sin tarjeta. Es una prueba por cuenta y por equipo.' },
+  { q: '¿Cómo funciona el mes gratuito?', a: 'Creas tu cuenta y confirmas tu correo. Recibes 30 días para una computadora, con una exportación al día y sin tarjeta. El cupo se renueva a medianoche de Perú. Es una prueba por cuenta y por equipo.' },
   { q: '¿Mis archivos salen de mi equipo?', a: 'No. La exportación ocurre en tu computadora. Lo único que viaja a internet es la validación de la licencia.' },
   { q: '¿Necesito internet para trabajar?', a: 'Solo para activar y para verificar la licencia. Si te quedas sin conexión puedes seguir trabajando hasta 7 días.' },
   { q: '¿En cuántos equipos puedo usarla?', a: 'Según tu plan. Desde tu cuenta puedes liberar un equipo para usarla en otro cuando cambies de computadora.' },

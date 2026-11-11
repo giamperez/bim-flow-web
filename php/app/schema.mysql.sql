@@ -57,6 +57,10 @@ CREATE TABLE IF NOT EXISTS customers (
   email_norm    VARCHAR(160) NULL,
   email_verified_at BIGINT NULL,
   session_version INT NOT NULL DEFAULT 0,
+  phone VARCHAR(24) NOT NULL DEFAULT '',
+  company VARCHAR(120) NOT NULL DEFAULT '',
+  billing_json TEXT NULL,
+  free_started_at BIGINT NULL,
   UNIQUE KEY uq_customers_email (email),
   KEY idx_customers_norm (email_norm)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -101,4 +105,33 @@ CREATE TABLE IF NOT EXISTS email_tokens (
   created_at  BIGINT NOT NULL,
   UNIQUE KEY uq_email_tokens_hash (token_hash),
   KEY idx_email_tokens_customer (customer_id, type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS export_usage (
+  license_id CHAR(36) NOT NULL,
+  usage_day CHAR(10) NOT NULL,
+  device_hash CHAR(64) NOT NULL,
+  request_id CHAR(36) NOT NULL,
+  created_at BIGINT NOT NULL,
+  PRIMARY KEY (license_id, usage_day),
+  UNIQUE KEY uq_export_device_day (device_hash, usage_day)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS payment_customers (
+  customer_id CHAR(36) NOT NULL,
+  environment VARCHAR(4) NOT NULL,
+  provider_id VARCHAR(100) NOT NULL,
+  PRIMARY KEY (customer_id, environment)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS payment_methods (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  customer_id CHAR(36) NOT NULL,
+  environment VARCHAR(4) NOT NULL,
+  provider_id VARCHAR(100) NOT NULL,
+  brand VARCHAR(24) NOT NULL,
+  last_four CHAR(4) NOT NULL,
+  created_at BIGINT NOT NULL,
+  UNIQUE KEY uq_payment_provider (provider_id, environment),
+  KEY idx_payment_customer (customer_id, environment)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

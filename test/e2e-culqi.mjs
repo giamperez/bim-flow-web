@@ -70,9 +70,9 @@ try {
 
   tag('Compra con tarjeta aceptada');
   const o1 = await por('a', 'POST', '/orders', { planId: 'mensual' });
-  check('crear el pedido devuelve los datos del pago, sin instrucciones manuales', o1.status === 201 && o1.json.paid === false && o1.json.payment.amount === 2500 && o1.json.payment.currency === 'PEN' && o1.json.payment.orderCode === o1.json.order.code && o1.json.instructions === '', JSON.stringify(o1.json));
+  check('crear el pedido devuelve los datos del pago, sin instrucciones manuales', o1.status === 201 && o1.json.paid === false && o1.json.payment.amount === 1990 && o1.json.payment.currency === 'PEN' && o1.json.payment.orderCode === o1.json.order.code && o1.json.instructions === '', JSON.stringify(o1.json));
   const code1 = o1.json.order.code;
-  check('sin licencia hasta pagar', (await por('a', 'GET', '/license')).json.license === null);
+  check('solo mes gratuito antes de pagar', (await por('a', 'GET', '/license')).json.license.isTrial === true);
   check('token con formato inválido → 400', (await por('a', 'POST', `/orders/${code1}/pay`, { token: 'x' })).status === 400);
   check('sin sesión → 401', (await por('b', 'POST', `/orders/${code1}/pay`, { token: 'tkn_test_ok1234' })).status === 401);
   // el navegador intenta falsificar el monto: se ignora
@@ -84,7 +84,7 @@ try {
   check('dos pagos simultáneos del mismo pedido: uno cobra y el otro se rechaza', statuses[0] === 200 && statuses[1] === 409, JSON.stringify(statuses));
   check('Culqi recibió UN solo cargo', charges.length === 1, String(charges.length));
   const c = charges[0];
-  check('el cargo usa el monto y la moneda de la BASE DE DATOS (no los del navegador)', c.amount === 2500 && c.currency_code === 'PEN', JSON.stringify(c));
+  check('el cargo usa el monto y la moneda de la BASE DE DATOS (no los del navegador)', c.amount === 1990 && c.currency_code === 'PEN', JSON.stringify(c));
   check('el cargo lleva el correo, el token, la descripción y el código del pedido', c.email === `cli.${stamp}@example.test` && c.source_id === 'tkn_test_ok1234' && c.description.includes(code1) && c.metadata.order_code === code1, JSON.stringify(c));
   check('se autentica con la llave privada', c.auth === `Bearer ${SECRET}`);
   const L = (await por('a', 'GET', '/license')).json.license;
@@ -94,9 +94,9 @@ try {
   check('pagar otra vez el mismo pedido → 409', (await por('a', 'POST', `/orders/${code1}/pay`, { token: 'tkn_test_ok1234' })).status === 409);
 
   tag('Tarjeta rechazada: se puede reintentar sin duplicar');
-  const o2 = await por('a', 'POST', '/orders', { planId: 'anual' });
+  const o2 = await por('a', 'POST', '/orders', { planId: 'equipo' });
   const code2 = o2.json.order.code;
-  check('pedido de renovación anual a S/ 250 (tramo Fundadores, 10 mensualidades)', o2.json.payment.amount === 25000 && o2.json.order.kind === 'renew', JSON.stringify(o2.json.payment));
+  check('pedido Equipo a S/ 49.90', o2.json.payment.amount === 4990 && o2.json.order.kind === 'renew', JSON.stringify(o2.json.payment));
   const before = charges.length;
   const declined = await por('a', 'POST', `/orders/${code2}/pay`, { token: 'tkn_test_declined' });
   check('rechazo → 402 con el mensaje del banco', declined.status === 402 && declined.json.error.includes('rechazada'), JSON.stringify(declined.json));
@@ -105,7 +105,7 @@ try {
   check('reintento con otra tarjeta → pagado', retry.status === 200 && retry.json.paid === true);
   check('Culqi vio exactamente 2 cargos nuevos (1 rechazado + 1 aceptado)', charges.length === before + 2, String(charges.length - before));
   const L2 = (await por('a', 'GET', '/license')).json.license;
-  check('la renovación suma 365 días y amplía a 2 equipos', L2.maxDevices === 2 && L2.expiresAt - L.expiresAt === 365 * 86400);
+  check('cambio a Equipo inicia 30 días para 3 computadoras', L2.maxDevices === 3 && L2.secondsLeft > 29 * 86400 && L2.secondsLeft <= 30 * 86400);
 
   tag('Corte de conexión: no se vuelve a cobrar');
   const o3 = await por('a', 'POST', '/orders', { planId: 'mensual' });
@@ -143,8 +143,9 @@ try {
   check('tope de intentos de pago por pedido (5 por hora) → 429', last === 429, String(last));
   check('la llave PRIVADA no aparece en ninguna respuesta del servidor', !bodies.some((b) => b.includes(SECRET) || b.includes('sk_test_')));
   check('la prueba gratis sigue siendo gratuita y no pasa por Culqi', await (async () => {
-    const t = await por('b', 'POST', '/orders', { planId: 'prueba' }, { ip: '9.7.0.1' });
-    return t.status === 201 && t.json.paid === true && t.json.payment === null;
+    const before = charges.length;
+    const t = await por('b', 'GET', '/license');
+    return t.status === 200 && t.json.license.isTrial && t.json.license.dailyLimit === 1 && charges.length === before;
   })());
 } finally {
   fake.close();

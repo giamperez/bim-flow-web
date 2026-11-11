@@ -100,6 +100,13 @@ function xp_culqi_charge(array $order, array $customer, string $token): array
         'description' => mb_substr('BIM FLOW · ' . $order['plan_name'] . ' · ' . $order['code'], 0, 80),
         'metadata' => ['order_code' => (string) $order['code'], 'customer_id' => (string) $customer['id']],
     ];
+    $billing = json_decode($customer['billing_json'] ?? '{}', true) ?: [];
+    $names = preg_split('/\s+/', trim($customer['name']), 2);
+    if (!empty($billing['address']) && !empty($billing['city']) && !empty($customer['phone']) && count($names) === 2) {
+        $body['antifraud_details'] = ['first_name' => $names[0], 'last_name' => $names[1],
+            'address' => $billing['address'], 'address_city' => $billing['city'], 'country_code' => $billing['country'] ?: 'PE',
+            'phone_number' => preg_replace('/\D/', '', $customer['phone'])];
+    }
     [$status, $res] = xp_http_json(
         'POST',
         xp_culqi_api_base() . '/charges',

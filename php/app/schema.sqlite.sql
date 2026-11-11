@@ -54,7 +54,11 @@ CREATE TABLE IF NOT EXISTS customers (
   created_at    INTEGER NOT NULL,
   email_norm    TEXT,
   email_verified_at INTEGER,
-  session_version INTEGER NOT NULL DEFAULT 0
+  session_version INTEGER NOT NULL DEFAULT 0,
+  phone TEXT NOT NULL DEFAULT '',
+  company TEXT NOT NULL DEFAULT '',
+  billing_json TEXT,
+  free_started_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_customers_norm ON customers (email_norm);
 
@@ -97,3 +101,30 @@ CREATE TABLE IF NOT EXISTS email_tokens (
   created_at  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_email_tokens_customer ON email_tokens (customer_id, type);
+
+CREATE TABLE IF NOT EXISTS export_usage (
+  license_id TEXT NOT NULL,
+  usage_day TEXT NOT NULL,
+  device_hash TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (license_id, usage_day),
+  UNIQUE (device_hash, usage_day)
+);
+CREATE TABLE IF NOT EXISTS payment_customers (
+  customer_id TEXT NOT NULL,
+  environment TEXT NOT NULL,
+  provider_id TEXT NOT NULL,
+  PRIMARY KEY (customer_id, environment)
+);
+CREATE TABLE IF NOT EXISTS payment_methods (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL,
+  environment TEXT NOT NULL,
+  provider_id TEXT NOT NULL,
+  brand TEXT NOT NULL,
+  last_four TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  UNIQUE (provider_id, environment)
+);
+CREATE INDEX IF NOT EXISTS idx_payment_customer ON payment_methods (customer_id, environment);

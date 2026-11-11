@@ -9,9 +9,10 @@ type Data = { plans: Plan[]; tier: Tier | null };
 const fallback: Data = {
   tier: null,
   plans: [
-    { id: 'prueba', name: 'Prueba gratis', trial: true, seconds: 7 * 86400, devices: 1, priceCents: 0, currency: 'PEN', description: 'Todas las funciones, sin tarjeta.' },
-    { id: 'mensual', name: 'Mensual', trial: false, seconds: 30 * 86400, devices: 1, priceCents: 2500, currency: 'PEN', description: 'Un equipo. Renovación mes a mes.' },
-    { id: 'anual', name: 'Anual', trial: false, seconds: 365 * 86400, devices: 2, priceCents: 25000, currency: 'PEN', description: 'Dos equipos. El mejor precio.' },
+    { id: 'prueba', name: 'Gratuito', trial: true, seconds: 30 * 86400, devices: 1, priceCents: 0, currency: 'PEN', description: 'Un mes para empezar. Una exportación al día.' },
+    { id: 'mensual', name: 'Individual', trial: false, seconds: 30 * 86400, devices: 1, priceCents: 1990, currency: 'PEN', description: 'Tu espacio de trabajo, sin límite diario de exportaciones.' },
+    { id: 'equipo', name: 'Equipo', trial: false, seconds: 30 * 86400, devices: 3, priceCents: 4990, currency: 'PEN', description: 'Una licencia para tres computadoras.' },
+    { id: 'estudio', name: 'Estudio', trial: false, seconds: 30 * 86400, devices: 7, priceCents: 9990, currency: 'PEN', description: 'Una licencia para siete computadoras.' },
   ],
 };
 
@@ -56,9 +57,9 @@ export function Pricing() {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {plans.map((p) => {
-          const best = p.id === 'anual';
+          const best = p.id === 'equipo';
           const perMonth = p.id === 'anual' ? p.priceCents / 12 : null;
           return (
             <div
@@ -73,8 +74,8 @@ export function Pricing() {
               {p.trial && (
                 <span className="absolute -top-3 left-7 rounded-full bg-brand-teal px-3 py-1 text-[11px] font-bold tracking-wider text-navy uppercase">Sin tarjeta</span>
               )}
-              <h3 className="text-lg font-bold text-navy">{p.trial ? `Prueba de ${duration(p.seconds)}` : p.name}</h3>
-              <p className="mt-4 flex items-baseline gap-2">
+              <h3 className="text-lg font-bold text-navy">{p.name}</h3>
+              <p className="mt-4 flex flex-wrap items-baseline gap-2">
                 <span className="text-4xl font-extrabold tracking-tight text-navy">{p.priceCents === 0 ? 'Gratis' : money(p.priceCents, p.currency)}</span>
                 {p.priceCents > 0 && <span className="text-sm text-slate-500">/ {duration(p.seconds)}</span>}
               </p>
@@ -83,6 +84,7 @@ export function Pricing() {
               <ul className="mt-6 grid gap-2.5 text-sm text-slate-700">
                 {[
                   `Hasta ${p.devices} equipo${p.devices === 1 ? '' : 's'}`,
+                  p.trial ? '1 exportación diaria por 30 días' : 'Sin límite diario de exportaciones',
                   'PDF, DWG, DXF, PNG, JPG y TIFF',
                   'Revit 2023 a 2027',
                   'Reintento de fallidos y reportes',

@@ -31,6 +31,7 @@ cp -r "$HERE/app/." "$APPDIR/" \
   && cp "$HERE/public/index.php" "$HERE/public/.htaccess" "$WEB/" \
   && cp "$ROOT/public/admin/index.html" "$WEB/admin/index.html" \
   && cp "$ROOT/public/portal/index.html" "$WEB/portal/index.html" \
+  && cp "$ROOT/public/portal/portal.css" "$ROOT/public/portal/.htaccess" "$WEB/portal/" \
   && cp "$ROOT/public/instalacion/index.html" "$WEB/instalacion/index.html" \
   && cp -r "$ROOT/site/." "$WEB/" \
   || { echo "No se pudieron copiar los archivos (permisos). Revise que el usuario pueda escribir en $WEB"; exit 1; }

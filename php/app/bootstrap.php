@@ -301,6 +301,8 @@ require_once __DIR__ . '/admin_api.php';
 require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/culqi.php';
 require_once __DIR__ . '/portal_api.php';
+require_once __DIR__ . '/customer_settings.php';
+require_once __DIR__ . '/payment_methods.php';
 
 // ---------------------------------------------------------------- dispatch
 function xp_dispatch(): void

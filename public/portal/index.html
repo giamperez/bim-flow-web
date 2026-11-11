@@ -9,7 +9,6 @@
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   /* Manual de marca: azul #005bae, turquesa #00afb7, fondo #e7f3f7, azul oscuro #031a35 */
@@ -147,6 +146,7 @@ body>.wrap{max-width:1240px;padding:0 32px}
 @media(max-width:680px){header .wrap{height:70px;padding:0 20px}.logo img{height:32px}body>.wrap{padding:0 20px}#auth{grid-template-columns:1fr;margin:24px 0;border-radius:18px}.auth-story{padding:24px 26px}.story-kicker{margin-bottom:12px;font-size:9px}.auth-story h2{font-size:24px;max-width:none}.story-copy,.model-visual,.story-bottom{display:none}#auth .card{padding:28px 26px;gap:18px}#auth h1{font-size:25px}.portal-footer{font-size:9px;flex-wrap:wrap}.auth{padding:28px 0;min-height:calc(100svh - 70px)}.auth .card{padding:26px}.who{gap:8px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
 </style>
+<link rel="stylesheet" href="/portal/portal.css?v=20261111-2">
 </head>
 <body>
 
@@ -168,9 +168,9 @@ body>.wrap{max-width:1240px;padding:0 32px}
   <!-- acceso -->
   <section class="auth hidden" id="auth">
     <aside class="auth-story" aria-label="BIM FLOW para Revit">
-      <p class="story-kicker">Tu flujo de trabajo, mejor conectado</p>
-      <h2>Menos tareas repetitivas.<br><span>Más tiempo para diseñar.</span></h2>
-      <p class="story-copy">Lleva tus proyectos de Revit al siguiente nivel. Tus herramientas, tu licencia y tus equipos, en un solo lugar.</p>
+      <p class="story-kicker">Diseñado para quienes construyen</p>
+      <h2>Tu talento diseña.<br><span>BIM FLOW hace el resto.</span></h2>
+      <p class="story-copy">De Revit a tu próxima entrega. Exporta tus planos, conecta tus equipos y mantén todo en movimiento.</p>
       <svg class="model-visual" viewBox="0 0 400 240" fill="none" aria-hidden="true">
         <defs>
           <pattern id="planGrid" width="24" height="24" patternTransform="matrix(1 .5 -1 .5 200 0)" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" stroke="#75b4cf" stroke-opacity=".12" stroke-width=".7"/></pattern>
@@ -189,12 +189,12 @@ body>.wrap{max-width:1240px;padding:0 32px}
         <circle cx="207" cy="24" r="3" fill="#8aebeb"/><circle cx="298" cy="70" r="3" fill="#8aebeb"/><circle cx="116" cy="158" r="3" fill="#8aebeb"/>
         <path d="M304 46h39m-20-20v40" stroke="#65d7db" stroke-opacity=".4"/>
       </svg>
-      <div class="story-bottom"><span class="trial-number">07</span><div><strong>Días para descubrir BIM FLOW</strong><p>Prueba gratis. Sin tarjeta de crédito.</p></div></div>
+      <div class="story-bottom"><span class="trial-number">30</span><div><strong>Días para descubrir tu nuevo flujo</strong><p>Una exportación al día. Sin tarjeta.</p></div></div>
     </aside>
     <form class="card" id="authForm">
       <p class="eyebrow" style="margin:0">Mi cuenta</p>
-      <h1 id="authTitle">Empieza tu prueba gratis</h1>
-      <p class="muted" style="margin:0" id="authLead">Crea tu cuenta y activa BIM FLOW en Revit durante 7 días. Sin tarjeta.</p>
+      <h1 id="authTitle" tabindex="-1">Crea tu espacio de trabajo</h1>
+      <p class="muted" style="margin:0" id="authLead">Empieza con un mes gratuito y una exportación diaria. Sin tarjeta de crédito.</p>
       <div class="tabs" role="tablist" aria-label="Acceso a tu cuenta">
         <button type="button" role="tab" id="tabRegister" aria-selected="true" aria-controls="authFields">Crear cuenta</button>
         <button type="button" role="tab" id="tabLogin" aria-selected="false" aria-controls="authFields" tabindex="-1">Ya tengo cuenta</button>
@@ -249,31 +249,75 @@ body>.wrap{max-width:1240px;padding:0 32px}
 
   <!-- cuenta -->
   <main class="hidden" id="account">
-    <div class="notice hidden" id="verifyBanner" role="status"></div>
-    <div class="grid2">
-      <section class="card sec" id="licenseCard"></section>
-      <section class="card sec">
-        <h2>Cómo activarla</h2>
-        <ol class="steps">
-          <li>Instala el plugin y abre <b>Revit</b> con un proyecto.</li>
-          <li>Ve a la pestaña <b>Pyramid</b> y pulsa <b>Exportar Planos</b>.</li>
-          <li>Pega tu <b>clave de licencia</b> y pulsa <b>Activar</b>.</li>
-        </ol>
-        <p class="muted" style="margin:0">Cada licencia permite un número de equipos según tu plan. Puedes liberar un equipo desde aquí para usarla en otro.</p>
-        <div id="downloadBox"></div>
-      </section>
+    <aside class="sidebar" id="sidebar" aria-label="Navegación de tu cuenta">
+      <a href="/" class="sidebar-logo"><img src="/brand/logo-header.png" alt="BIM FLOW by Vertex" width="760" height="226"></a>
+      <p class="nav-caption">Espacio de trabajo</p>
+      <nav class="side-nav" aria-label="Panel de usuario">
+        <a href="#resumen" data-nav="resumen" aria-current="page"><i data-icon="grid"></i>Resumen</a>
+        <a href="#licencia" data-nav="licencia"><i data-icon="key"></i>Licencia y equipos</a>
+        <a href="#comprar" data-nav="comprar"><i data-icon="layers"></i>Planes y precios</a>
+        <a href="#pedidos" data-nav="pedidos"><i data-icon="receipt"></i>Mis pedidos</a>
+        <a href="#facturacion" data-nav="facturacion"><i data-icon="card"></i>Facturación y pagos</a>
+      </nav>
+      <p class="nav-caption" style="margin-top:28px">Tu cuenta</p>
+      <nav class="side-nav" aria-label="Configuración">
+        <a href="#perfil" data-nav="perfil"><i data-icon="user"></i>Mi perfil</a>
+        <a href="#ayuda" data-nav="ayuda"><i data-icon="help"></i>Ayuda e instalación</a>
+      </nav>
+      <div class="side-space"></div>
+      <div class="side-plan"><strong id="sidePlan">Tu espacio BIM FLOW</strong><p id="sidePlanNote">Todo listo para tu próxima entrega.</p><a class="btn primary" href="#comprar">Explorar planes <i data-icon="arrow"></i></a></div>
+      <div class="side-person"><div class="avatar" data-initials>BF</div><div class="person-copy"><strong data-customer-name>Mi cuenta</strong><span data-customer-email></span></div><button class="icon-button" id="sideLogout" aria-label="Cerrar sesión" title="Cerrar sesión"><i data-icon="logout"></i></button></div>
+    </aside>
+    <div class="workspace">
+      <header class="workspace-top">
+        <div style="display:flex;align-items:center;gap:12px"><button class="icon-button mobile-menu" id="menuToggle" aria-label="Abrir navegación" aria-expanded="false" aria-controls="sidebar"><i data-icon="menu"></i></button><div class="breadcrumbs"><span>Mi espacio</span><span aria-hidden="true">/</span><b id="viewBreadcrumb">Resumen</b></div></div>
+        <div class="top-actions"><span class="top-status">BIM FLOW para Revit</span><a class="btn" href="/">Ir al sitio <i data-icon="external"></i></a><div class="avatar" data-initials aria-hidden="true">BF</div></div>
+      </header>
+      <div class="workspace-content">
+        <div class="notice hidden" id="verifyBanner" role="status" style="margin-bottom:20px"></div>
+        <div class="error-banner hidden" id="loadError" role="alert"></div>
+        <section class="view-panel" data-view="resumen" aria-labelledby="overviewTitle">
+          <div class="page-heading"><div><div class="page-label">Tu espacio BIM FLOW</div><h1 id="overviewTitle">Bienvenido a tu próximo proyecto</h1><p>Tu licencia, tus equipos y tus entregas. Todo en un lugar.</p></div><span class="badge active">Mi cuenta</span></div>
+          <div class="welcome-banner"><div><p class="eyebrow">Menos pasos. Mejores entregas.</p><h2>Que tus ideas avancen.<br>Del resto nos encargamos.</h2><p>Prepara tu siguiente exportación en Revit y mantén el control de tu licencia desde aquí.</p><a href="#licencia" class="btn">Ver mi licencia <i data-icon="arrow"></i></a></div><div id="heroModel" aria-hidden="true"></div></div>
+          <div class="stats">
+            <div class="card stat"><div class="stat-top">Mi plan <i data-icon="layers"></i></div><div class="stat-value" id="summaryPlan">—</div><div class="stat-note" id="summaryPlanNote">Cargando tu licencia…</div></div>
+            <div class="card stat"><div class="stat-top">Computadoras conectadas <i data-icon="monitor"></i></div><div class="stat-value" id="summaryDevices">—</div><div class="stat-note">Gestiona dónde usas tu licencia</div></div>
+            <div class="card stat"><div class="stat-top">Exportaciones <i data-icon="export"></i></div><div class="stat-value" id="summaryUsage">—</div><div class="stat-note" id="summaryUsageNote">Disponibilidad de tu plan</div></div>
+          </div>
+          <div class="overview-grid"><section class="card"><div class="section-title"><h2>Tu licencia, a la mano</h2><a href="#licencia">Ver detalle →</a></div><div id="overviewLicense" aria-live="polite"></div></section><section class="card"><div class="section-title"><h2>Empieza en tres pasos</h2><i data-icon="spark"></i></div><ol class="step-list"><li><span class="step-count">01</span><div><b>Descarga e instala</b>Prepara BIM FLOW para tu versión de Revit.</div></li><li><span class="step-count">02</span><div><b>Activa tu computadora</b>Copia tu clave desde Licencia y equipos.</div></li><li><span class="step-count">03</span><div><b>Haz tu primera entrega</b>Abre un proyecto y elige Exportar Planos.</div></li></ol><a class="btn" href="#ayuda" style="width:100%;margin-top:22px">Ver guía de instalación <i data-icon="arrow"></i></a></section></div>
+        </section>
+        <section class="view-panel hidden" data-view="licencia" aria-labelledby="licenseTitle">
+          <div class="page-heading"><div><div class="page-label">Tu herramienta, donde la necesitas</div><h1 id="licenseTitle">Licencia y equipos</h1><p>Activa BIM FLOW y administra las computadoras de tu plan.</p></div><a class="btn" href="#comprar">Cambiar de plan <i data-icon="arrow"></i></a></div>
+          <div class="grid2"><section class="card sec" id="licenseCard"></section><section class="card sec"><h2>De aquí a tu próxima entrega</h2><ol class="steps"><li>Descarga el instalador y cierra Revit antes de instalar.</li><li>Abre un proyecto. En la pestaña <b>Pyramid</b>, elige <b>Exportar Planos</b>.</li><li>Pega tu <b>clave de licencia</b> y pulsa <b>Activar</b>.</li></ol><div class="notice info">Una licencia puede conectarse a 1, 3 o 7 computadoras, según tu plan. Libera un equipo para trasladarla a otro.</div><div id="downloadBox"></div></section></div>
+        </section>
+        <section class="view-panel hidden" data-view="comprar" aria-labelledby="plansHeading">
+          <div class="page-heading"><div><div class="page-label">Crece a tu ritmo</div><h1 id="plansHeading">Un plan para cada forma de trabajar</h1><p>Precios en soles. Una licencia compartida entre las computadoras de tu plan.</p></div></div>
+          <div class="notice hidden" id="paymentEnvironment" role="status"></div>
+          <section class="card sec" id="comprar"><div class="section-title" style="margin:0"><h2 id="plansTitle">Elige tu plan</h2><span class="badge suspended">Pago por 30 días</span></div><div id="tierBox" class="hidden"></div><div class="plans" id="plans"></div><p class="plan-meta">Renovación manual. Solo se realiza un cobro cuando confirmas una compra.</p></section>
+          <div class="notice info">Al cambiar a otro plan, comienza un nuevo período de 30 días. Al renovar el mismo plan de pago, conservas los días que te quedan. Si reduces la cantidad de computadoras, se conservan las usadas más recientemente.</div>
+        </section>
+        <section class="view-panel hidden" data-view="pedidos" aria-labelledby="ordersTitle">
+          <div class="page-heading"><div><div class="page-label">Todo en orden</div><h1 id="ordersTitle">Mis pedidos</h1><p>Consulta tus compras, completa un pago pendiente o revisa su estado.</p></div><button class="btn" id="refreshOrders"><i data-icon="refresh"></i>Actualizar</button></div>
+          <section class="card sec"><h2>Historial de pedidos</h2><div id="orders"></div><p class="card-description" style="margin:0;font-size:11px">Un pago en verificación requiere revisión. Evita repetirlo hasta conocer el resultado.</p></section>
+        </section>
+        <section class="view-panel hidden" data-view="facturacion" aria-labelledby="billingTitle">
+          <div class="page-heading"><div><div class="page-label">Tus datos, siempre a mano</div><h1 id="billingTitle">Facturación y pagos</h1><p>Guarda tus datos de facturación y elige cómo pagar tu próxima compra.</p></div></div>
+          <div class="billing-grid"><form class="card form-stack" id="billingForm"><div class="section-title" style="margin:0"><h2>Datos de facturación</h2><i data-icon="receipt"></i></div><p class="card-description">Estos datos identifican al titular o empresa de tus compras.</p><div class="form-grid">
+            <label class="full">Nombre o razón social<input id="billingName" maxlength="160" autocomplete="organization" placeholder="Nombre del titular o empresa"></label>
+            <label>Tipo de documento<select id="billingDocumentType"><option value="">Seleccionar</option><option>DNI</option><option>RUC</option><option>CE</option></select></label><label>Número de documento<input id="billingDocument" maxlength="20" placeholder="Número de documento"></label>
+            <label class="full">Dirección<input id="billingAddress" maxlength="200" autocomplete="street-address" placeholder="Calle, número y distrito"></label><label>Ciudad<input id="billingCity" maxlength="80" autocomplete="address-level2" placeholder="Lima"></label><label>País (código de 2 letras)<input id="billingCountry" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" autocomplete="country" placeholder="PE"></label>
+          </div><div class="err" id="billingErr" role="alert"></div><div class="form-actions"><button class="btn primary" type="submit">Guardar datos</button><p>Puedes actualizarlos cuando lo necesites.</p></div></form>
+          <section class="card sec"><div class="section-title" style="margin:0"><h2>Tarjetas guardadas</h2><i data-icon="card"></i></div><p class="card-description">Agiliza tus próximas compras. Tú decides cuándo pagar.</p><div id="cards" class="cards-list"></div><button class="btn" id="addCard"><i data-icon="plus"></i>Añadir tarjeta</button><div class="secure-note"><i data-icon="lock"></i><span>Culqi custodia tu tarjeta. BIM FLOW conserva una referencia, la marca y los últimos cuatro dígitos. Guardarla no activa cobros automáticos.</span></div></section></div>
+        </section>
+        <section class="view-panel hidden" data-view="perfil" aria-labelledby="profileTitle">
+          <div class="page-heading"><div><div class="page-label">Un espacio a tu nombre</div><h1 id="profileTitle">Mi perfil</h1><p>Actualiza tus datos y mantén segura tu cuenta.</p></div></div>
+          <div class="profile-grid"><form class="card form-stack" id="profileForm"><div class="profile-identity"><div class="avatar" data-initials>BF</div><div><h2 data-customer-name>Mi cuenta</h2><p data-customer-email></p></div></div><div class="form-grid"><label class="full">Nombre y apellido<input id="profileName" required maxlength="120" autocomplete="name"></label><label class="full">Correo electrónico<input id="profileEmail" type="email" required maxlength="160" autocomplete="email"></label><label>Empresa o estudio<input id="profileCompany" maxlength="120" autocomplete="organization" placeholder="Opcional"></label><label>Teléfono<input id="profilePhone" type="tel" maxlength="24" autocomplete="tel" placeholder="+51 999 999 999"></label><label class="full hidden" id="emailPasswordRow">Contraseña actual para cambiar el correo<input id="emailPassword" type="password" autocomplete="current-password" maxlength="200"></label></div><div class="err" id="profileErr" role="alert"></div><div class="form-actions"><button class="btn primary" type="submit">Guardar cambios</button></div></form>
+          <form class="card form-stack security-card" id="securityForm"><div class="section-title" style="margin:0"><h2>Contraseña y seguridad</h2><i data-icon="lock"></i></div><p class="card-description">Al cambiar tu contraseña se cierran las otras sesiones de tu cuenta.</p><label>Contraseña actual<input id="currentPassword" type="password" required autocomplete="current-password" maxlength="200"></label><label>Nueva contraseña<input id="newPassword" type="password" required autocomplete="new-password" minlength="8" maxlength="200" placeholder="Mínimo 8 caracteres"></label><label>Repite la nueva contraseña<input id="confirmPassword" type="password" required autocomplete="new-password" minlength="8" maxlength="200"></label><div class="err" id="securityErr" role="alert"></div><button class="btn" type="submit">Actualizar contraseña</button></form></div>
+        </section>
+        <section class="view-panel hidden" data-view="ayuda" aria-labelledby="helpTitle"><div class="page-heading"><div><div class="page-label">Te acompañamos en el proceso</div><h1 id="helpTitle">Listo para empezar</h1><p>Todo lo que necesitas para trabajar con BIM FLOW en Revit.</p></div></div><div class="help-grid"><section class="card"><i data-icon="download"></i><h3>Instala BIM FLOW</h3><p>Consulta la guía paso a paso para instalar el complemento en Revit 2023–2027.</p><a class="btn primary" href="/instalacion/">Ver guía de instalación <i data-icon="external"></i></a></section><section class="card"><i data-icon="monitor"></i><h3>Cambia de computadora</h3><p>En Licencia y equipos, libera una computadora y activa la nueva con tu misma clave.</p><a class="btn" href="#licencia">Gestionar equipos <i data-icon="arrow"></i></a></section><section class="card"><i data-icon="export"></i><h3>Tu mes gratuito</h3><p>Dispones de una exportación por día durante 30 días en una computadora. El cupo se renueva a medianoche de Perú. Cada lote confirmado cuenta como una exportación; sus reintentos no consumen otro cupo.</p></section><section class="card"><i data-icon="card"></i><h3>Pagos y renovaciones</h3><p>Cada compra de un plan de pago cubre 30 días. No hay renovación automática. Si un pedido aparece en verificación, revisa su estado antes de volver a pagar.</p><a class="btn" href="#pedidos">Ver mis pedidos <i data-icon="arrow"></i></a></section></div></section>
+        <footer class="workspace-footer"><span>BIM FLOW by Vertex · Diseñado para tu flujo de trabajo.</span><a href="/instalacion/">Guía de instalación ↗</a></footer>
+      </div>
     </div>
-
-    <section class="card sec" id="comprar">
-      <h2 id="plansTitle">Elige tu plan</h2>
-      <div id="tierBox"></div>
-      <div class="plans" id="plans"></div>
-    </section>
-
-    <section class="card sec">
-      <h2>Mis pedidos</h2>
-      <div id="orders"></div>
-    </section>
   </main>
 </div>
 
@@ -285,7 +329,7 @@ body>.wrap{max-width:1240px;padding:0 32px}
 'use strict';
 const $ = (s, r = document) => r.querySelector(s);
 const SCREENS = ['auth', 'forgot', 'reset', 'message', 'account'];
-function showScreen(name) { SCREENS.forEach((id) => $('#' + id).classList.toggle('hidden', id !== name)); $('#who').classList.toggle('hidden', name !== 'account'); $('#authFooter').classList.toggle('hidden', name !== 'auth'); }
+function showScreen(name) { document.body.dataset.screen = name; SCREENS.forEach((id) => $('#' + id).classList.toggle('hidden', id !== name)); $('#who').classList.toggle('hidden', name !== 'account'); $('#authFooter').classList.toggle('hidden', name !== 'auth'); }
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const DAY = 86400;
 const fmtDateTime = (s) => s ? new Date(s * 1000).toLocaleString('es', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
@@ -307,8 +351,8 @@ async function api(path, { method = 'GET', body } = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({ ok: false, error: 'Respuesta inválida del servidor.' }));
-  if (res.status === 401 && !path.startsWith('/login') && !path.startsWith('/register')) { showAuth(); throw new Error('Sesión expirada'); }
-  if (!res.ok || data.ok === false) throw new Error(data.error || 'Error ' + res.status);
+  if (res.status === 401 && !path.startsWith('/login') && !path.startsWith('/register') && path !== '/me') { showAuth(); throw new Error('Sesión expirada'); }
+  if (!res.ok || data.ok === false) { const err = new Error(data.error || 'Error ' + res.status); err.pending = !!data.pending; throw err; }
   return data;
 }
 function toast(msg) {
@@ -316,10 +360,24 @@ function toast(msg) {
   $('#toastRoot').append(el); setTimeout(() => el.remove(), 3000);
 }
 function modal(html) {
+  const previousFocus = document.activeElement;
   const root = document.createElement('div'); root.className = 'overlay';
   root.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
-  const close = () => { root.remove(); document.removeEventListener('keydown', onKey); };
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  let closed = false;
+  const title = root.querySelector('h3');
+  if (title) { title.id = 'dialog-' + Math.random().toString(36).slice(2); root.firstElementChild.setAttribute('aria-labelledby', title.id); }
+  const close = () => { if (closed) return; closed = true; root.remove(); document.removeEventListener('keydown', onKey); root.dispatchEvent(new Event('dialogclose')); previousFocus?.isConnected && previousFocus.focus(); };
+  const onKey = (e) => {
+    if (!root.contains(document.activeElement)) return;
+    if (e.key === 'Escape') { e.preventDefault(); close(); }
+    if (e.key === 'Tab') {
+      const items = [...root.querySelectorAll('button:not(:disabled),input:not(:disabled),a[href],select')];
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
   root.addEventListener('mousedown', (e) => { if (e.target === root) close(); });
   document.addEventListener('keydown', onKey);
   $('#modalRoot').append(root);
@@ -331,6 +389,7 @@ function confirmDialog(message, okLabel, danger) {
     let done = false;
     const m = modal(`<h3>Confirmar</h3><p style="margin:0">${esc(message)}</p><div class="actions"><button class="btn" id="no">Cancelar</button><button class="btn ${danger ? 'danger' : 'primary'}" id="yes">${esc(okLabel)}</button></div>`);
     const finish = (v) => { if (done) return; done = true; m.close(); resolve(v); };
+    m.root.addEventListener('dialogclose', () => finish(false));
     m.$('#no').onclick = () => finish(false); m.$('#yes').onclick = () => finish(true);
     m.root.addEventListener('mousedown', (e) => { if (e.target === m.root) finish(false); });
   });
@@ -345,8 +404,8 @@ function setMode(m) {
   $('#authFields').setAttribute('aria-labelledby', m === 'login' ? 'tabLogin' : 'tabRegister');
   $('#nameRow').classList.toggle('hidden', m === 'login');
   $('#authBtn').textContent = m === 'login' ? 'Ingresar' : 'Crear cuenta';
-  $('#authTitle').textContent = m === 'login' ? 'Accede a tu cuenta' : 'Empieza tu prueba gratis';
-  $('#authLead').textContent = m === 'login' ? 'Gestiona tu licencia, tus equipos y tus pedidos.' : 'Crea tu cuenta y activa BIM FLOW en Revit durante 7 días. Sin tarjeta.';
+  $('#authTitle').textContent = m === 'login' ? 'Qué bueno verte de nuevo' : 'Crea tu espacio de trabajo';
+  $('#authLead').textContent = m === 'login' ? 'Gestiona tu licencia, tus equipos y tus pedidos.' : 'Empieza con un mes gratuito y una exportación diaria. Sin tarjeta de crédito.';
   $('#password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
   $('#password').placeholder = m === 'login' ? '' : 'Mínimo 8 caracteres';
   $('#authErr').textContent = '';
@@ -382,17 +441,19 @@ $('#logout').onclick = async () => { await api('/logout', { method: 'POST' }).ca
 /* ---------- cuenta ---------- */
 let paymentInfo = null, plansCache = [], hasLicense = false, licenseIsTrial = false, paymentMode = 'manual', needsVerification = false;
 async function enter(customer, verificationRequired) {
+  updateCustomer(customer); navigatePanel();
   showScreen('account'); $('#whoName').textContent = customer.name;
   needsVerification = !!verificationRequired && customer.verified === false;
   renderVerifyBanner(customer);
-  loadDownload();
-  await loadLicense();
-  await Promise.all([loadPlans(), loadOrders()]);
-  if (location.hash === '#comprar') $('#comprar').scrollIntoView({ behavior: 'smooth' });
+  $('#loadError').classList.add('hidden');
+  const results = await Promise.allSettled([loadDownload(), loadLicense(), loadPlans(), loadOrders(), loadCards()]);
+  const failed = results.find(r => r.status === 'rejected');
+  if (failed) { $('#loadError').textContent = 'No pudimos cargar parte de tu cuenta. ' + failed.reason.message; $('#loadError').classList.remove('hidden'); }
 }
 
 async function loadLicense() {
   const { license: l } = await api('/license');
+  updateLicenseSummary(l);
   hasLicense = !!l;
   licenseIsTrial = !!(l && l.isTrial);
   const card = $('#licenseCard');
@@ -406,17 +467,17 @@ async function loadLicense() {
   const active = l.devices.filter((d) => d.status === 'active');
   const shownState = l.isTrial && l.state === 'expiring' ? 'trial' : l.state;
   card.innerHTML = `
-    <div class="row" style="justify-content:space-between;align-items:center"><div><p class="eyebrow" style="margin:0 0 4px">Mi licencia</p><h2>${l.isTrial ? 'Prueba gratis' : esc(l.plan)}</h2></div><span class="badge ${esc(shownState)}">${esc(STATE[shownState] || shownState)}</span></div>
+    <div class="row" style="justify-content:space-between;align-items:center"><div><p class="eyebrow" style="margin:0 0 4px">Mi licencia</p><h2>${l.isTrial ? 'Mes gratuito' : esc(l.plan)}</h2></div><span class="badge ${esc(shownState)}">${esc(STATE[shownState] || shownState)}</span></div>
     <div><div class="big">${esc(fmtLeft(l.secondsLeft))}</div><div class="muted">restante · vence el ${esc(fmtDateTime(l.expiresAt))}</div></div>
-    ${l.isTrial && l.state !== 'expired' ? '<div class="notice info">Estás en tu prueba gratuita. Elige un plan antes de que termine para no interrumpir tu trabajo.</div>' : ''}
+    ${l.isTrial && l.state !== 'expired' ? '<div class="notice info">Tu mes gratuito incluye una exportación diaria. El cupo se renueva a medianoche de Perú. Elige un plan de pago para quitar el límite diario.</div>' : ''}
     ${l.state === 'expired' ? '<div class="notice">Tu licencia venció. Elige un plan abajo para reactivarla con la misma clave.</div>' : ''}
     ${l.state === 'expiring' && !l.isTrial ? '<div class="notice">Tu licencia vence pronto. Renuévala abajo para no interrumpir tu trabajo.</div>' : ''}
     ${l.state === 'suspended' || l.state === 'revoked' ? '<div class="notice">Esta licencia fue bloqueada. Contacta a soporte.</div>' : ''}
-    <dl class="kv"><dt>Plan</dt><dd>${esc(l.isTrial ? 'Prueba gratis' : l.plan)}</dd><dt>Equipos</dt><dd>${active.length} de ${l.maxDevices} en uso</dd></dl>
+    <dl class="kv"><dt>Plan</dt><dd>${esc(l.isTrial ? 'Mes gratuito' : l.plan)}</dd><dt>Equipos</dt><dd>${active.length} de ${l.maxDevices} en uso</dd></dl>
     ${l.key ? `<div><div class="muted" style="margin-bottom:6px;font-weight:600">Tu clave de licencia</div>
       <div class="keybox mono" id="keybox" data-key="${esc(l.key)}">••••• ••••• ••••• •••••</div>
       <div class="row" style="margin-top:10px"><button class="btn small" id="showKey">Mostrar</button><button class="btn small" id="copyKey">Copiar</button><button class="btn small danger" id="regen">Generar otra</button></div></div>` : '<div class="muted">La clave de esta licencia no está disponible en el portal. Contacta a soporte.</div>'}
-    <div><div class="muted" style="margin:6px 0;font-weight:600">Mis equipos</div>
+    <div><div class="muted" style="margin:6px 0;font-weight:600">Mis computadoras</div>
     ${active.length ? `<div class="tablewrap"><table><thead><tr><th>Equipo</th><th>Revit</th><th>Último uso</th><th></th></tr></thead><tbody>
       ${active.map((d) => `<tr><td>${esc(d.name) || 'Sin nombre'}</td><td>${esc(d.revitVersion)}</td><td>${esc(fmtDateTime(d.lastSeen))}</td><td><button class="btn small" data-rel="${esc(d.id)}">Liberar</button></td></tr>`).join('')}
     </tbody></table></div>` : '<div class="empty">Aún no la has activado en ningún equipo.</div>'}</div>`;
@@ -437,33 +498,35 @@ async function loadLicense() {
 }
 
 async function loadPlans() {
-  const r = await api('/plans');
-  paymentMode = r.paymentMode;
-  paymentInfo = r.payment || null;
-  const plans = r.plans.filter((p) => !(p.trial && r.trialAvailable === false));
-  plansCache = plans;
-  const t = r.tier;
-  const monthly = r.plans.find((p) => p.id === 'mensual');
-  $('#tierBox').innerHTML = t && t.slotsLeft !== null
-    ? `<div class="tier"><b>Precio de lanzamiento: quedan ${t.slotsLeft} cupo${t.slotsLeft === 1 ? '' : 's'}.</b> ${t.nextPrices && t.nextPrices.mensual && monthly ? `Después, el plan mensual pasa de ${esc(money(monthly.priceCents, monthly.currency))} a ${esc(money(t.nextPrices.mensual, monthly.currency))}. ` : ''}Quien compra ahora conserva su precio.</div>`
-    : '';
-  $('#plans').innerHTML = plans.length ? plans.map((p) => `
-    <div class="plan ${p.id === 'anual' ? 'best' : ''}">
-      ${p.trial ? '<span class="tag teal">Sin tarjeta</span>' : p.id === 'anual' ? '<span class="tag">Más conveniente</span>' : ''}
-      <h3>${p.trial ? 'Prueba de ' + esc(duration(p.seconds)) : esc(p.name)}</h3>
-      <div class="price">${p.priceCents === 0 ? 'Gratis' : esc(money(p.priceCents, p.currency))} ${p.priceCents === 0 ? '' : `<small>/ ${esc(duration(p.seconds))}</small>`}</div>
-      <div class="muted">${esc(p.description)}</div>
-      <div class="muted">Hasta <b>${p.devices}</b> equipo${p.devices === 1 ? '' : 's'}</div>
-      <button class="btn primary" data-plan="${esc(p.id)}" ${needsVerification ? 'disabled title="Confirma tu correo para continuar"' : ''}>${needsVerification ? 'Confirma tu correo primero' : p.trial ? 'Empezar prueba gratis' : paymentMode === 'test' ? 'Probar compra' : paymentMode === 'culqi' ? 'Pagar con tarjeta' : hasLicense && !licenseIsTrial ? 'Renovar con este plan' : 'Comprar este plan'}</button>
-    </div>`).join('') : '<div class="empty">Los planes no están disponibles por ahora.</div>';
-  $('#plans').querySelectorAll('[data-plan]').forEach((b) => b.onclick = () => buy(b.dataset.plan));
+  const r = await api('/plans'); paymentMode = r.paymentMode; paymentInfo = r.payment || null;
+  plansCache = r.plans;
+  const banner = $('#paymentEnvironment');
+  banner.classList.toggle('hidden', !['test', 'culqi'].includes(paymentMode) || (paymentMode === 'culqi' && paymentInfo?.environment !== 'test'));
+  banner.textContent = paymentMode === 'test' ? 'Modo de demostración: los pedidos se aprueban sin pasar por Culqi.' : 'Culqi en modo de prueba: usa una tarjeta de prueba. No se cobra dinero real.';
+  $('#plansTitle').textContent = 'Elige el espacio que tu equipo necesita';
+  $('#plans').innerHTML = r.plans.map(p => `<article class="plan ${p.id === 'equipo' ? 'best' : ''}">
+    ${p.id === 'equipo' ? '<span class="tag">Para trabajar en equipo</span>' : ''}
+    <h3>${esc(p.name)}</h3><div class="price">${p.priceCents ? '<span class="currency">S/</span>' + (p.priceCents / 100).toFixed(2) : 'Gratis'}<small>${p.trial ? 'durante tu primer mes' : 'por 30 días'}</small></div>
+    <p class="muted" style="margin:0">${esc(p.description)}</p>
+    <ul class="plan-features"><li>${icon('check')}${p.devices} computadora${p.devices === 1 ? '' : 's'} por licencia</li><li>${icon('check')}${p.trial ? '1 exportación por día' : 'Sin límite diario de exportaciones'}</li><li>${icon('check')}Exporta desde Revit 2023–2027</li><li>${icon('check')}${p.trial ? 'Sin tarjeta de crédito' : 'Renovación a tu ritmo'}</li></ul>
+    <button class="btn ${p.id === 'equipo' ? 'primary' : ''}" data-plan="${esc(p.id)}" ${p.trial || needsVerification ? 'disabled' : ''}>${p.trial ? (hasLicense ? 'Incluido al crear tu cuenta' : needsVerification ? 'Confirma tu correo' : 'Incluido en tu cuenta') : needsVerification ? 'Confirma tu correo' : 'Elegir ' + esc(p.name)}</button>
+  </article>`).join('');
+  $('#plans').querySelectorAll('[data-plan]').forEach(b => b.onclick = () => buy(b.dataset.plan));
+  $('#addCard').disabled = paymentMode !== 'culqi' || !paymentInfo || needsVerification;
 }
 
+let purchaseBusy = false;
 async function buy(planId) {
+  if (purchaseBusy) return;
+  purchaseBusy = true;
+  try { await buyPlan(planId); } finally { purchaseBusy = false; }
+}
+async function buyPlan(planId) {
   const plan = plansCache.find((p) => p.id === planId);
+  if (!plan) return;
   const question = plan.trial
     ? `Vas a activar tu prueba gratuita de ${duration(plan.seconds)}. Es una por cuenta y por equipo.`
-    : `Vas a pedir el plan ${plan.name} (${money(plan.priceCents, plan.currency)}).`;
+    : `Plan ${plan.name}: ${money(plan.priceCents, plan.currency)} por 30 días, para ${plan.devices} computadora(s). Renovación manual. Al cambiar de plan empieza un período nuevo; si reduces la capacidad se liberan las computadoras menos recientes.`;
   if (!await confirmDialog(question, plan.trial ? 'Activar prueba' : 'Continuar', false)) return;
   try {
     const r = await api('/orders', { method: 'POST', body: { planId } });
@@ -477,7 +540,7 @@ async function buy(planId) {
       const m = modal(`<h3>${plan.trial ? '¡Tu prueba está activa!' : '¡Listo!'}</h3>
         <p style="margin:0">${plan.trial ? `Tienes ${esc(duration(plan.seconds))} con todas las funciones.` : 'Tu pago se confirmó y tu licencia ya está activa.'} Copia tu clave y pégala en Revit para activarla. Pedido <b class="mono">${esc(r.order.code)}</b>.</p>
         <div class="actions"><button class="btn primary" id="ok">Ver mi clave</button></div>`);
-      m.$('#ok').onclick = () => { m.close(); $('#licenseCard').scrollIntoView({ behavior: 'smooth' }); };
+      m.$('#ok').onclick = () => { m.close(); location.hash = '#licencia'; };
     } else {
       const m = modal(`<h3>Pedido creado</h3>
         <p style="margin:0">Código de pedido: <b class="mono" style="font-size:20px">${esc(r.order.code)}</b></p>
@@ -492,46 +555,53 @@ async function buy(planId) {
 }
 
 /* ---------- pago en línea (Culqi) ---------- */
+const scriptLoads = new Map();
 function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    if ([...document.scripts].some((s) => s.src === src)) return resolve();
+  if (scriptLoads.has(src)) return scriptLoads.get(src);
+  const promise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src; s.onload = resolve;
-    s.onerror = () => reject(new Error('No se pudo cargar el formulario de pago. Revisa tu conexión e inténtalo de nuevo.'));
+    s.onerror = () => { s.remove(); scriptLoads.delete(src); reject(new Error('No se pudo cargar el formulario de pago. Revisa tu conexión e inténtalo de nuevo.')); };
     document.head.append(s);
   });
+  scriptLoads.set(src, promise);
+  return promise;
 }
 function successModal(order) {
   const m = modal(`<h3>¡Pago confirmado!</h3><p style="margin:0">Tu licencia ya está activa. Pedido <b class="mono">${esc(order.code)}</b>. Copia tu clave y pégala en Revit para activarla.</p>
     <div class="actions"><button class="btn primary" id="ok">Ver mi clave</button></div>`);
-  m.$('#ok').onclick = () => { m.close(); $('#licenseCard').scrollIntoView({ behavior: 'smooth' }); };
+  m.$('#ok').onclick = () => { m.close(); location.hash = '#licencia'; };
 }
 /** Abre el formulario de Culqi (llave pública), recibe el token y pide al servidor que cobre el pedido. */
 async function payOnline(order, pay) {
-  try { await loadScript('https://checkout.culqi.com/js/v4'); } catch (err) { toast(err.message); return; }
-  const Culqi = window.Culqi;
-  if (!Culqi) { toast('No se pudo iniciar el formulario de pago.'); return; }
-  Culqi.publicKey = pay.publicKey;
-  Culqi.settings({ title: 'BIM FLOW', currency: pay.currency, description: pay.description, amount: pay.amount });
-  Culqi.options({ lang: 'auto', installments: false, paymentMethods: { tarjeta: true, yape: false, bancaMovil: false, agente: false, billetera: false, cuotealo: false } });
-  const result = await new Promise((resolve) => {
-    window.culqi = async () => {
-      try { Culqi.close(); } catch { /* ya cerrado */ }
-      if (!Culqi.token) { resolve({ ok: false, error: (Culqi.error && (Culqi.error.user_message || Culqi.error.merchant_message)) || 'No se pudo procesar la tarjeta.' }); return; }
-      try { const r = await api(`/orders/${encodeURIComponent(order.code)}/pay`, { method: 'POST', body: { token: Culqi.token.id } }); resolve({ ok: true, r }); }
-      catch (err) { resolve({ ok: false, error: err.message }); }
-    };
-    Culqi.open();
-  });
-  if (result.ok) successModal(result.r.order);
-  else toast(result.error);
+  const cards = (await api('/cards')).cards;
+  let cardId = '';
+  if (cards.length) {
+    const selected = await choosePayment(order, cards);
+    if (selected === null) return;
+    cardId = selected;
+  }
+  try {
+    let body;
+    if (cardId) body = { cardId };
+    else {
+      const token = await checkoutToken({ title: 'BIM FLOW', currency: pay.currency, description: pay.description, amount: pay.amount });
+      if (!token) return;
+      body = { token };
+    }
+    const r = await api(`/orders/${encodeURIComponent(order.code)}/pay`, { method:'POST', body });
+    successModal(r.order);
+  } catch (err) {
+    const m = modal(`<h3>No se pudo confirmar el pago</h3><p role="alert">${esc(err.message)}</p><div class="actions"><button class="btn primary" id="closePayment">Ver pedidos</button></div>`);
+    m.$('#closePayment').onclick = () => { m.close(); location.hash = '#pedidos'; };
+  }
 }
 
 async function loadOrders() {
   const { orders } = await api('/orders');
   $('#orders').innerHTML = orders.length ? `<div class="tablewrap"><table><thead><tr><th>Código</th><th>Plan</th><th>Monto</th><th>Tipo</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody>
-    ${orders.map((o) => `<tr><td class="mono"><b>${esc(o.code)}</b></td><td>${esc(o.planName)}</td><td>${o.amountCents === 0 ? 'Gratis' : esc(money(o.amountCents, o.currency))}</td><td>${o.kind === 'trial' ? 'Prueba' : o.kind === 'renew' ? 'Renovación' : 'Nueva'}</td><td><span class="badge ${esc(o.status)}">${esc(ORDER[o.status] || o.status)}</span></td><td>${esc(fmtDateTime(o.createdAt))}</td><td>${o.status === 'pending' && paymentInfo ? `<button class="btn small primary" data-pay="${esc(o.code)}">Pagar</button> ` : ''}${o.status === 'pending' ? `<button class="btn small" data-cancel="${esc(o.code)}">Cancelar</button>` : ''}</td></tr>`).join('')}
-  </tbody></table></div>` : '<div class="empty">Todavía no has hecho pedidos.</div>';
+    ${orders.map((o) => `<tr><td class="mono"><b>${esc(o.code)}</b></td><td>${esc(o.planName)}${o.status === 'pending' && o.canPay === false ? '<br><small class="muted">Tarifa anterior · crea un pedido nuevo</small>' : ''}</td><td>${o.amountCents === 0 ? 'Gratis' : esc(money(o.amountCents, o.currency))}</td><td>${o.kind === 'trial' ? 'Prueba' : o.kind === 'renew' ? 'Renovación' : 'Nueva'}</td><td><span class="badge ${esc(o.status)}">${esc(ORDER[o.status] || o.status)}</span></td><td>${esc(fmtDateTime(o.createdAt))}</td><td>${o.status === 'pending' && paymentInfo && o.canPay !== false ? `<button class="btn small primary" data-pay="${esc(o.code)}">Pagar</button> ` : ''}${o.status === 'pending' ? `<button class="btn small" data-cancel="${esc(o.code)}">Cancelar</button>` : ''}</td></tr>`).join('')}
+  </tbody></table></div>` : `<div class="empty">${icon('receipt')}<strong>Tu próxima entrega empieza aquí</strong>Aún no tienes compras. Tu mes gratuito se activa al confirmar tu cuenta.<br><a href="#comprar">Explorar planes</a></div>`;
   $('#orders').querySelectorAll('[data-pay]').forEach((b) => b.onclick = async () => {
     const o = orders.find((x) => x.code === b.dataset.pay);
     if (!o || !paymentInfo) return;
@@ -615,6 +685,176 @@ async function loadDownload() {
       + '<p style="margin:10px 0 0;font-size:13px"><a href="/instalacion/">¿Windows muestra un aviso al instalar? Te explicamos qué hacer</a></p>';
   } catch { box.innerHTML = '<p style="margin:0;font-size:13px"><a href="/instalacion/">Guía de instalación</a></p>'; }
 }
+
+/* ---------- navegación, perfil y facturación ---------- */
+const ICON_PATHS = {
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  key:'<circle cx="8" cy="9" r="5"/><path d="m12 12 9 9m-3-3 3-3m-6 0 3-3"/>',
+  layers:'<path d="m12 3 10 5-10 5L2 8Zm-9 9 9 5 9-5M3 17l9 5 9-5"/>',
+  receipt:'<path d="M6 3h12v19l-3-2-3 2-3-2-3 2Z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
+  card:'<rect x="2" y="4" width="20" height="16" rx="3"/><path d="M2 9h20M6 15h4"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1-1.5 2M12 17h.01"/>',
+  arrow:'<path d="M4 12h15m-5-5 5 5-5 5"/>',
+  external:'<path d="M14 3h7v7m0-7L10 14M10 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-5"/>',
+  monitor:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/>',
+  export:'<path d="M12 16V2m-5 5 5-5 5 5M3 14v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6"/>',
+  download:'<path d="M12 2v14m-5-5 5 5 5-5M3 17v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/>',
+  lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/>',
+  spark:'<path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/>',
+  logout:'<path d="M9 4H4v16h5m5-4 4-4-4-4m-5 4h12"/>',
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+  refresh:'<path d="M20 7v5h-5M4 17v-5h5m11-1a8 8 0 0 0-14-5M4 13a8 8 0 0 0 14 5"/>',
+  plus:'<path d="M12 4v16M4 12h16"/>',
+  check:'<path d="m5 12 4 4L19 6"/>'
+};
+function icon(name) { return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${ICON_PATHS[name] || ICON_PATHS.grid}</svg>`; }
+document.querySelectorAll('[data-icon]').forEach(el => el.outerHTML = icon(el.dataset.icon));
+const heroModel = $('.model-visual').cloneNode(true);
+heroModel.classList.remove('model-visual'); heroModel.classList.add('hero-model');
+// Identificadores propios para que los dos SVG no compartan patrones o degradados.
+heroModel.innerHTML = heroModel.innerHTML.replaceAll('planGrid','dashboardGrid').replaceAll('glass','dashboardGlass');
+$('#heroModel').append(heroModel);
+const VIEW_NAMES = { resumen:'Resumen', licencia:'Licencia y equipos', comprar:'Planes y precios', pedidos:'Mis pedidos', facturacion:'Facturación y pagos', perfil:'Mi perfil', ayuda:'Ayuda e instalación' };
+let currentCustomer = null;
+function closeMenu() { $('#sidebar').dataset.open = 'false'; $('#menuToggle').setAttribute('aria-expanded','false'); }
+function navigatePanel() {
+  const target = location.hash.slice(1);
+  const view = Object.hasOwn(VIEW_NAMES, target) ? target : 'resumen';
+  document.querySelectorAll('[data-view]').forEach(el => el.classList.toggle('hidden',el.dataset.view !== view));
+  document.querySelectorAll('[data-nav]').forEach(el => el.dataset.nav === view ? el.setAttribute('aria-current','page') : el.removeAttribute('aria-current'));
+  $('#viewBreadcrumb').textContent = VIEW_NAMES[view];
+  document.title = VIEW_NAMES[view] + ' · BIM FLOW';
+  closeMenu();
+}
+window.addEventListener('hashchange', () => { if (document.body.dataset.screen === 'account') { navigatePanel(); window.scrollTo(0,0); } });
+document.querySelectorAll('[data-nav]').forEach(el => el.addEventListener('click',closeMenu));
+$('#menuToggle').onclick = () => { const open = $('#sidebar').dataset.open !== 'true'; $('#sidebar').dataset.open = String(open); $('#menuToggle').setAttribute('aria-expanded',String(open)); };
+document.addEventListener('click',e => { if ($('#sidebar').dataset.open === 'true' && !e.target.closest('#sidebar, #menuToggle')) closeMenu(); });
+document.addEventListener('keydown',e => { if (e.key === 'Escape') closeMenu(); });
+$('#sideLogout').onclick = () => $('#logout').click();
+$('#refreshOrders').onclick = async () => { const btn=$('#refreshOrders'); btn.disabled=true; try { await loadOrders(); toast('Pedidos actualizados'); } catch(e) { toast(e.message); } finally { btn.disabled=false; } };
+function updateCustomer(c) {
+  currentCustomer = c;
+  document.querySelectorAll('[data-customer-name]').forEach(el=>el.textContent=c.name);
+  document.querySelectorAll('[data-customer-email]').forEach(el=>el.textContent=c.email);
+  const initials = c.name.trim().split(/\s+/).slice(0,2).map(n=>n[0]).join('').toUpperCase();
+  document.querySelectorAll('[data-initials]').forEach(el=>el.textContent=initials);
+  $('#overviewTitle').textContent = 'Hola, ' + c.name.split(' ')[0] + '.';
+  $('#profileName').value=c.name; $('#profileEmail').value=c.email;
+  $('#profileCompany').value=c.company || ''; $('#profilePhone').value=c.phone || '';
+  const b=c.billing || {};
+  $('#billingName').value=b.name || ''; $('#billingDocumentType').value=b.documentType || '';
+  $('#billingDocument').value=b.documentNumber || ''; $('#billingAddress').value=b.address || '';
+  $('#billingCity').value=b.city || ''; $('#billingCountry').value=b.country || 'PE';
+  $('#emailPasswordRow').classList.add('hidden'); $('#emailPassword').value='';
+}
+function updateLicenseSummary(l) {
+  if (!l) {
+    $('#summaryPlan').textContent='Por activar'; $('#summaryDevices').textContent='0'; $('#summaryUsage').textContent='—';
+    $('#summaryPlanNote').textContent='Confirma tu correo para empezar';
+    $('#overviewLicense').innerHTML=`<div class="empty">${icon('key')}<strong>Tu licencia está por empezar</strong>Confirma tu correo para activar tu mes gratuito.</div>`;
+    return;
+  }
+  const active=l.devices.filter(d=>d.status==='active').length;
+  const free=l.isTrial;
+  const expired=['expired','revoked','suspended'].includes(l.state);
+  $('#summaryPlan').textContent=free ? 'Gratuito' : l.plan;
+  $('#summaryPlanNote').textContent=expired ? (STATE[l.state] || l.state) : 'Vence el ' + new Date(l.expiresAt*1000).toLocaleDateString('es-PE',{day:'numeric',month:'short',year:'numeric'});
+  $('#summaryDevices').innerHTML=active + ' <small>/ ' + l.maxDevices + '</small>';
+  $('#summaryUsage').innerHTML=expired ? 'No disponible' : free ? Math.max(0,1-(l.exportsToday||0)) + ' <small>/ 1 hoy</small>' : 'Sin límite';
+  $('#summaryUsageNote').textContent=free ? 'Se renueva a medianoche · Perú' : 'Sin límite diario de exportaciones';
+  $('#sidePlan').textContent='Plan ' + (free ? 'Gratuito' : l.plan);
+  $('#sidePlanNote').textContent=free ? 'Un mes. Una exportación diaria.' : l.maxDevices + ' computadora(s) para tu equipo.';
+  $('#overviewLicense').innerHTML=`<div class="license-preview"><div class="license-mark">${icon('key')}</div><div style="flex:1"><h3>${esc(free ? 'Tu mes gratuito' : 'Plan ' + l.plan)}</h3><p>${l.maxDevices} computadora${l.maxDevices===1?'':'s'} por licencia</p></div><span class="badge ${esc(l.state)}">${esc(STATE[l.state]||l.state)}</span></div><hr class="mini-divider"><div class="mini-row"><span>Tiempo restante</span><b>${expired ? 'Sin acceso activo' : esc(fmtLeft(l.secondsLeft))}</b></div><div class="mini-row"><span>Computadoras conectadas</span><b>${active} de ${l.maxDevices}</b></div><div class="progress-track"><span style="width:${Math.min(100,100*active/l.maxDevices)}%"></span></div><a class="btn" href="#licencia" style="width:100%;margin-top:10px">Gestionar mi licencia ${icon('arrow')}</a>`;
+}
+$('#profileEmail').addEventListener('input',()=>$('#emailPasswordRow').classList.toggle('hidden',$('#profileEmail').value.trim().toLowerCase()===currentCustomer.email));
+function formAction(formId, errId, action) {
+  $(formId).addEventListener('submit',async e=>{
+    e.preventDefault(); const btn=e.currentTarget.querySelector('button[type=submit]'); btn.disabled=true; $(errId).textContent='';
+    try { await action(); } catch(err) { $(errId).textContent=err.message; } finally { btn.disabled=false; }
+  });
+}
+formAction('#profileForm','#profileErr',async()=>{
+  const r=await api('/profile',{method:'PATCH',body:{name:$('#profileName').value,email:$('#profileEmail').value,company:$('#profileCompany').value,phone:$('#profilePhone').value,currentPassword:$('#emailPassword').value}});
+  updateCustomer(r.customer); needsVerification=!!r.verificationRequired && !r.customer.verified; renderVerifyBanner(r.customer);
+  await Promise.all([loadLicense(),loadPlans()]); toast(needsVerification?'Datos guardados. Revisa tu correo para confirmarlo.':'Tu perfil está actualizado');
+});
+formAction('#billingForm','#billingErr',async()=>{
+  const r=await api('/profile',{method:'PATCH',body:{billing:{name:$('#billingName').value,documentType:$('#billingDocumentType').value,documentNumber:$('#billingDocument').value,address:$('#billingAddress').value,city:$('#billingCity').value,country:$('#billingCountry').value.toUpperCase()}}});
+  updateCustomer(r.customer); toast('Datos de facturación guardados');
+});
+formAction('#securityForm','#securityErr',async()=>{
+  if ($('#newPassword').value!==$('#confirmPassword').value) throw new Error('Las contraseñas nuevas no coinciden.');
+  await api('/password',{method:'POST',body:{currentPassword:$('#currentPassword').value,password:$('#newPassword').value}});
+  $('#securityForm').reset(); toast('Contraseña actualizada. Las otras sesiones se cerraron.');
+});
+async function loadCards() {
+  const {cards}=await api('/cards');
+  $('#cards').innerHTML=cards.length ? cards.map(c=>`<div class="payment-card"><span class="card-brand">${esc(c.brand)}</span><div><strong>•••• ${esc(c.lastFour)}</strong><p>Disponible para tus compras</p></div><button class="icon-button" data-delete-card="${esc(c.id)}" aria-label="Eliminar tarjeta terminada en ${esc(c.lastFour)}">${icon('logout')}</button></div>`).join('') : `<div class="empty">${icon('card')}<strong>Tus pagos, a tu manera</strong>Aún no tienes tarjetas guardadas.<br>Puedes pagar sin guardar una tarjeta.</div>`;
+  $('#cards').querySelectorAll('[data-delete-card]').forEach(btn=>btn.onclick=async()=>{
+    if (!await confirmDialog('¿Eliminar esta tarjeta guardada de tu cuenta y de Culqi?', 'Eliminar tarjeta',true)) return;
+    btn.disabled=true;
+    try { await api('/cards/'+encodeURIComponent(btn.dataset.deleteCard),{method:'DELETE'}); await loadCards(); toast('Tarjeta eliminada'); }
+    catch(err) { toast(err.message); } finally { btn.disabled=false; }
+  });
+}
+function choosePayment(order,cards) {
+  return new Promise(resolve=>{
+    let done=false;
+    const m=modal(`<h3>Elige cómo pagar</h3><p>Total: <strong>${esc(money(order.amountCents,order.currency))}</strong>. Este pago cubre 30 días.</p>${cards.map(c=>`<label class="payment-choice"><input type="radio" name="payChoice" value="${esc(c.id)}"><span>${esc(c.brand)} · •••• ${esc(c.lastFour)}</span></label>`).join('')}<label class="payment-choice"><input type="radio" name="payChoice" value="" checked><span>Usar otra tarjeta con Culqi</span></label><p class="muted">Solo se hará el cobro que confirmas ahora. Sin renovación automática.</p><div class="actions"><button class="btn" id="paymentCancel">Cancelar</button><button class="btn primary" id="paymentContinue">Continuar</button></div>`);
+    const finish=value=>{if(done)return;done=true;m.close();resolve(value);};
+    m.root.addEventListener('dialogclose',()=>finish(null));
+    m.$('#paymentCancel').onclick=()=>finish(null);
+    m.$('#paymentContinue').onclick=()=>finish(m.$('input[name=payChoice]:checked').value);
+  });
+}
+let checkoutBusy=false;
+async function checkoutToken(settings) {
+  if (checkoutBusy) throw new Error('Ya hay un formulario de tarjeta abierto.');
+  if (!paymentInfo) throw new Error('El pago con tarjeta no está disponible.');
+  checkoutBusy=true;
+  try {
+    await loadScript('https://checkout.culqi.com/js/v4');
+    const Culqi=window.Culqi;
+    if (!Culqi) throw new Error('No se pudo iniciar Culqi. Inténtalo nuevamente.');
+    Culqi.publicKey=paymentInfo.publicKey;
+    Culqi.settings(settings);
+    Culqi.options({lang:'es',installments:false,paymentMethods:{tarjeta:true,yape:false,bancaMovil:false,agente:false,billetera:false,cuotealo:false},style:{logo:location.origin+'/brand/logo-header.png',bannerColor:'#082744',buttonBackground:'#075abd',buttonTextColor:'#ffffff',linksColor:'#075abd',buttonText:settings.amount===0?'Guardar tarjeta':'Pagar'}});
+    return await new Promise((resolve,reject)=>{
+      let done=false;
+      const m=modal(`<h3>Continúa en Culqi</h3><p>Ingresa los datos de tu tarjeta en el formulario seguro de Culqi. Si lo cerraste, puedes volver a abrirlo o regresar a tu cuenta.</p><div class="actions"><button class="btn" id="checkoutCancel">Volver a mi cuenta</button><button class="btn primary" id="checkoutReopen">Abrir formulario</button></div>`);
+      const finish=(token,error)=>{if(done)return;done=true;window.culqi=()=>{};try{Culqi.close();}catch{}m.close();error?reject(error):resolve(token);};
+      m.root.addEventListener('dialogclose',()=>finish(null));
+      m.$('#checkoutCancel').onclick=()=>finish(null);
+      m.$('#checkoutReopen').onclick=()=>Culqi.open();
+      window.culqi=()=>{
+        if (Culqi.token?.id) finish(Culqi.token.id);
+        else finish(null,new Error(Culqi.error?.user_message || Culqi.error?.merchant_message || 'Culqi no pudo validar la tarjeta.'));
+      };
+      try { Culqi.open(); } catch(error) { finish(null,error); }
+    });
+  } finally { checkoutBusy=false; }
+}
+$('#addCard').onclick=async()=>{
+  if (!currentCustomer.phone || currentCustomer.name.trim().split(/\s+/).length < 2) { toast('Completa tu nombre y apellido y teléfono antes de añadir una tarjeta.'); location.hash='#perfil'; return; }
+  if (!currentCustomer.billing?.address || !currentCustomer.billing?.city) { toast('Guarda tu dirección y ciudad de facturación antes de añadir una tarjeta.'); return; }
+  const accepted=await new Promise(resolve=>{
+    let done=false;
+    const m=modal(`<h3>Guarda tu tarjeta con Culqi</h3><p>Podrás elegirla al pagar tus próximas compras. Esta acción no compra un plan ni activa cobros automáticos.</p><label class="check-consent"><input type="checkbox" id="cardConsent"><span>Autorizo a Culqi a guardar mi tarjeta para futuras compras que yo confirme. Podré eliminarla desde mi cuenta.</span></label><div class="actions"><button class="btn" id="saveCardCancel">Cancelar</button><button class="btn primary" id="saveCardContinue" disabled>Continuar a Culqi</button></div>`);
+    const finish=value=>{if(done)return;done=true;m.close();resolve(value);};
+    m.root.addEventListener('dialogclose',()=>finish(false));
+    m.$('#cardConsent').onchange=()=>m.$('#saveCardContinue').disabled=!m.$('#cardConsent').checked;
+    m.$('#saveCardCancel').onclick=()=>finish(false);m.$('#saveCardContinue').onclick=()=>finish(true);
+  });
+  if (!accepted) return;
+  $('#addCard').disabled=true;
+  try {
+    const token=await checkoutToken({title:'BIM FLOW',currency:'PEN',amount:0,description:'Guardar tarjeta para futuras compras'});
+    if (!token) return;
+    await api('/cards',{method:'POST',body:{token,consent:true}});await loadCards();toast('Tarjeta guardada con Culqi');
+  } catch(err) {toast(err.message);} finally {$('#addCard').disabled=false;}
+};
 
 /* ---------- inicio ---------- */
 (async () => {

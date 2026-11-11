@@ -26,6 +26,9 @@ function xp_route_license(string $method, string $action): void
         case 'release':
             xp_lic_release();
             break;
+        case 'export':
+            xp_lic_export();
+            break;
     }
 }
 
@@ -64,6 +67,10 @@ function xp_resolve_license(array $body, string $ip): array
     if ((int) $lic['expires_at'] <= time()) {
         xp_fail(403, 'expired', 'La licencia ha vencido. Renuévela para seguir usando XportBIM.', ['expiresAt' => (int) $lic['expires_at']]);
     }
+    if (!empty($lic['is_trial']) && version_compare((string) ($body['appVersion'] ?? '0'), '3.2.0', '<')) {
+        // Los clientes antiguos solo descartan un token si reconocen el código de rechazo.
+        xp_fail(426, 'expired', 'Actualiza BIM FLOW a la versión 3.2.0 o posterior para usar el mes gratuito con una exportación diaria.', ['reason' => 'update_required']);
+    }
     return $lic;
 }
 
@@ -84,6 +91,7 @@ function xp_issue(array $lic, string $deviceHash, int $devicesUsed): void
             'exp' => $exp,
             'iat' => $iat,
             'chk' => min($exp, $iat + $grace * XP_DAY),
+            'dailyLimit' => !empty($lic['is_trial']) ? 1 : 0,
         ]),
         'license' => [
             'customer' => $lic['customer_name'],
@@ -94,6 +102,46 @@ function xp_issue(array $lic, string $deviceHash, int $devicesUsed): void
         ],
         'serverTime' => $iat,
     ]);
+}
+
+function xp_usage_day(): string
+{
+    return (new DateTimeImmutable('now', new DateTimeZone('America/Lima')))->format('Y-m-d');
+}
+
+function xp_usage_reset(): int
+{
+    return (new DateTimeImmutable('tomorrow', new DateTimeZone('America/Lima')))->getTimestamp();
+}
+
+/** Una exportación es un lote confirmado; reintentar sus fallos dentro del mismo lote no vuelve a consumir cupo. */
+function xp_lic_export(): void
+{
+    $b = xp_body() ?? [];
+    $lic = xp_resolve_license($b, xp_ip());
+    $dev = xp_device_info($b);
+    $requestId = xp_clip($b['requestId'] ?? '', 36);
+    if ($dev['hash'] === '' || !preg_match('/^[a-f0-9-]{36}$/i', $requestId)) { xp_fail(400, 'bad_request', 'Solicitud de exportación inválida.'); }
+    $outcome = xp_tx(function () use ($lic, $dev, $requestId) {
+        $current = xp_one('SELECT * FROM licenses WHERE id = ?' . xp_for_update(), [$lic['id']]);
+        if (!$current || $current['status'] !== 'active' || (int) $current['expires_at'] <= time()) { return 'expired'; }
+        if (!xp_one("SELECT id FROM devices WHERE license_id = ? AND device_hash = ? AND status = 'active'", [$lic['id'], $dev['hash']])) { return 'device_not_activated'; }
+        if (empty($current['is_trial'])) { return 'ok'; }
+        $day = xp_usage_day();
+        $used = xp_one('SELECT * FROM export_usage WHERE (license_id = ? OR device_hash = ?) AND usage_day = ?', [$lic['id'], $dev['hash'], $day]);
+        if ($used) { return $used['license_id'] === $lic['id'] && $used['device_hash'] === $dev['hash'] && $used['request_id'] === $requestId ? 'ok' : 'daily_limit'; }
+        try {
+            xp_exec('INSERT INTO export_usage (license_id, usage_day, device_hash, request_id, created_at) VALUES (?, ?, ?, ?, ?)', [$lic['id'], $day, $dev['hash'], $requestId, time()]);
+        } catch (PDOException $e) {
+            if (substr((string) $e->getCode(), 0, 2) !== '23') { throw $e; }
+            return 'daily_limit';
+        }
+        xp_log_event('free_export_reserved', $lic['id'], null, $requestId, xp_ip());
+        return 'ok';
+    });
+    if ($outcome === 'daily_limit') { xp_fail(429, 'daily_limit', 'Ya utilizaste tu exportación gratuita de hoy. Vuelve mañana o elige un plan sin límite diario.', ['resetsAt' => xp_usage_reset()]); }
+    if ($outcome !== 'ok') { xp_fail(403, $outcome, 'La licencia o este equipo ya no están activos. Verifica tu licencia.'); }
+    xp_json(200, ['ok' => true]);
 }
 
 function xp_lic_handle(bool $allowNew): void
