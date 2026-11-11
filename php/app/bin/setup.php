@@ -260,6 +260,17 @@ if (in_array('--setup-mail', $flags, true)) {
         fwrite(STDERR, "Datos incompletos o inválidos (servidor, remitente o cifrado).\n");
         exit(1);
     }
+    // Brevo, Gmail y casi todos los proveedores exigen usuario y clave: un usuario vacío es el error más común.
+    $local = in_array($mail['host'], ['localhost', '127.0.0.1'], true);
+    if (!$local && ($mail['username'] === '' || $mail['password'] === '')) {
+        fwrite(STDERR, "El usuario y la contraseña SMTP no pueden quedar vacíos con este servidor ({$mail['host']}).\n");
+        fwrite(STDERR, "Escriba el usuario completo (por ejemplo 123abc001@smtp-brevo.com) y pegue la clave SMTP. No se guardó nada.\n");
+        exit(1);
+    }
+    if (strpos($mail['username'], '@smtp-') === strlen($mail['username']) - 5 || preg_match('/@smtp-$/', $mail['username'])) {
+        fwrite(STDERR, "El usuario SMTP parece cortado ('{$mail['username']}'). No se guardó nada; vuelva a intentarlo.\n");
+        exit(1);
+    }
     $config['mail'] = $mail;
     if (empty($config['public_url'])) {
         echo "Aviso: falta la URL pública de los enlaces. Ejecute: php app/bin/setup.php --public-url=https://su-dominio\n";
