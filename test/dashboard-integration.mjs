@@ -28,6 +28,8 @@ assert.equal(migration.status,0,migration.stdout+migration.stderr);
 const migrate2=spawnSync(PHP,[join(sandbox,'php/app/bin/setup.php'),'--migrate'],{encoding:'utf8'});
 assert.equal(migrate2.status,0,'Migration must be repeatable');
 assert.equal(php(`require ${quote(bootstrap)};$r=xp_one("SELECT * FROM customers WHERE id = 'migration-fixture'");echo $r['name'].'|'.$r['phone'].'|'.$r['created_at'];`),'Cuenta anterior||123','Migration preserves existing account data');
+assert.equal(php(`require ${quote(bootstrap)};$r=xp_one("SELECT * FROM licenses WHERE id = 'legacy-free'");echo $r['access_mode'].'|'.$r['expires_at'].'|'.$r['is_trial'];`),'free|253402300799|0','Old daily-free license migrates to monthly free without expiry');
+assert.equal(php(`require ${quote(bootstrap)};$r=xp_one("SELECT * FROM licenses WHERE id = 'legacy-paid'");echo $r['access_mode'].'|'.$r['plan'].'|'.$r['max_devices'].'|'.$r['expires_at'];`),'paid|Anual|2|4102444800','Paid historical annual license remains unchanged');
 const charges=[], providerCards=new Map(); let seq=0;
 const fake=http.createServer((req,res)=>{let raw='';req.on('data',d=>raw+=d);req.on('end',()=>{
   const body=raw?JSON.parse(raw):{};
@@ -60,38 +62,56 @@ async function call(who,path,method='GET',body,csrf=true){
 }
 const por=(w,p,m,b,c)=>call(w,'/portal/api'+p,m,b,c);
 const admin=(p,m,b)=>call('admin','/admin/api'+p,m,b);
-const dev=(key,n=1)=>({key,deviceId:n.toString(16).padStart(64,'0'),deviceName:'PC-'+n,appVersion:'3.2.0',revitVersion:'2025'});
+const dev=(key,n=1)=>({key,deviceId:n.toString(16).padStart(64,'0'),deviceName:'PC-'+n,appVersion:'3.3.0',revitVersion:'2025',units:1,requiresFull:false});
 const api=(p,b)=>call('none','/api/v1/'+p,'POST',b);
 const sql=code=>php(`require ${quote(bootstrap)};${code}`);
 try{
   for(let i=0;i<40;i++){try{await fetch(base+'/api/v1/health');break;}catch{await new Promise(r=>setTimeout(r,100));}}
   check('Admin login separado del cliente',(await admin('/login','POST',{password})).status===200);
   const catalog=(await por('none','/plans')).data;
-  check('Catálogo fijo, sin tramos ni anual',catalog.tier===null&&catalog.plans.length===4&&catalog.plans.map(p=>p.priceCents).join(',')==='0,1990,4990,9990'&&catalog.plans.map(p=>p.devices).join(',')==='1,1,3,7');
-  check('Mes gratuito con una exportación diaria',catalog.plans[0].seconds===30*86400&&catalog.plans[0].dailyLimit===1);
+  check('Catálogo mensual y anual, sin tramos',catalog.tier===null&&catalog.plans.length===7&&catalog.plans.map(p=>p.priceCents).join(',')==='0,1990,15900,4990,39900,9990,79900'&&catalog.plans.map(p=>p.devices).join(',')==='1,1,1,3,3,7,7');
+  check('Gratuito permanente con 150 archivos al mes',catalog.plans[0].seconds===0&&catalog.plans[0].monthlyLimit===150&&catalog.plans[0].free);
   check('Sin sesión no hay perfil',(await por('none','/me')).status===401);
   check('Rechaza correo temporal',(await por('a','/register','POST',{name:'Test',email:'x@mailinator.com',password})).status===400);
   check('Registro',(await por('a','/register','POST',{name:'Ana Diseño',email:'ana@example.test',password})).status===201);
   check('Cuenta no entra al administrador',(await call('a','/admin/api/stats')).status===401);
   check('CSRF en perfil',(await por('a','/profile','PATCH',{name:'X'},false)).status===403);
   const free=(await por('a','/license')).data.license;
-  check('Licencia gratuita automática',free.isTrial&&free.maxDevices===1&&free.dailyLimit===1&&free.secondsLeft>29*86400);
+  check('Licencia gratuita automática',free.accessMode==='free'&&!free.isTrial&&free.maxDevices===1&&free.monthlyLimit===150&&free.secondsLeft>365*86400);
   check('Licencia automática idempotente',(await por('a','/license')).data.license.id===free.id);
-  check('No permite reactivar el mes gratis',(await por('a','/orders','POST',{planId:'prueba'})).status===409);
+  check('No permite reactivar el mes gratis',(await por('a','/orders','POST',{planId:'gratis'})).status===409);
   const obsolete=await api('activate',{...dev(free.key),appVersion:'3.1.0'});
   check('Plugin antiguo debe actualizar e invalida token anterior',obsolete.data.reason==='update_required'&&obsolete.data.error==='expired');
   const activation=await api('activate',dev(free.key));
   check('Activa plugin nuevo',activation.status===200);
   const payload=JSON.parse(Buffer.from(activation.data.token.split('.')[0],'base64url'));
-  check('Token firmado contiene límite diario',payload.dailyLimit===1);
+  check('Token firmado contiene límite diario',payload.monthlyLimit===150&&payload.access==='free');
   check('No autoriza un equipo ajeno',(await api('export',{...dev(free.key,2),requestId:randomUUID()})).data.error==='device_not_activated');
   const requestId=randomUUID();
   check('Primera exportación diaria',(await api('export',{...dev(free.key),requestId})).status===200);
   check('Misma reserva idempotente',(await api('export',{...dev(free.key),requestId})).status===200);
-  check('Segunda exportación bloqueada',(await api('export',{...dev(free.key),requestId:randomUUID()})).data.error==='daily_limit');
-  check('Portal refleja consumo',(await por('a','/license')).data.license.exportsToday===1);
-  sql("xp_exec(\"UPDATE export_usage SET usage_day = '2000-01-01'\");");
-  check('Se renueva al día siguiente',(await api('export',{...dev(free.key),requestId:randomUUID()})).status===200);
+  check('Reserva superior al saldo bloqueada',(await api('export',{...dev(free.key),requestId:randomUUID(),units:150})).data.error==='monthly_limit');
+  check('Portal refleja consumo',(await por('a','/license')).data.license.exportsUsed===1);
+  check('Fallido no consume archivo',(await api('complete',{...dev(free.key),requestId,units:0})).status===200);
+  check('Reconciliación idempotente',(await api('complete',{...dev(free.key),requestId,units:0})).status===200);
+  check('Saldo devuelto',(await por('a','/license')).data.license.exportsUsed===0);
+  const largeRequest=randomUUID();
+  check('Reserva lote de 150 archivos',(await api('export',{...dev(free.key),requestId:largeRequest,units:150})).status===200);
+  check('Bloquea archivo 151',(await api('export',{...dev(free.key),requestId:randomUUID()})).data.error==='monthly_limit');
+  check('Solo 149 generados devuelven un cupo',(await api('complete',{...dev(free.key),requestId:largeRequest,units:149})).status===200&&(await por('a','/license')).data.license.exportsUsed===149);
+  check('No concilia dos resultados distintos',(await api('complete',{...dev(free.key),requestId:largeRequest,units:0})).status===409);
+  sql("xp_exec(\"UPDATE export_buckets SET period = '2000-01'\");");
+  check('Se renueva al mes siguiente',(await api('export',{...dev(free.key),requestId:randomUUID()})).status===200);
+  check('Opciones avanzadas bloqueadas en Gratuito',(await api('export',{...dev(free.key),requestId:randomUUID(),requiresFull:true})).data.error==='full_required');
+  check('Activa prueba Full de 14 días',(await por('a','/trial','POST')).status===200);
+  const trial=(await por('a','/license')).data.license;
+  check('Full 14 días conserva clave',trial.accessMode==='trial'&&trial.isTrial&&trial.monthlyLimit===0&&trial.key===free.key&&trial.secondsLeft<=14*86400&&trial.secondsLeft>13*86400);
+  check('Full no tiene cupo ni restricción de opciones',(await api('export',{...dev(free.key),requestId:randomUUID(),units:500,requiresFull:true})).status===200);
+  check('No repite prueba Full',(await por('a','/trial','POST')).status===409);
+  sql("xp_exec(\"UPDATE licenses SET expires_at = 1 WHERE access_mode = 'trial'\");");
+  const afterTrial=(await por('a','/license')).data.license;
+  check('Prueba vencida vuelve a Gratuito con misma clave',afterTrial.accessMode==='free'&&!afterTrial.isTrial&&afterTrial.key===free.key&&afterTrial.monthlyLimit===150);
+  check('Prueba vencida no habilita opciones Full',(await api('export',{...dev(free.key),requestId:randomUUID(),requiresFull:true})).data.error==='full_required');
   const freeDevice=free.key;
   check('Perfil valida teléfono',(await por('a','/profile','PATCH',{phone:'mal'})).status===400);
   check('Actualiza perfil',(await por('a','/profile','PATCH',{name:'Ana Arquitecta',company:'Estudio Norte',phone:'+51 999 888 777'})).status===200);
@@ -107,6 +127,9 @@ try{
   const card=(await por('a','/cards')).data.cards[0];
   check('Solo marca y últimos cuatro dígitos',card.lastFour==='1111'&&card.brand==='Visa'&&!Object.hasOwn(card,'provider_id'));
   check('Otra cuenta registrada',(await por('b','/register','POST',{name:'Bruno Prueba',email:'bruno@example.test',password})).status===201);
+  const otherFree=(await por('b','/license')).data.license;
+  check('Otra cuenta puede solicitar una prueba sin equipo activo',(await por('b','/trial','POST')).status===200);
+  check('Una computadora no repite prueba Full con otra cuenta',(await api('activate',dev(otherFree.key,1))).data.error==='trial_used');
   check('No lista tarjetas ajenas',(await por('b','/cards')).data.cards.length===0);
   check('No elimina tarjetas ajenas',(await por('b','/cards/'+card.id,'DELETE')).status===404);
   check('No cambia correo sin contraseña',(await por('a','/profile','PATCH',{email:'nueva@example.test'})).status===400);
@@ -126,6 +149,7 @@ try{
   for(let n=2;n<=3;n++)check('Activa computadora '+n,(await api('activate',dev(team.key,n))).status===200);
   check('Respeta límite de equipos',(await api('activate',dev(team.key,4))).data.error==='device_limit');
   check('Plan pagado sin límite diario',(await api('export',{...dev(team.key),requestId:randomUUID()})).status===200);
+  check('Plugin anterior mantiene compatibilidad para planes pagados',(await api('export',{...dev(team.key),appVersion:'3.2.0',units:undefined,requestId:randomUUID()})).status===200);
   const renew=(await por('a','/orders','POST',{planId:'equipo'})).data.order;
   await por('a','/orders/'+renew.code+'/pay','POST',{cardId:card.id});
   const renewed=(await por('a','/license')).data.license;
@@ -134,6 +158,14 @@ try{
   await por('a','/orders/'+downgrade.code+'/pay','POST',{cardId:card.id});
   const individual=(await por('a','/license')).data.license;
   check('Bajar plan reduce capacidad y libera excedentes',individual.maxDevices===1&&individual.devices.filter(d=>d.status==='active').length===1);
+  const annual=(await por('a','/orders','POST',{planId:'equipo_anual'})).data.order;
+  check('Anual de tres equipos cuesta S/ 399',annual.amountCents===39900&&annual.seconds===365*86400);
+  await por('a','/orders/'+annual.code+'/pay','POST',{cardId:card.id});
+  const annualLicense=(await por('a','/license')).data.license;
+  check('Anual aplica 365 días y tres computadoras',annualLicense.maxDevices===3&&annualLicense.secondsLeft>364*86400&&annualLicense.secondsLeft<=365*86400);
+  const annualRenew=(await por('a','/orders','POST',{planId:'equipo_anual'})).data.order;
+  await por('a','/orders/'+annualRenew.code+'/pay','POST',{cardId:card.id});
+  check('Renovación anual suma 365 días',(await por('a','/license')).data.license.expiresAt-annualLicense.expiresAt===365*86400);
   const decline=(await por('a','/orders','POST',{planId:'estudio'})).data.order;
   check('Rechazo permite reintentar',(await por('a','/orders/'+decline.code+'/pay','POST',{token:'tkn_test_declined'})).status===402);
   check('Pedido rechazado sigue pendiente',(await por('a','/orders')).data.orders.find(o=>o.code===decline.code).status==='pending');
@@ -147,6 +179,9 @@ try{
   check('Usuario no aprueba pagos',(await call('a','/admin/api/orders/'+review.id+'/approve','POST')).status===401);
   check('Admin puede conciliar',(await admin('/orders/'+review.id+'/approve','POST')).status===200);
   check('Conciliación aplica siete computadoras',(await por('a','/license')).data.license.maxDevices===7);
+  sql(`xp_exec('UPDATE licenses SET expires_at = 1 WHERE id = ?', ['${free.id}']);`);
+  const expiredPaid=(await por('a','/license')).data.license;
+  check('Plan pagado vencido vuelve a Gratuito',expiredPaid.accessMode==='free'&&expiredPaid.maxDevices===1&&expiredPaid.key===free.key);
   check('Elimina tarjeta en Culqi y local',(await por('a','/cards/'+card.id,'DELETE')).status===200&&providerCards.size===0);
   const oldSession=jar.a;
   check('Contraseña actual requerida',(await por('a','/password','POST',{currentPassword:'incorrecta',password:'otra-clave-1234'})).status===400);
@@ -183,6 +218,7 @@ try{
     await run(join(sandbox,'test/smtp-test.mjs'));
   }
   if(process.env.KEEP_QA_SERVER==='1'){
+    cpSync(join(root,'site'),join(sandbox,'site'),{recursive:true});
     php(`$c=require ${quote(configPath)};$c['payment_mode']='culqi';$c['mail']=['driver'=>'none'];file_put_contents(${quote(configPath)},'<?php return '.var_export($c,true).';');`);
     // Cuenta nueva para revisión visual en navegador; conserva el servidor hasta Ctrl+C.
     await por('visual','/register','POST',{name:'Giampier Perez',email:'visual@example.test',password});

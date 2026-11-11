@@ -58,8 +58,8 @@ check('verificar con el enlace', (await por('none', 'POST', '/verify', { token: 
 check('el mismo enlace otra vez sigue dando OK (ya verificado)', (await por('none', 'POST', '/verify', { token: tokenLast })).json?.alreadyVerified === true);
 check('me: ahora está verificado', (await por('a', 'GET', '/me')).json.customer.verified === true);
 const trial = await por('a', 'GET', '/license');
-check('el mes gratuito se activa al confirmar correo', trial.status === 200 && trial.json.license.isTrial && trial.json.license.dailyLimit === 1);
-check('recibe el aviso del mes gratuito', sentTo(emailA, 'mes gratuito de BIM FLOW está activo').length === 1);
+check('el mes gratuito se activa al confirmar correo', trial.status === 200 && trial.json.license.accessMode === 'free' && trial.json.license.monthlyLimit === 150);
+check('recibe el aviso del mes gratuito', sentTo(emailA, 'plan gratuito de Xport está activo').length === 1);
 
 tag('Olvidé mi contraseña');
 const before = mails().length;
@@ -76,7 +76,7 @@ check('contraseña corta rechazada', (await por('none', 'POST', '/reset', { toke
 check('token inventado rechazado', (await por('none', 'POST', '/reset', { token: 'y'.repeat(43), password: 'otra-clave-nueva' }, { ip: '10.5.1.3' })).status === 400);
 const done = await por('none', 'POST', '/reset', { token: rt, password: 'otra-clave-nueva' }, { ip: '10.5.1.2' });
 check('restablecer con el enlace', done.status === 200);
-check('aviso de seguridad "contraseña cambiada"', sentTo(emailA, 'contraseña de BIM FLOW fue cambiada').length === 1);
+check('aviso de seguridad "contraseña cambiada"', sentTo(emailA, 'contraseña de Xport fue cambiada').length === 1);
 check('el enlace es de un solo uso', (await por('none', 'POST', '/reset', { token: rt, password: 'tercera-clave-nueva' })).status === 400);
 check('la contraseña vieja ya no sirve', (await por('b', 'POST', '/login', { email: emailA, password: 'clave-segura-1' }, { ip: '10.5.1.4' })).status === 401);
 check('la contraseña nueva sí', (await por('b', 'POST', '/login', { email: emailA, password: 'otra-clave-nueva' }, { ip: '10.5.1.4' })).status === 200);
@@ -103,7 +103,7 @@ const adminMail = sentTo('admin@example.test', 'Nuevo pedido por aprobar: ' + or
 check('el administrador recibe el aviso del pedido', adminMail.length === 1 && adminMail[0].text.includes('Beto'));
 const row = (await adm('GET', '/orders?status=pending')).json.orders.find((o) => o.code === order.json.order.code);
 check('aprobar el pago', (await adm('POST', `/orders/${row.id}/approve`)).status === 200);
-check('el cliente recibe "Tu licencia está lista"', sentTo(emailB, 'Tu licencia de BIM FLOW está lista').length === 1);
+check('el cliente recibe "Tu licencia está lista"', sentTo(emailB, 'Tu licencia de Xport está lista').length === 1);
 
 tag('Instalador para clientes');
 check('sin instalador publicado', (await por('none', 'GET', '/download')).json.installer === null);
@@ -114,7 +114,7 @@ const up = await adm('POST', '/installer?name=XportBIM_Setup_v3.1.0_Revit2023-20
 check('el admin publica el instalador', up.status === 200 && up.json.installer.size === fake.length && up.json.installer.version === '3.1.0', JSON.stringify(up.json));
 const crypto = await import('node:crypto');
 const info = (await por('none', 'GET', '/download')).json.installer;
-check('la descarga pública informa tamaño, versión y huella SHA-256 correcta', info && info.sha256 === crypto.createHash('sha256').update(fake).digest('hex') && info.url === '/downloads/XportBIM_Setup.exe');
+check('la descarga pública informa tamaño, versión y huella SHA-256 correcta', info && info.sha256 === crypto.createHash('sha256').update(fake).digest('hex') && info.url === '/downloads/Xport_Setup.exe');
 const file = await fetch(BASE + info.url);
 check('el archivo se descarga idéntico', file.status === 200 && Buffer.from(await file.arrayBuffer()).equals(fake));
 check('subir sin sesión de admin → 401', (await call('none', 'POST', '/admin/api/installer?name=x.exe', undefined, { raw: fake })).status === 401);

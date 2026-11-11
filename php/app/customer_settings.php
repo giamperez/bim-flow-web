@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/** El mes gratuito se asigna una sola vez y nunca sustituye una licencia existente. */
+/** El plan gratuito se asigna una sola vez y no sustituye una licencia existente. */
 function xp_ensure_free_license(array $customer): void
 {
     if (xp_verification_required() && empty($customer['email_verified_at'])) { return; }
@@ -10,16 +10,16 @@ function xp_ensure_free_license(array $customer): void
         if (!$fresh || !empty($fresh['free_started_at']) || xp_portal_license_row($customer)) { return; }
         if (xp_verification_required() && empty($fresh['email_verified_at'])) { return; }
         [$id] = xp_new_license(['customer_name' => $customer['name'], 'customer_email' => $customer['email'],
-            'plan' => 'Gratuito', 'max_devices' => 1, 'expires_at' => time() + 30 * XP_DAY,
-            'customer_id' => $customer['id'], 'store_key' => true, 'is_trial' => true]);
-        xp_log_event('free_month_started', $id, null, '30 días · 1 exportación diaria');
+            'plan' => 'Gratuito', 'max_devices' => 1, 'expires_at' => 253402300799,
+            'customer_id' => $customer['id'], 'store_key' => true, 'is_trial' => false, 'access_mode' => 'free']);
+        xp_log_event('free_plan_started', $id, null, '150 archivos al mes · PDF y DWG');
         xp_exec('UPDATE customers SET free_started_at = ? WHERE id = ?', [time(), $customer['id']]);
         return true;
     });
     if ($created) {
         $base = xp_base_url();
-        xp_send_mail($customer['email'], 'Tu mes gratuito de BIM FLOW está activo', xp_mail_template('Tu espacio está listo',
-            '<p>Tu mes gratuito incluye 30 días, una computadora y una exportación al día. El cupo se renueva a medianoche de Perú.</p><p>Entra a tu cuenta para copiar tu clave e instalar BIM FLOW en Revit.</p>',
+        xp_send_mail($customer['email'], 'Tu plan gratuito de Xport está activo', xp_mail_template('Tu espacio está listo',
+            '<p>Xport Gratuito incluye una computadora y 150 archivos al mes en PDF y DWG. El cupo se renueva el primer día de cada mes en Perú.</p><p>Entra a tu cuenta para copiar tu clave e instalar Xport en Revit.</p>',
             $base !== '' ? $base . '/portal/#licencia' : null, 'Ver mi licencia'));
     }
 }

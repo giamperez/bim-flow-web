@@ -49,7 +49,7 @@ export function ExportShowcase() {
           <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
           <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
         </div>
-        <span className="text-[11px] font-medium tracking-[0.16em] text-slate-300 uppercase">BIM FLOW · Entrega 03</span>
+        <span className="text-[11px] font-medium tracking-[0.16em] text-slate-300 uppercase">Xport · Entrega 03</span>
         <span className={`h-2 w-2 rounded-full ${finished ? 'bg-[#00afb7]' : 'animate-pulse bg-[#00afb7]'}`} aria-hidden="true" />
       </div>
 

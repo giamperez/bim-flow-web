@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS licenses (
   customer_id    CHAR(36) NULL,
   key_enc        TEXT NULL,
   is_trial       TINYINT NOT NULL DEFAULT 0,
+  access_mode VARCHAR(10) NOT NULL DEFAULT 'paid',
   UNIQUE KEY uq_licenses_key_hash (key_hash),
   KEY idx_licenses_expires (expires_at),
   KEY idx_licenses_status (status)
@@ -61,6 +62,7 @@ CREATE TABLE IF NOT EXISTS customers (
   company VARCHAR(120) NOT NULL DEFAULT '',
   billing_json TEXT NULL,
   free_started_at BIGINT NULL,
+  trial_started_at BIGINT NULL,
   UNIQUE KEY uq_customers_email (email),
   KEY idx_customers_norm (email_norm)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -115,6 +117,25 @@ CREATE TABLE IF NOT EXISTS export_usage (
   created_at BIGINT NOT NULL,
   PRIMARY KEY (license_id, usage_day),
   UNIQUE KEY uq_export_device_day (device_hash, usage_day)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS export_buckets (
+  subject VARCHAR(80) NOT NULL,
+  period CHAR(7) NOT NULL,
+  used_units INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (subject, period)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS export_reservations (
+  license_id CHAR(36) NOT NULL,
+  request_id CHAR(36) NOT NULL,
+  device_hash CHAR(64) NOT NULL,
+  period CHAR(7) NOT NULL,
+  planned_units INT NOT NULL,
+  quota_units INT NOT NULL,
+  actual_units INT NULL,
+  created_at BIGINT NOT NULL,
+  settled_at BIGINT NULL,
+  PRIMARY KEY (license_id, request_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS payment_customers (

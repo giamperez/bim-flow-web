@@ -458,7 +458,7 @@ function xp_admin_order_cancel(string $id): void
 }
 
 // ---------------------------------------------------------------- instalador para clientes
-/** Recibe el .exe como cuerpo crudo (`?name=` = nombre original) y lo publica en /downloads/XportBIM_Setup.exe. */
+/** Recibe el .exe como cuerpo crudo (`?name=` = nombre original) y lo publica en /downloads/Xport_Setup.exe. */
 function xp_admin_upload_installer(): void
 {
     $limit = 40 * 1024 * 1024;
@@ -485,14 +485,14 @@ function xp_admin_upload_installer(): void
         xp_json(500, ['ok' => false, 'error' => 'No se pudo crear la carpeta de descargas.']);
     }
     $tmp = $dir . '/.upload-' . bin2hex(random_bytes(6));
-    if (file_put_contents($tmp, $data) === false || !@rename($tmp, $dir . '/XportBIM_Setup.exe')) {
+    if (file_put_contents($tmp, $data) === false || !@rename($tmp, $dir . '/Xport_Setup.exe')) {
         @unlink($tmp);
         xp_json(500, ['ok' => false, 'error' => 'No se pudo guardar el instalador (permisos de la carpeta downloads).']);
     }
-    @chmod($dir . '/XportBIM_Setup.exe', 0644);
+    @chmod($dir . '/Xport_Setup.exe', 0644);
     $version = preg_match('/(\d+\.\d+(?:\.\d+)?)/', $name, $m) ? $m[1] : '';
     file_put_contents($dir . '/installer.json', json_encode([
-        'version' => $version, 'sha256' => hash('sha256', $data), 'uploadedAt' => time(), 'originalName' => $name,
+        'version' => $version, 'sha256' => hash('sha256', $data), 'uploadedAt' => time(), 'originalName' => $name, 'file' => 'Xport_Setup.exe',
     ]));
     @chmod($dir . '/installer.json', 0644);
     xp_log_event('installer_uploaded', null, null, $name . ' · ' . strlen($data) . ' bytes');

@@ -9,6 +9,8 @@ Valida las licencias del complemento de Revit y ofrece un panel para gestionarla
 
 El complemento no distingue cuál responde: solo necesita la URL (HTTPS) y la clave pública.
 
+Modelo comercial vigente, opciones gratuitas, prueba Full, migración y contadores: [Xport por BimFlow](docs/xport-modelo-comercial.md).
+
 ## Cómo funciona
 - Clave de licencia `XPBM-XXXXX-XXXXX-XXXXX-XXXXX`. En la base solo se guarda su hash; se muestra una vez al crearla.
 - `POST /api/v1/activate | validate | deactivate | release`. Devuelve un token firmado (ECDSA P-256 / SHA-256, firma `r||s`) ligado al equipo, con vencimiento y fecha de reverificación (7 días sin internet).
@@ -39,15 +41,15 @@ Otra contraseña: `php app/bin/setup.php --reset-password`. Ver la clave públic
 | Ruta | Qué es |
 |---|---|
 | `/` | Landing (código en `landing/`, compilada en `site/`) |
-| `/portal/` | **Portal del cliente**: crear cuenta, comprar o renovar, ver y copiar su clave, liberar equipos, regenerar la clave |
+| `/portal/` | **Portal de Xport por BimFlow**: crear cuenta, comprar o renovar, ver y copiar su clave, liberar equipos, regenerar la clave |
 | `/admin/` | Panel de administración: licencias, **pedidos por aprobar**, actividad |
 | `/api/v1/*` | API del complemento de Revit |
 
 - **Licencias de prueba por minutos:** en el panel, *Nueva licencia* → campo **Prueba corta: minutos** (2, 10 min, 1 hora…). *Extender* admite días o minutos.
 - **Compra:** el cliente elige un plan en el portal y se crea un pedido con un código `BF-XXXXXX`. Con `payment_mode: 'manual'` (por defecto) el cliente paga fuera de línea y el administrador pulsa **Aprobar pago** en *Pedidos*; ahí se crea o renueva su licencia. Con `payment_mode: 'test'` el pago se aprueba al instante (solo pruebas; instalar con `XP_PAYMENT_MODE=test`). Para conectar una pasarela, su webhook debe llamar a `xp_mark_order_paid($orderId)` (idempotente).
-- **Mes gratuito:** se asigna automáticamente al consultar la licencia después de confirmar el correo (si hay correo configurado). Dura 30 días para una computadora, con un lote de exportación al día; el cupo se renueva a medianoche de Perú. Necesita el plugin 3.2.0 y conexión a internet para reservar el cupo mediante `POST /api/v1/export`. Los reintentos del mismo lote no consumen otro cupo. Eliminar una licencia no reinicia el mes gratuito.
-- **Control del mes gratuito:** una prueba por cliente y por computadora; el contador diario tiene restricciones únicas por licencia y por equipo. Los alias de Gmail se normalizan y se rechazan correos temporales. La verificación de correo se exige cuando hay un servicio de envío configurado. El registro se limita a 10 cuentas por hora y red.
-- **Catálogo fijo en soles:** Individual S/ 19.90 (1 computadora), Equipo S/ 49.90 (3), Estudio S/ 99.90 (7); todos por 30 días y sin límite diario. El catálogo vigente ignora `pricing_tiers`, `plans` y `price_lock` antiguos de `config.php`. Los pedidos históricos conservan sus importes; ya no se vende el anual. Renovar el mismo plan de pago suma 30 días al vencimiento; cambiar de plan inicia un período nuevo. Una reducción de capacidad libera las computadoras menos recientes.
+- **Xport Gratuito:** una computadora, PDF y DWG con ajustes esenciales, y 150 archivos al mes calendario de Perú. Sin vencimiento comercial. La prueba Full se activa por separado durante 14 días y vuelve a Gratuito al terminar.
+- **Cupo mensual y prueba Full:** una prueba Full por cuenta y computadora; 150 archivos mensuales por licencia/computadora en Gratuito. Reserva previa y conciliación de archivos realmente generados; fallidos y cancelados devuelven cupo. El cupo se renueva el primer día del mes en Perú.
+- **Catálogo fijo en soles:** 1 computadora S/ 19.90 mensual / S/ 159 anual; 3 computadoras S/ 49.90 / S/ 399; 7 computadoras S/ 99.90 / S/ 799. Mensuales por 30 días; anuales por 365. Todos incluyen Full. Pedidos históricos conservados; los pendientes con tarifas antiguas no pueden cobrarse.
 
 - **Panel de usuario:** barra lateral, resumen, licencia y equipos, planes, pedidos, facturación, perfil y seguridad. El perfil permite nombre, empresa, teléfono y correo; cambiar el correo exige contraseña y nueva verificación si hay correo configurado. Cambiar la contraseña invalida las otras sesiones y los enlaces de recuperación anteriores.
 - **Tarjetas guardadas:** consentimiento explícito, tokenización con Culqi Checkout, creación de cliente y tarjeta mediante `/v2/customers` y `/v2/cards`. Solo se guarda la referencia de Culqi, marca y últimos cuatro dígitos. Se pueden elegir para pagar o eliminar. No hay suscripciones ni cobros automáticos. Las referencias de prueba y producción se mantienen separadas. Para guardarlas se requieren nombre y apellido, teléfono, dirección y ciudad. Datos de facturación guardados no equivalen a emisión de comprobantes tributarios.
@@ -93,7 +95,7 @@ Proveedores: **Brevo** (gratis 300/día; `smtp-relay.brevo.com`, 587, `tls`), **
 Pruebas: `test/e2e-mail.mjs` (44 comprobaciones, correo en modo `log`) y `test/smtp-test.mjs` (protocolo SMTP contra un servidor simulado; no cubre STARTTLS/SSL reales: usa `--test-mail` con tu proveedor).
 
 ## Instalador para clientes
-En el panel de administración, **Resumen → Instalador para clientes → Publicar instalador**: sube el `.exe` que descargas de GitHub Actions. Queda en `/downloads/XportBIM_Setup.exe` con su versión y su **huella SHA-256**, y aparece en el portal y en `/instalacion/`, la guía amable con los pasos para cada aviso de Windows (SmartScreen, Control inteligente de aplicaciones, navegador, antivirus, Revit).
+En el panel de administración, **Resumen → Instalador para clientes → Publicar instalador**: sube el `.exe` que descargas de GitHub Actions. Queda en `/downloads/Xport_Setup.exe` con su versión y su **huella SHA-256**, y aparece en el portal y en `/instalacion/`, la guía amable con los pasos para cada aviso de Windows (SmartScreen, Control inteligente de aplicaciones, navegador, antivirus, Revit).
 
 ## Cloudflare Workers
 ```bash

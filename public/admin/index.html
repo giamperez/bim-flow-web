@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>XportBIM · Licencias</title>
+<title>Xport · Licencias</title>
 <style>
 :root{
   --bg:#f4f6f9;--panel:#fff;--ink:#17212b;--muted:#5d6b7a;--line:#e1e6ec;--brand:#0b6bcb;--brand-ink:#fff;
@@ -114,7 +114,7 @@ tbody tr.click:hover{background:var(--idle-bg)}
 
 <section id="login" class="login hidden">
   <form id="loginForm">
-    <h1>XportBIM · Licencias</h1>
+    <h1>Xport · Licencias</h1>
     <label>Contraseña de administrador
       <input id="password" type="password" autocomplete="current-password" required autofocus>
     </label>
@@ -125,7 +125,7 @@ tbody tr.click:hover{background:var(--idle-bg)}
 
 <div id="app" class="app hidden">
   <aside>
-    <div class="brand">XportBIM<small>Panel de licencias</small></div>
+    <div class="brand">Xport<small>Panel de licencias</small></div>
     <nav class="nav" aria-label="Secciones">
       <button data-view="dashboard">Resumen</button>
       <button data-view="licenses">Licencias</button>
@@ -308,7 +308,7 @@ async function loadInstaller() {
       <div style="margin-top:4px"><a href="${esc(info.url)}" target="_blank" rel="noopener">Descargar para comprobarlo</a></div></div>`
       : '<div class="muted">Aún no hay un instalador publicado. Los clientes verán «estará disponible muy pronto».</div>'}
     <div class="row"><input type="file" id="instFile" accept=".exe" style="max-width:420px"><button class="btn primary fixed" id="instUp">Publicar instalador</button></div>
-    <div class="muted" style="font-size:13px">Sube el archivo <b>XportBIM_Setup_vX.Y.Z_….exe</b> descargado de GitHub Actions. Reemplaza al anterior y calcula su huella SHA-256.</div>
+    <div class="muted" style="font-size:13px">Sube el archivo <b>Xport_Setup_vX.Y.Z_….exe</b> descargado de GitHub Actions. Reemplaza al anterior y calcula su huella SHA-256.</div>
     <div class="err" id="instErr" role="alert"></div></div>`;
   $('#instUp').onclick = async () => {
     const f = $('#instFile').files[0];

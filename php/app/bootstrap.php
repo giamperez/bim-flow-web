@@ -273,6 +273,7 @@ function xp_license_public(array $l, int $expiringDays = 30): array
         'plan' => $l['plan'],
         'maxDevices' => (int) $l['max_devices'],
         'isTrial' => !empty($l['is_trial']),
+        'accessMode' => $l['access_mode'] ?? 'paid',
         'status' => $l['status'],
         'state' => $state,
         'expiresAt' => $expires,
@@ -303,6 +304,7 @@ require_once __DIR__ . '/culqi.php';
 require_once __DIR__ . '/portal_api.php';
 require_once __DIR__ . '/customer_settings.php';
 require_once __DIR__ . '/payment_methods.php';
+require_once __DIR__ . '/export_allowance.php';
 
 // ---------------------------------------------------------------- dispatch
 function xp_dispatch(): void

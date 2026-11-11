@@ -78,22 +78,29 @@ function xp_plans(?array $customer = null): array
 {
     // Catálogo vigente. Los pedidos históricos conservan su importe y duración originales.
     // No reutilizar los antiguos tramos de precio ni overrides de config.php.
-    return [
-        ['id' => 'prueba', 'name' => 'Gratuito', 'trial' => true, 'seconds' => 30 * XP_DAY, 'devices' => 1, 'priceCents' => 0, 'currency' => 'PEN', 'dailyLimit' => 1, 'description' => 'Un mes para empezar. Una exportación al día.'],
-        ['id' => 'mensual', 'name' => 'Individual', 'trial' => false, 'seconds' => 30 * XP_DAY, 'devices' => 1, 'priceCents' => 1990, 'currency' => 'PEN', 'dailyLimit' => 0, 'description' => 'Tu espacio de trabajo, sin límite diario de exportaciones.'],
-        ['id' => 'equipo', 'name' => 'Equipo', 'trial' => false, 'seconds' => 30 * XP_DAY, 'devices' => 3, 'priceCents' => 4990, 'currency' => 'PEN', 'dailyLimit' => 0, 'description' => 'Una licencia compartida para un estudio en movimiento.'],
-        ['id' => 'estudio', 'name' => 'Estudio', 'trial' => false, 'seconds' => 30 * XP_DAY, 'devices' => 7, 'priceCents' => 9990, 'currency' => 'PEN', 'dailyLimit' => 0, 'description' => 'Más computadoras conectadas al mismo flujo de trabajo.'],
-    ];
+    $plans = [['id' => 'gratis', 'name' => 'Gratuito', 'displayName' => 'Gratuito', 'trial' => false, 'free' => true,
+        'cycle' => 'free', 'seconds' => 0, 'devices' => 1, 'priceCents' => 0, 'currency' => 'PEN', 'monthlyLimit' => 150,
+        'description' => 'PDF y DWG con los ajustes esenciales. 150 archivos al mes.']];
+    foreach ([['mensual','Individual',1,1990,15900],['equipo','Equipo',3,4990,39900],['estudio','Estudio',7,9990,79900]] as [$id,$name,$devices,$monthly,$annual]) {
+        foreach (['monthly','annual'] as $cycle) {
+            $plans[] = ['id' => $cycle === 'monthly' ? $id : ($id === 'mensual' ? 'anual' : $id . '_anual'),
+                'name' => $name . ($cycle === 'annual' ? ' anual' : ''), 'displayName' => $name,
+                'trial' => false, 'free' => false, 'cycle' => $cycle, 'seconds' => ($cycle === 'monthly' ? 30 : 365) * XP_DAY,
+                'devices' => $devices, 'priceCents' => $cycle === 'monthly' ? $monthly : $annual,
+                'currency' => 'PEN', 'monthlyLimit' => 0, 'description' => 'Todas las opciones y formatos. Sin límite de archivos.'];
+        }
+    }
+    return $plans;
 }
 
 /** La prueba gratuita es única por cliente: solo si nunca tuvo licencia ni pidió otra prueba. */
 function xp_trial_available(array $customer): bool
 {
-    if (!empty($customer['free_started_at'])) { return false; }
-    if (xp_one('SELECT id FROM licenses WHERE customer_id = ? LIMIT 1', [$customer['id']])) {
-        return false;
-    }
-    return !xp_one("SELECT id FROM orders WHERE customer_id = ? AND kind = 'trial' LIMIT 1", [$customer['id']]);
+    if (!empty($customer['trial_started_at'])) { return false; }
+    $lic = xp_portal_license_row($customer);
+    if (!$lic && !empty($customer['free_started_at'])) { return false; }
+    if ($lic && (($lic['access_mode'] ?? 'paid') !== 'free' || $lic['status'] !== 'active')) { return false; }
+    return !xp_one("SELECT id FROM orders WHERE customer_id = ? AND status = 'paid' AND amount_cents > 0 LIMIT 1", [$customer['id']]);
 }
 
 /**
@@ -109,12 +116,12 @@ function xp_new_license(array $f): array
     $id = xp_uuid();
     $t = time();
     xp_exec(
-        "INSERT INTO licenses (id, key_hash, key_hint, customer_name, customer_email, plan, max_devices, status, expires_at, notes, created_at, updated_at, customer_id, key_enc, is_trial)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO licenses (id, key_hash, key_hint, customer_name, customer_email, plan, max_devices, status, expires_at, notes, created_at, updated_at, customer_id, key_enc, is_trial, access_mode)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?)",
         [
             $id, xp_sha256($key), substr($key, -5), $f['customer_name'], $f['customer_email'] ?? '', $f['plan'] ?? 'standard',
             (int) $f['max_devices'], (int) $f['expires_at'], $f['notes'] ?? '', $t, $t,
-            $f['customer_id'] ?? null, !empty($f['store_key']) ? xp_encrypt_key($key) : null, !empty($f['is_trial']) ? 1 : 0,
+            $f['customer_id'] ?? null, !empty($f['store_key']) ? xp_encrypt_key($key) : null, !empty($f['is_trial']) ? 1 : 0, $f['access_mode'] ?? 'paid',
         ]
     );
     return [$id, $key];
@@ -141,10 +148,10 @@ function xp_mark_order_paid(string $orderId, string $actor = 'system', string $p
         } else {
             $licenseId = $lic['id'];
             // Un cambio de capacidad empieza un período nuevo; renovar el mismo plan conserva los días restantes.
-            $samePlan = empty($lic['is_trial']) && $lic['plan'] === $o['plan_name'];
+            $samePlan = ($lic['access_mode'] ?? 'paid') === 'paid' && $lic['plan'] === $o['plan_name'];
             $expires = ($samePlan ? max((int) $lic['expires_at'], $t) : $t) + (int) $o['seconds'];
             xp_exec(
-                'UPDATE licenses SET expires_at = ?, max_devices = ?, plan = ?, is_trial = 0, updated_at = ? WHERE id = ?',
+                "UPDATE licenses SET expires_at = ?, max_devices = ?, plan = ?, is_trial = 0, access_mode = 'paid', updated_at = ? WHERE id = ?",
                 [$expires, (int) $o['devices'], $o['plan_name'], $t, $licenseId]
             );
             $active = xp_all("SELECT id FROM devices WHERE license_id = ? AND status = 'active' ORDER BY last_seen DESC, id", [$licenseId]);
@@ -225,6 +232,7 @@ $who = xp_current_customer();
             'plans' => xp_plans($who),
             'tier' => null,
             'trialAvailable' => $who ? xp_trial_available($who) : null,
+            'trialDays' => 14,
             'paymentMode' => xp_config()['payment_mode'] ?? 'manual',
             'payment' => (xp_config()['payment_mode'] ?? 'manual') === 'culqi' ? xp_culqi_public_info() : null,
         ]);
@@ -269,6 +277,7 @@ $who = xp_current_customer();
         xp_json(200, ['ok' => true, 'customer' => xp_customer_public($customer), 'verificationRequired' => xp_verification_required()]);
     }
     if ($route === 'profile' && $method === 'PATCH') { xp_portal_profile($customer); }
+    if ($route === 'trial' && $method === 'POST') { xp_portal_start_trial($customer); }
     if ($route === 'password' && $method === 'POST') { xp_portal_password($customer); }
     if ($route === 'cards' && $method === 'GET') { xp_portal_cards($customer); }
     if ($route === 'cards' && $method === 'POST') { xp_portal_save_card($customer); }
@@ -371,6 +380,7 @@ function xp_portal_license(array $customer): void
 {
     xp_ensure_free_license($customer);
     $lic = xp_portal_license_row($customer);
+    if ($lic) { $lic = xp_refresh_access($lic); }
     if (!$lic) {
         xp_json(200, ['ok' => true, 'license' => null]);
     }
@@ -384,9 +394,10 @@ function xp_portal_license(array $customer): void
         ];
     }, $devices);
     $public['secondsLeft'] = max(0, (int) $lic['expires_at'] - time());
-    $public['dailyLimit'] = !empty($lic['is_trial']) ? 1 : 0;
-    $public['exportsToday'] = (int) xp_one('SELECT COUNT(*) AS n FROM export_usage WHERE license_id = ? AND usage_day = ?', [$lic['id'], xp_usage_day()])['n'];
-    $public['usageResetsAt'] = xp_usage_reset();
+    $public['accessMode'] = $lic['access_mode'] ?? 'paid';
+    $public['monthlyLimit'] = $public['accessMode'] === 'free' ? 150 : 0;
+    $public['exportsUsed'] = xp_monthly_usage($lic['id']);
+    $public['usageResetsAt'] = xp_monthly_reset();
     xp_json(200, ['ok' => true, 'license' => $public]);
 }
 
@@ -395,6 +406,7 @@ function xp_order_public(array $o): array
     return [
         'code' => $o['code'], 'planName' => $o['plan_name'], 'amountCents' => (int) $o['amount_cents'], 'currency' => $o['currency'],
         'status' => $o['status'], 'kind' => $o['kind'], 'createdAt' => (int) $o['created_at'],
+        'seconds' => (int) $o['seconds'], 'devices' => (int) $o['devices'],
         'paidAt' => $o['paid_at'] === null ? null : (int) $o['paid_at'],
         'canPay' => $o['status'] === 'pending' && xp_order_offer_current($o),
     ];
@@ -403,7 +415,7 @@ function xp_order_public(array $o): array
 function xp_order_offer_current(array $order): bool
 {
     foreach (xp_plans() as $plan) {
-        if ($plan['id'] === $order['plan_id'] && !$plan['trial'] && $plan['priceCents'] === (int) $order['amount_cents']
+        if ($plan['id'] === $order['plan_id'] && empty($plan['free']) && $plan['priceCents'] === (int) $order['amount_cents']
             && $plan['devices'] === (int) $order['devices'] && $plan['seconds'] === (int) $order['seconds'] && $plan['currency'] === $order['currency']) { return true; }
     }
     return false;
@@ -430,9 +442,9 @@ function xp_portal_create_order(array $customer): void
     if (!$plan) {
         xp_json(400, ['ok' => false, 'error' => 'Plan no disponible.']);
     }
-    if ($plan['trial']) {
+    if (!empty($plan['free'])) {
         xp_ensure_free_license($customer);
-        xp_json(409, ['ok' => false, 'error' => 'El mes gratuito se incluye automáticamente al confirmar tu cuenta. Consulta Licencia y equipos.']);
+        xp_json(409, ['ok' => false, 'error' => 'Xport Gratuito se incluye automáticamente al confirmar tu cuenta. Consulta Licencia y equipos.']);
     } else {
         $pending = (int) xp_one("SELECT COUNT(*) AS n FROM orders WHERE customer_id = ? AND status = 'pending'", [$customer['id']])['n'];
         if ($pending >= XP_MAX_PENDING_ORDERS) {
@@ -466,7 +478,7 @@ function xp_portal_create_order(array $customer): void
         'payment' => $online ? array_merge((array) xp_culqi_public_info(), [
             'amount' => (int) $order['amount_cents'],
             'currency' => $order['currency'],
-            'description' => mb_substr('BIM FLOW · ' . $order['plan_name'], 0, 80),
+            'description' => mb_substr('Xport · ' . $order['plan_name'], 0, 80),
             'orderCode' => $order['code'],
         ]) : null,
         'instructions' => ($paid || $online) ? '' : (string) (xp_config()['payment_instructions']
@@ -561,10 +573,10 @@ function xp_send_verification(array $customer): bool
     xp_log_event('verify_sent', null, null, $customer['id'], xp_ip());
     return xp_send_mail(
         $customer['email'],
-        'Confirma tu correo en BIM FLOW',
+        'Confirma tu correo en Xport',
         xp_mail_template(
             'Confirma tu correo',
-            '<p>Hola ' . htmlspecialchars($customer['name']) . ',</p><p>Gracias por crear tu cuenta en BIM FLOW. Confirma tu correo para activar tu prueba gratuita y gestionar tu licencia.</p><p>El enlace vale 48 horas.</p>',
+            '<p>Hola ' . htmlspecialchars($customer['name']) . ',</p><p>Gracias por crear tu cuenta en Xport. Confirma tu correo para activar tu prueba gratuita y gestionar tu licencia.</p><p>El enlace vale 48 horas.</p>',
             $base . '/portal/#verify=' . $token,
             'Confirmar mi correo'
         )
@@ -625,7 +637,7 @@ function xp_portal_forgot(): void
         $token = xp_token_create($c['id'], 'reset', 3600);
         xp_send_mail(
             $c['email'],
-            'Restablece tu contraseña de BIM FLOW',
+            'Restablece tu contraseña de Xport',
             xp_mail_template(
                 'Restablece tu contraseña',
                 '<p>Hola ' . htmlspecialchars($c['name']) . ',</p><p>Recibimos una solicitud para restablecer la contraseña de tu cuenta. El enlace vale 1 hora y solo se puede usar una vez.</p><p>Si no fuiste tú, ignora este correo: tu contraseña no cambiará.</p>',
@@ -665,7 +677,7 @@ function xp_portal_reset(): void
     xp_log_event('password_reset', null, null, $c['email'], $ip);
     xp_send_mail(
         $c['email'],
-        'Tu contraseña de BIM FLOW fue cambiada',
+        'Tu contraseña de Xport fue cambiada',
         xp_mail_template(
             'Tu contraseña fue cambiada',
             '<p>Hola ' . htmlspecialchars($c['name']) . ',</p><p>La contraseña de tu cuenta se cambió el ' . gmdate('d/m/Y H:i') . ' (UTC). Las sesiones abiertas se cerraron.</p><p><b>Si no fuiste tú</b>, restablece tu contraseña de nuevo ahora mismo y escríbenos.</p>',
@@ -720,7 +732,7 @@ function xp_notify_license_ready(string $orderId): void
     $trial = $o['kind'] === 'trial';
     xp_send_mail(
         $c['email'],
-        $trial ? 'Tu prueba gratis de BIM FLOW está activa' : 'Tu licencia de BIM FLOW está lista',
+        $trial ? 'Tu prueba gratis de Xport está activa' : 'Tu licencia de Xport está lista',
         xp_mail_template(
             $trial ? 'Tu prueba gratis está activa' : 'Tu licencia está lista',
             '<p>Hola ' . htmlspecialchars($c['name']) . ',</p><p>' . ($trial ? 'Tu prueba gratuita ya está activa.' : 'Confirmamos tu pago del pedido <b>' . htmlspecialchars($o['code']) . '</b>.')
@@ -742,13 +754,14 @@ function xp_installer_info(): ?array
 {
     $dir = xp_downloads_dir();
     $meta = @file_get_contents($dir . '/installer.json');
-    $file = $dir . '/XportBIM_Setup.exe';
     $data = $meta ? json_decode($meta, true) : null;
+    $filename = is_array($data) && ($data['file'] ?? '') === 'Xport_Setup.exe' ? 'Xport_Setup.exe' : 'XportBIM_Setup.exe';
+    $file = $dir . '/' . $filename;
     if (!is_array($data) || !is_file($file)) {
         return null;
     }
     return [
-        'url' => '/downloads/XportBIM_Setup.exe',
+        'url' => '/downloads/' . $filename,
         'version' => (string) ($data['version'] ?? ''),
         'size' => (int) filesize($file),
         'sha256' => (string) ($data['sha256'] ?? ''),

@@ -72,7 +72,7 @@ try {
   const o1 = await por('a', 'POST', '/orders', { planId: 'mensual' });
   check('crear el pedido devuelve los datos del pago, sin instrucciones manuales', o1.status === 201 && o1.json.paid === false && o1.json.payment.amount === 1990 && o1.json.payment.currency === 'PEN' && o1.json.payment.orderCode === o1.json.order.code && o1.json.instructions === '', JSON.stringify(o1.json));
   const code1 = o1.json.order.code;
-  check('solo mes gratuito antes de pagar', (await por('a', 'GET', '/license')).json.license.isTrial === true);
+  check('solo mes gratuito antes de pagar', (await por('a', 'GET', '/license')).json.license.accessMode === 'free');
   check('token con formato inválido → 400', (await por('a', 'POST', `/orders/${code1}/pay`, { token: 'x' })).status === 400);
   check('sin sesión → 401', (await por('b', 'POST', `/orders/${code1}/pay`, { token: 'tkn_test_ok1234' })).status === 401);
   // el navegador intenta falsificar el monto: se ignora
@@ -145,7 +145,7 @@ try {
   check('la prueba gratis sigue siendo gratuita y no pasa por Culqi', await (async () => {
     const before = charges.length;
     const t = await por('b', 'GET', '/license');
-    return t.status === 200 && t.json.license.isTrial && t.json.license.dailyLimit === 1 && charges.length === before;
+    return t.status === 200 && t.json.license.accessMode === 'free' && t.json.license.monthlyLimit === 150 && charges.length === before;
   })());
 } finally {
   fake.close();

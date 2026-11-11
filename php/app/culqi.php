@@ -97,7 +97,7 @@ function xp_culqi_charge(array $order, array $customer, string $token): array
         'currency_code' => (string) $order['currency'],
         'email' => (string) $customer['email'],
         'source_id' => $token,
-        'description' => mb_substr('BIM FLOW · ' . $order['plan_name'] . ' · ' . $order['code'], 0, 80),
+        'description' => mb_substr('Xport · ' . $order['plan_name'] . ' · ' . $order['code'], 0, 80),
         'metadata' => ['order_code' => (string) $order['code'], 'customer_id' => (string) $customer['id']],
     ];
     $billing = json_decode($customer['billing_json'] ?? '{}', true) ?: [];

@@ -19,6 +19,7 @@ import { BrandArt } from './components/BrandArt';
 import { ExportShowcase } from './components/ExportShowcase';
 import { PlanDrawing } from './components/PlanDrawing';
 import { Pricing } from './components/Pricing';
+import { ProductBrand } from './components/ProductBrand';
 
 // El escenario 3D (three.js) se descarga solo cuando el visitante llega a esa parte de la página.
 const BimCanvas = lazy(() => import('./components/BimCanvas'));
@@ -54,12 +55,12 @@ const features = [
 ];
 
 const benefits = [
-  { icon: FileOutput, title: 'Todo el set en un clic', text: 'Láminas o vistas ordenadas por número de lámina, a PDF, DWG, DXF, PNG, JPG y TIFF.' },
-  { icon: SlidersHorizontal, title: 'Control fino', text: 'Papel, escala, color, DPI, versión CAD y unidades. Guarda perfiles y reutilízalos en cada entrega.' },
+  { icon: FileOutput, title: 'Todo el set en un clic', text: 'PDF y DWG con Gratuito. Con Xport Full añade DXF, PNG, JPG y TIFF para completar tu entrega.' },
+  { icon: SlidersHorizontal, title: 'Control fino con Full', text: 'Papel, escala, color, DPI, versión CAD y unidades. Guarda perfiles y reutilízalos en cada entrega.' },
   { icon: RotateCw, title: 'A prueba de fallos', text: 'Si una vista falla, las demás continúan. Reintentas solo lo fallido y recibes un reporte de todo el lote.' },
   { icon: ShieldCheck, title: 'Tu modelo intacto', text: 'Los ajustes temporales, como el nivel de detalle, se revierten al terminar, incluso si algo sale mal.' },
   { icon: FolderArchive, title: 'Entregas ordenadas', text: 'Una carpeta nueva por entrega, nombres sin colisiones, ZIP opcional y un reporte.csv de cada operación.' },
-  { icon: HardDrive, title: '100% local', text: 'Tus archivos no salen de tu equipo. Solo la licencia se valida en línea, y funciona hasta 7 días sin conexión.' },
+  { icon: HardDrive, title: '100% local', text: 'Tus archivos se quedan en tu equipo. Full permite trabajar hasta siete días sin conexión; Gratuito verifica su cupo en línea.' },
 ];
 
 const steps = [
@@ -72,9 +73,10 @@ const before = ['Abrir cada lámina', 'Configurar la impresora', 'Ajustar el for
 
 const faqs: { q: string; a: string; link?: { href: string; label: string } }[] = [
   { q: '¿Qué formatos y versiones de Revit soporta?', a: 'Exporta a PDF, DWG, DXF, PNG, JPG y TIFF, y hay una versión del plugin para Revit 2023, 2024, 2025, 2026 y 2027.' },
-  { q: '¿Cómo funciona el mes gratuito?', a: 'Creas tu cuenta y confirmas tu correo. Recibes 30 días para una computadora, con una exportación al día y sin tarjeta. El cupo se renueva a medianoche de Perú. Es una prueba por cuenta y por equipo.' },
+  { q: '¿Qué incluye Xport Gratuito?', a: 'Xport Gratuito permite generar 150 archivos al mes en una computadora, con PDF y DWG y ajustes esenciales. Cada archivo principal cuenta; un PDF combinado cuenta como uno. Los fallidos y cancelados no consumen cupo. Se renueva el primer día del mes en Perú.' },
+  { q: '¿Cómo funciona la prueba Full de 14 días?', a: 'Actívala desde tu cuenta para probar todos los formatos, perfiles y ajustes avanzados en una computadora, sin tarjeta y sin límite de archivos. Al terminar continúas en Gratuito. Solo se permite una prueba por cuenta y computadora.' },
   { q: '¿Mis archivos salen de mi equipo?', a: 'No. La exportación ocurre en tu computadora. Lo único que viaja a internet es la validación de la licencia.' },
-  { q: '¿Necesito internet para trabajar?', a: 'Solo para activar y para verificar la licencia. Si te quedas sin conexión puedes seguir trabajando hasta 7 días.' },
+  { q: '¿Necesito internet para trabajar?', a: 'El plan Gratuito requiere internet para gestionar el cupo mensual. Full y la prueba Full permiten trabajar sin conexión durante el período de gracia del token, como máximo siete días y siempre dentro de su vigencia.' },
   { q: '¿En cuántos equipos puedo usarla?', a: 'Según tu plan. Desde tu cuenta puedes liberar un equipo para usarla en otro cuando cambies de computadora.' },
   {
     q: '¿Windows me muestra un aviso al instalar?',
@@ -111,8 +113,8 @@ export function App() {
       {/* Encabezado */}
       <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto flex h-[76px] max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
-          <a href="#" aria-label="BIM FLOW by Vertex, inicio" className="shrink-0">
-            <img src="/brand/logo-header.png" alt="BIM FLOW by Vertex" width={760} height={226} className="h-11 w-auto sm:h-[52px]" />
+          <a href="#" aria-label="Xport por BimFlow, inicio" className="shrink-0">
+            <ProductBrand />
           </a>
           <nav className="hidden items-center gap-9 text-sm font-medium text-slate-600 md:flex" aria-label="Secciones">
             <a href="#beneficios" className="transition-colors hover:text-brand">Beneficios</a>
@@ -122,7 +124,7 @@ export function App() {
           </nav>
           <div className="flex items-center gap-4">
             <a href="/portal/" className="hidden text-sm font-semibold text-brand transition-colors hover:text-navy sm:inline">Mi cuenta</a>
-            <a href="/portal/#comprar" className="btn-primary rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap">Probar gratis</a>
+            <a href="/portal/#prueba" className="btn-primary rounded-full px-5 py-2.5 text-sm font-bold whitespace-nowrap">Probar Full</a>
           </div>
         </div>
       </header>
@@ -134,24 +136,24 @@ export function App() {
           <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-5 pt-16 pb-20 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:pt-24 lg:pb-28">
             <div>
               <Reveal>
-                <Eyebrow>Plugins para ingeniería y arquitectura</Eyebrow>
+                <Eyebrow>Xport por BimFlow · Exportación para Revit</Eyebrow>
               </Reveal>
               <Reveal delay={0.08}>
                 <h1 className="mt-5 text-balance text-[2.6rem] leading-[1.04] font-extrabold tracking-tight sm:text-6xl lg:text-[4.1rem]">
-                  Más eficiencia,
+                  Tus planos, listos.
                   <br />
-                  <span className="text-gradient">más proyectos</span>
+                  <span className="text-gradient">Con Xport.</span>
                 </h1>
               </Reveal>
               <Reveal delay={0.16}>
                 <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
-                  BIM FLOW desarrolla plugins que automatizan lo repetitivo en Revit. Con <b className="text-navy">XportBIM</b> exportas todo el set de láminas o vistas a PDF, DWG, DXF e imágenes en un solo clic.
+                  <b className="text-navy">Xport por BimFlow</b> conecta tu modelo con la próxima entrega. Exporta tus láminas y vistas sin repetir tareas: empieza gratis o descubre todas las opciones de Xport Full.
                 </p>
               </Reveal>
               <Reveal delay={0.24}>
                 <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <a href="/portal/#comprar" className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 font-bold">
-                    Probar gratis 7 días
+                  <a href="/portal/#prueba" className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 font-bold">
+                    Probar Full 14 días
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </a>
                   <a
@@ -161,7 +163,7 @@ export function App() {
                     Ver cómo funciona
                   </a>
                 </div>
-                <p className="mt-4 text-sm text-slate-500">Sin tarjeta · Todas las funciones · Para Revit 2023 a 2027</p>
+                <p className="mt-4 text-sm text-slate-500">Full por 14 días · Sin tarjeta · Después, continúa gratis</p>
               </Reveal>
             </div>
 
@@ -238,7 +240,7 @@ export function App() {
                 <h2 className="mt-4 text-balance text-3xl leading-tight font-extrabold tracking-tight sm:text-[2.6rem]">
                   Exportar planos ya no debería <span className="text-gradient">quitarte horas</span>
                 </h2>
-                <p className="mt-5 text-lg text-slate-600">XportBIM resuelve la entrega de planos de principio a fin, con el control que necesita un proyecto real.</p>
+                <p className="mt-5 text-lg text-slate-600">Xport resuelve la entrega de planos de principio a fin, con el control que necesita un proyecto real.</p>
               </Reveal>
             </div>
             <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -302,7 +304,7 @@ export function App() {
                   </ul>
                 </div>
                 <div className="rounded-2xl border border-brand-teal/40 bg-brand-teal/[0.07] p-5">
-                  <p className="text-xs font-semibold tracking-[0.2em] text-[#4fd8df] uppercase">Con BIM FLOW</p>
+                  <p className="text-xs font-semibold tracking-[0.2em] text-[#4fd8df] uppercase">Con Xport por BimFlow</p>
                   <ul className="mt-3 grid gap-2 text-sm text-white">
                     {['Seleccionas las láminas', 'Pulsas Exportar'].map((b) => (
                       <li key={b} className="flex items-center gap-2.5">
@@ -358,7 +360,7 @@ export function App() {
             <Reveal className="mx-auto mb-12 max-w-2xl text-center">
               <Eyebrow>Precios</Eyebrow>
               <h2 className="mt-4 text-balance text-3xl font-extrabold tracking-tight sm:text-[2.6rem]">Empieza gratis. Paga cuando te convenza.</h2>
-              <p className="mt-4 text-lg text-slate-600">7 días con todas las funciones. Después eliges el plan que mejor se ajuste a tu equipo.</p>
+              <p className="mt-4 text-lg text-slate-600">Empieza con 150 archivos al mes gratis, o prueba Xport Full durante 14 días. Elige el espacio que tu equipo necesita.</p>
             </Reveal>
             <Pricing />
           </div>
@@ -427,15 +429,15 @@ export function App() {
             <h2 className="text-4xl leading-tight font-extrabold tracking-tight sm:text-5xl">
               Deja de exportar <span className="text-gradient-light">a mano.</span>
             </h2>
-            <p className="mx-auto mt-5 max-w-md text-lg text-slate-300">Pruébalo 7 días con todas tus láminas. Sin tarjeta.</p>
+            <p className="mx-auto mt-5 max-w-md text-lg text-slate-300">Descubre Xport Full durante 14 días. Después, continúa gratis con 150 archivos al mes.</p>
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a href="/portal/#comprar" className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5 font-bold">
-                Empezar prueba gratis
+              <a href="/portal/#prueba" className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5 font-bold">
+                Probar Xport Full
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </a>
             </div>
             <div className="mx-auto mt-12 max-w-md border-t border-white/10 pt-8">
-              <p className="text-sm text-slate-300">¿Prefieres verlo en acción? Te mostramos BIM FLOW con tus propios modelos.</p>
+              <p className="text-sm text-slate-300">¿Prefieres verlo en acción? Te mostramos Xport con tus propios modelos.</p>
               {sent ? (
                 <p className="mt-5 inline-flex items-center gap-2 rounded-full border border-brand-teal/50 px-5 py-3 text-sm text-white" role="status">
                   <Check className="h-4 w-4 text-[#4fd8df]" aria-hidden="true" /> Recibido. Te escribiremos a {email}.
@@ -464,14 +466,14 @@ export function App() {
 
       <footer className="bg-navy text-slate-400">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 border-t border-white/10 px-5 py-8 text-sm sm:flex-row sm:px-8">
-          <img src="/brand/logo-header-white.png" alt="BIM FLOW by Vertex" width={760} height={226} className="h-9 w-auto" loading="lazy" />
+          <ProductBrand light />
           <nav className="flex items-center gap-6" aria-label="Enlaces del pie">
             <a href="#precios" className="transition-colors hover:text-white">Precios</a>
             <a href="/instalacion/" className="transition-colors hover:text-white">Instalación</a>
             <a href="/portal/" className="transition-colors hover:text-white">Mi cuenta</a>
             <a href="#faq" className="transition-colors hover:text-white">Preguntas</a>
           </nav>
-          <p>© 2026 BIM FLOW · By Vertex</p>
+          <p>© 2026 Xport por BimFlow · Vertex</p>
         </div>
       </footer>
     </div>

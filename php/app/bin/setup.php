@@ -102,6 +102,7 @@ function migrate_schema(PDO $pdo, string $driver, string $appDir): void
     $sqlite = $driver === 'sqlite';
     $wanted = [
         'licenses' => [
+            'access_mode' => $sqlite ? "TEXT NOT NULL DEFAULT 'paid'" : "VARCHAR(10) NOT NULL DEFAULT 'paid'",
             'customer_id' => $sqlite ? 'TEXT' : 'CHAR(36) NULL',
             'key_enc' => $sqlite ? 'TEXT' : 'TEXT NULL',
             'is_trial' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'TINYINT NOT NULL DEFAULT 0',
@@ -111,6 +112,7 @@ function migrate_schema(PDO $pdo, string $driver, string $appDir): void
             'company' => $sqlite ? "TEXT NOT NULL DEFAULT ''" : "VARCHAR(120) NOT NULL DEFAULT ''",
             'billing_json' => $sqlite ? 'TEXT' : 'TEXT NULL',
             'free_started_at' => $sqlite ? 'INTEGER' : 'BIGINT NULL',
+            'trial_started_at' => $sqlite ? 'INTEGER' : 'BIGINT NULL',
             'email_norm' => $sqlite ? 'TEXT' : 'VARCHAR(160) NULL',
             'email_verified_at' => $sqlite ? 'INTEGER' : 'BIGINT NULL',
             'session_version' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'INT NOT NULL DEFAULT 0',
@@ -144,6 +146,7 @@ function migrate_schema(PDO $pdo, string $driver, string $appDir): void
         }
     }
     // Clientes creados antes de existir email_norm: se rellena para que el control de duplicados los incluya.
+    $pdo->exec("UPDATE licenses SET access_mode = 'free', is_trial = 0, plan = 'Gratuito', expires_at = 253402300799 WHERE is_trial = 1 AND access_mode = 'paid'");
     $pdo->exec('UPDATE customers SET free_started_at = created_at WHERE free_started_at IS NULL AND id IN (SELECT customer_id FROM licenses WHERE customer_id IS NOT NULL)');
     require_once $appDir . '/bootstrap.php';
     foreach ($pdo->query("SELECT id, email FROM customers WHERE email_norm IS NULL")->fetchAll(PDO::FETCH_ASSOC) as $c) {

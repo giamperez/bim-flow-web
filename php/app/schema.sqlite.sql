@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS licenses (
   updated_at     INTEGER NOT NULL,
   customer_id    TEXT,
   key_enc        TEXT,
-  is_trial       INTEGER NOT NULL DEFAULT 0
+  is_trial       INTEGER NOT NULL DEFAULT 0,
+  access_mode TEXT NOT NULL DEFAULT 'paid'
 );
 CREATE INDEX IF NOT EXISTS idx_licenses_expires ON licenses (expires_at);
 CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses (status);
@@ -58,7 +59,8 @@ CREATE TABLE IF NOT EXISTS customers (
   phone TEXT NOT NULL DEFAULT '',
   company TEXT NOT NULL DEFAULT '',
   billing_json TEXT,
-  free_started_at INTEGER
+  free_started_at INTEGER,
+  trial_started_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_customers_norm ON customers (email_norm);
 
@@ -116,6 +118,24 @@ CREATE TABLE IF NOT EXISTS payment_customers (
   environment TEXT NOT NULL,
   provider_id TEXT NOT NULL,
   PRIMARY KEY (customer_id, environment)
+);
+CREATE TABLE IF NOT EXISTS export_buckets (
+  subject TEXT NOT NULL,
+  period TEXT NOT NULL,
+  used_units INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (subject, period)
+);
+CREATE TABLE IF NOT EXISTS export_reservations (
+  license_id TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  device_hash TEXT NOT NULL,
+  period TEXT NOT NULL,
+  planned_units INTEGER NOT NULL,
+  quota_units INTEGER NOT NULL,
+  actual_units INTEGER,
+  created_at INTEGER NOT NULL,
+  settled_at INTEGER,
+  PRIMARY KEY (license_id, request_id)
 );
 CREATE TABLE IF NOT EXISTS payment_methods (
   id TEXT PRIMARY KEY,

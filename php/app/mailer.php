@@ -34,7 +34,7 @@ function xp_base_url(): string
 function xp_mail_template(string $title, string $bodyHtml, ?string $buttonUrl, ?string $buttonLabel): string
 {
     $base = xp_base_url();
-    $logo = $base !== '' ? '<img src="' . htmlspecialchars($base . '/brand/logo-header.png', ENT_QUOTES) . '" alt="BIM FLOW" height="38" style="display:block;border:0;height:38px;width:auto">' : '<b style="font-size:20px;color:#005bae">BIM FLOW</b>';
+    $logo = $base !== '' ? '<img src="' . htmlspecialchars($base . '/brand/logo-header.png', ENT_QUOTES) . '" alt="Xport" height="38" style="display:block;border:0;height:38px;width:auto">' : '<b style="font-size:20px;color:#005bae">Xport</b>';
     $button = '';
     if ($buttonUrl && $buttonLabel) {
         $button = '<p style="margin:26px 0"><a href="' . htmlspecialchars($buttonUrl, ENT_QUOTES) . '" style="background:#005bae;color:#ffffff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:999px;display:inline-block">' . htmlspecialchars($buttonLabel) . '</a></p>'
@@ -45,7 +45,7 @@ function xp_mail_template(string $title, string $bodyHtml, ?string $buttonUrl, ?
         . '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:18px;padding:32px">'
         . '<tr><td>' . $logo . '<h1 style="font-size:22px;margin:24px 0 12px">' . htmlspecialchars($title) . '</h1>'
         . '<div style="font-size:15px;line-height:1.6;color:#2b4059">' . $bodyHtml . '</div>' . $button
-        . '<p style="margin:28px 0 0;font-size:12px;color:#6b7c93">BIM FLOW · By Vertex — Más eficiencia, más proyectos</p>'
+        . '<p style="margin:28px 0 0;font-size:12px;color:#6b7c93">Xport por BimFlow · Vertex</p>'
         . '</td></tr></table></td></tr></table></body></html>';
 }
 
@@ -88,7 +88,7 @@ function xp_mail_build(array $c, string $to, string $subject, string $html, stri
 {
     $boundary = 'bf_' . bin2hex(random_bytes(12));
     $host = parse_url(xp_base_url(), PHP_URL_HOST) ?: 'localhost';
-    $fromName = xp_mail_encode_header(str_replace(['"', "\r", "\n"], '', (string) ($c['from_name'] ?? 'BIM FLOW')));
+    $fromName = xp_mail_encode_header(str_replace(['"', "\r", "\n"], '', (string) ($c['from_name'] ?? 'Xport')));
     $h = [
         'From: ' . $fromName . ' <' . $c['from_email'] . '>',
         'To: <' . $to . '>',
