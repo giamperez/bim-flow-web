@@ -881,7 +881,10 @@ function xp_portal_pay_order(array $customer, string $code): void
         xp_json(402, ['ok' => false, 'error' => $r['message']]);
     }
     // Sin respuesta clara: no se sabe si se cobró. Se deja en revisión para NO cobrar dos veces.
-    xp_log_event('payment_unknown', null, null, $code);
+    if ($r['chargeId'] !== '') {
+        xp_exec('UPDATE orders SET provider_ref = ? WHERE id = ?', [$r['chargeId'], $order['id']]);
+    }
+    xp_log_event('payment_unknown', null, null, $code . ($r['chargeId'] !== '' ? ' · ' . $r['chargeId'] : ''));
     xp_json(502, ['ok' => false, 'pending' => true, 'error' => 'No pudimos confirmar el pago con el banco. Si ves el cargo en tu tarjeta, no lo repitas: lo verificaremos y activaremos tu licencia.']);
 }
 

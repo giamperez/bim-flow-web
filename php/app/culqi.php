@@ -113,6 +113,13 @@ function xp_culqi_charge(array $order, array $customer, string $token): array
     if (($status === 200 || $status === 201) && ($res['object'] ?? '') === 'charge' && ($outcome['type'] ?? '') === 'venta_exitosa' && !empty($res['id'])) {
         return ['ok' => true, 'definitive' => true, 'chargeId' => (string) $res['id'], 'message' => ''];
     }
-    $message = (string) ($res['user_message'] ?? $outcome['user_message'] ?? $res['merchant_message'] ?? 'El pago no pudo completarse.');
-    return ['ok' => false, 'definitive' => true, 'chargeId' => '', 'message' => mb_substr($message, 0, 200)];
+    // "No se cobró" solo se afirma cuando Culqi lo dice sin ambigüedad: error 4xx, sin cargo creado y con un mensaje de error.
+    // Cualquier otra respuesta (2xx con un resultado distinto, 3D Secure pendiente, formato inesperado) puede significar que SÍ se
+    // cobró: el pedido queda en verificación, sin reintento, y el cargo (si lo hay) se anota para el administrador.
+    $isError = ($res['object'] ?? '') === 'error' || isset($res['user_message']) || isset($res['merchant_message']);
+    if ($status >= 400 && $status < 500 && $isError && empty($res['id'])) {
+        $message = (string) ($res['user_message'] ?? $res['merchant_message'] ?? 'El pago no pudo completarse.');
+        return ['ok' => false, 'definitive' => true, 'chargeId' => '', 'message' => mb_substr($message, 0, 200)];
+    }
+    return ['ok' => false, 'definitive' => false, 'chargeId' => (string) ($res['id'] ?? ''), 'message' => 'Respuesta no reconocida de Culqi.'];
 }

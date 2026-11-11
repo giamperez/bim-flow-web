@@ -32,6 +32,9 @@ const fake = http.createServer((req, res) => {
       return send(400, { object: 'error', type: 'card_error', code: 'card_declined', merchant_message: 'declined', user_message: 'La tarjeta fue rechazada por el banco. Prueba con otra.' });
     }
     if (body.source_id === 'tkn_test_boom00') return send(500, { object: 'error' });
+    // Respuestas que NO se pueden interpretar con seguridad: puede que SÍ se haya cobrado.
+    if (body.source_id === 'tkn_test_weird00') return send(201, { object: 'charge', id: 'chr_test_weird', outcome: { type: 'pendiente_3ds' } });
+    if (body.source_id === 'tkn_test_noid000') return send(200, { ok: true });
     return send(400, { object: 'error', type: 'parameter_error', user_message: 'Token inválido.' });
   });
 });
@@ -116,6 +119,17 @@ try {
   check('el administrador ve el pedido en verificación', !!row);
   check('el administrador lo aprueba tras comprobarlo en Culqi', (await adm('POST', `/orders/${row.id}/approve`)).status === 200);
   check('queda pagado', (await por('a', 'GET', '/orders')).json.orders.find((o) => o.code === code3).status === 'paid');
+
+  tag('Respuestas que no se pueden interpretar: no se reintenta');
+  for (const [token, expectRef] of [['tkn_test_weird00', 'chr_test_weird'], ['tkn_test_noid000', null]]) {
+    const o = await por('a', 'POST', '/orders', { planId: 'mensual' });
+    const r = await por('a', 'POST', `/orders/${o.json.order.code}/pay`, { token });
+    check(`${token}: 502 y el pedido queda en verificación (NO vuelve a pendiente)`, r.status === 502 && r.json.pending === true, JSON.stringify(r.json));
+    check(`${token}: no se puede reintentar`, (await por('a', 'POST', `/orders/${o.json.order.code}/pay`, { token: 'tkn_test_ok1234' })).status === 409);
+    const row = (await adm('GET', '/orders?status=processing')).json.orders.find((x) => x.code === o.json.order.code);
+    check(`${token}: el administrador ve el pedido${expectRef ? ' con el cargo ' + expectRef : ''}`, !!row && (expectRef ? row.providerRef === expectRef : true), JSON.stringify(row?.providerRef));
+    await adm('POST', `/orders/${row.id}/cancel`);
+  }
 
   tag('Seguridad');
   const regB = await por('b', 'POST', '/register', { email: `otro.${stamp}@example.test`, name: 'Otro', password: 'clave-segura-2' }, { ip: '10.7.0.2' });
