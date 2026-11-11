@@ -8,6 +8,13 @@
   --color-mist: #e7f3f7;
   --color-navy: #031a35;
   --color-navy-2: #072a52;
+
+  /* Colores usados por el escenario 3D restaurado (BimCanvas) */
+  --color-ink: #040a1f;
+  --color-ink-2: #0a1838;
+  --color-line: rgb(125 180 255 / 0.15);
+  --color-accent: #22d3ee;
+  --color-subtle: #8197bd;
 }
 
 @layer base {

@@ -9,14 +9,14 @@ type Data = { plans: Plan[]; tier: Tier | null };
 const fallback: Data = {
   tier: null,
   plans: [
-    { id: 'prueba', name: 'Prueba gratis', trial: true, seconds: 7 * 86400, devices: 1, priceCents: 0, currency: 'USD', description: 'Todas las funciones, sin tarjeta.' },
-    { id: 'mensual', name: 'Mensual', trial: false, seconds: 30 * 86400, devices: 1, priceCents: 1500, currency: 'USD', description: 'Un equipo. Renovación mes a mes.' },
-    { id: 'anual', name: 'Anual', trial: false, seconds: 365 * 86400, devices: 2, priceCents: 15000, currency: 'USD', description: 'Dos equipos. El mejor precio.' },
+    { id: 'prueba', name: 'Prueba gratis', trial: true, seconds: 7 * 86400, devices: 1, priceCents: 0, currency: 'PEN', description: 'Todas las funciones, sin tarjeta.' },
+    { id: 'mensual', name: 'Mensual', trial: false, seconds: 30 * 86400, devices: 1, priceCents: 2500, currency: 'PEN', description: 'Un equipo. Renovación mes a mes.' },
+    { id: 'anual', name: 'Anual', trial: false, seconds: 365 * 86400, devices: 2, priceCents: 25000, currency: 'PEN', description: 'Dos equipos. El mejor precio.' },
   ],
 };
 
 const money = (cents: number, currency: string) =>
-  `${currency} ${(cents / 100).toLocaleString('es', { minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`;
+  `${currency === 'PEN' ? 'S/' : currency} ${(cents / 100).toLocaleString('es', { minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`;
 
 function duration(seconds: number) {
   const days = Math.round(seconds / 86400);
@@ -106,7 +106,7 @@ export function Pricing() {
           );
         })}
       </div>
-      <p className="mt-6 text-center text-xs text-slate-500">La prueba gratuita es una por equipo y por cuenta. Precios en dólares estadounidenses.</p>
+      <p className="mt-6 text-center text-xs text-slate-500">La prueba gratuita es una por equipo y por cuenta. Precios en soles (PEN).</p>
     </div>
   );
 }

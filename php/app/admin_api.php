@@ -421,6 +421,7 @@ function xp_admin_orders(): void
         $out['customerName'] = $o['customer_name'];
         $out['customerEmail'] = $o['customer_email'];
         $out['provider'] = $o['provider'];
+        $out['providerRef'] = $o['provider_ref'] ?? null;
         return $out;
     }, array_slice($rows, 0, $size));
     xp_json(200, ['ok' => true, 'page' => $page, 'hasMore' => count($rows) > $size, 'orders' => $orders]);
@@ -432,7 +433,7 @@ function xp_admin_order_approve(string $id): void
     if (!$order) {
         xp_json(404, ['ok' => false, 'error' => 'Pedido no encontrado.']);
     }
-    if ($order['status'] !== 'pending') {
+    if (!in_array($order['status'], ['pending', 'processing'], true)) {
         xp_json(409, ['ok' => false, 'error' => 'El pedido ya no está pendiente.']);
     }
     $result = xp_mark_order_paid($id, 'aprobado por el administrador');
@@ -448,7 +449,7 @@ function xp_admin_order_cancel(string $id): void
     if (!$order) {
         xp_json(404, ['ok' => false, 'error' => 'Pedido no encontrado.']);
     }
-    $n = xp_exec("UPDATE orders SET status = 'cancelled' WHERE id = ? AND status = 'pending'", [$id]);
+    $n = xp_exec("UPDATE orders SET status = 'cancelled' WHERE id = ? AND status IN ('pending', 'processing')", [$id]);
     if ($n === 0) {
         xp_json(409, ['ok' => false, 'error' => 'El pedido ya no está pendiente.']);
     }

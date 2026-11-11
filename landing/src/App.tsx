@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   ArrowRight,
@@ -17,7 +17,11 @@ import {
 } from 'lucide-react';
 import { BrandArt } from './components/BrandArt';
 import { ExportShowcase } from './components/ExportShowcase';
+import { PlanDrawing } from './components/PlanDrawing';
 import { Pricing } from './components/Pricing';
+
+// El escenario 3D (three.js) se descarga solo cuando el visitante llega a esa parte de la página.
+const BimCanvas = lazy(() => import('./components/BimCanvas'));
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -325,6 +329,25 @@ export function App() {
             </Reveal>
             <Reveal delay={0.12}>
               <ExportShowcase />
+            </Reveal>
+          </div>
+
+          {/* Escenario 3D interactivo */}
+          <div className="relative mx-auto mt-24 max-w-6xl px-5 sm:px-8">
+            <Reveal className="mx-auto max-w-2xl text-center">
+              <Eyebrow light>Míralo en 3D</Eyebrow>
+              <h3 className="mt-4 text-3xl leading-tight font-extrabold tracking-tight text-balance sm:text-4xl">
+                Cada lámina viaja a su lugar. <span className="text-gradient-light">Pruébalo.</span>
+              </h3>
+              <p className="mt-4 text-slate-300">Pulsa <b className="text-white">Exportar set</b> y mira cómo se arma la entrega. Puedes pasar el cursor para acelerar el flujo.</p>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <div className="relative mt-10 h-[420px] overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent sm:h-[520px]">
+                <PlanDrawing loop className="pointer-events-none absolute top-1/2 left-1/2 w-[680px] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-[0.14] sm:w-[860px]" />
+                <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-slate-400">Cargando escena 3D…</div>}>
+                  <BimCanvas />
+                </Suspense>
+              </div>
             </Reveal>
           </div>
         </section>

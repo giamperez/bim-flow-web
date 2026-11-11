@@ -82,9 +82,13 @@ function xp_is_disposable_email(string $email): bool
 function xp_tiers(): array
 {
     return xp_config()['pricing_tiers'] ?? [
-        ['name' => 'Lanzamiento', 'until' => 50, 'trial_days' => 7, 'prices' => ['mensual' => 1500, 'anual' => 15000]],
-        ['name' => 'Crecimiento', 'until' => 150, 'trial_days' => 7, 'prices' => ['mensual' => 1900, 'anual' => 19000]],
-        ['name' => 'Estándar', 'until' => null, 'trial_days' => 5, 'prices' => ['mensual' => 2500, 'anual' => 25000]],
+        // Los primeros 5 clientes de pago: S/ 25 al mes. Cada tramo siguiente sube un poco y acorta la prueba.
+        // Anual = 10 mensualidades (2 meses gratis). Importes en céntimos de sol.
+        ['name' => 'Fundadores', 'until' => 5, 'trial_days' => 7, 'prices' => ['mensual' => 2500, 'anual' => 25000]],
+        ['name' => 'Lanzamiento', 'until' => 20, 'trial_days' => 7, 'prices' => ['mensual' => 2900, 'anual' => 29000]],
+        ['name' => 'Crecimiento', 'until' => 50, 'trial_days' => 5, 'prices' => ['mensual' => 3500, 'anual' => 35000]],
+        ['name' => 'Estándar', 'until' => 100, 'trial_days' => 5, 'prices' => ['mensual' => 4500, 'anual' => 45000]],
+        ['name' => 'Pleno', 'until' => null, 'trial_days' => 3, 'prices' => ['mensual' => 5900, 'anual' => 59000]],
     ];
 }
 
@@ -139,8 +143,8 @@ function xp_plans(?array $customer = null): array
     $c = xp_config();
     $raw = $c['plans'] ?? [
         ['id' => 'prueba', 'name' => 'Prueba gratis', 'trial' => true, 'devices' => 1, 'description' => 'Todas las funciones, sin tarjeta.'],
-        ['id' => 'mensual', 'name' => 'Mensual', 'days' => 30, 'devices' => 1, 'currency' => 'USD', 'price_cents' => 1500, 'description' => 'Un equipo. Renovación mes a mes.'],
-        ['id' => 'anual', 'name' => 'Anual', 'days' => 365, 'devices' => 2, 'currency' => 'USD', 'price_cents' => 15000, 'description' => 'Dos equipos. El mejor precio.'],
+        ['id' => 'mensual', 'name' => 'Mensual', 'days' => 30, 'devices' => 1, 'currency' => 'PEN', 'price_cents' => 2500, 'description' => 'Un equipo. Renovación mes a mes.'],
+        ['id' => 'anual', 'name' => 'Anual', 'days' => 365, 'devices' => 2, 'currency' => 'PEN', 'price_cents' => 25000, 'description' => 'Dos equipos. El mejor precio.'],
     ];
     $tier = xp_tiers()[xp_effective_tier($customer)];
     $plans = [];
@@ -160,7 +164,7 @@ function xp_plans(?array $customer = null): array
             'seconds' => $seconds,
             'devices' => (int) ($p['devices'] ?? 1),
             'priceCents' => $price,
-            'currency' => (string) ($p['currency'] ?? 'USD'),
+            'currency' => (string) ($p['currency'] ?? 'PEN'),
             'description' => (string) ($p['description'] ?? ''),
         ];
     }
@@ -201,11 +205,11 @@ function xp_new_license(array $f): array
 }
 
 /** Idempotente: confirma un pedido pendiente y crea o renueva la licencia de su cliente. */
-function xp_mark_order_paid(string $orderId, string $actor = 'system'): ?array
+function xp_mark_order_paid(string $orderId, string $actor = 'system', string $providerRef = ''): ?array
 {
-    $result = xp_tx(function () use ($orderId, $actor) {
+    $result = xp_tx(function () use ($orderId, $actor, $providerRef) {
         $o = xp_one('SELECT * FROM orders WHERE id = ?' . xp_for_update(), [$orderId]);
-        if (!$o || $o['status'] !== 'pending') {
+        if (!$o || !in_array($o['status'], ['pending', 'processing'], true)) {
             return null;
         }
         $cust = xp_one('SELECT * FROM customers WHERE id = ?', [$o['customer_id']]);
@@ -225,7 +229,7 @@ function xp_mark_order_paid(string $orderId, string $actor = 'system'): ?array
                 [$expires, max((int) $lic['max_devices'], (int) $o['devices']), $o['plan_name'], $t, $licenseId]
             );
         }
-        xp_exec("UPDATE orders SET status = 'paid', paid_at = ?, license_id = ? WHERE id = ?", [$t, $licenseId, $orderId]);
+        xp_exec("UPDATE orders SET status = 'paid', paid_at = ?, license_id = ?, provider_ref = COALESCE(NULLIF(?, ''), provider_ref) WHERE id = ?", [$t, $licenseId, $providerRef, $orderId]);
         xp_log_event('order_paid', $licenseId, null, $o['code'] . ' · ' . $o['plan_name'] . ' · ' . $actor);
         return ['licenseId' => $licenseId, 'code' => $o['code']];
     });
@@ -296,6 +300,7 @@ $who = xp_current_customer();
             'tier' => xp_tier_info(),
             'trialAvailable' => $who ? xp_trial_available($who) : null,
             'paymentMode' => xp_config()['payment_mode'] ?? 'manual',
+            'payment' => (xp_config()['payment_mode'] ?? 'manual') === 'culqi' ? xp_culqi_public_info() : null,
         ]);
     }
     if ($route === 'lead' && $method === 'POST') {
@@ -348,6 +353,12 @@ $who = xp_current_customer();
     }
     if ($route === 'orders' && $method === 'POST') {
         xp_portal_create_order($customer);
+    }
+    if (count($parts) === 3 && $parts[0] === 'orders' && $parts[2] === 'pay' && $method === 'POST') {
+        xp_portal_pay_order($customer, $parts[1]);
+    }
+    if (count($parts) === 3 && $parts[0] === 'orders' && $parts[2] === 'cancel' && $method === 'POST') {
+        xp_portal_cancel_order($customer, $parts[1]);
     }
     if ($route === 'license/regenerate-key' && $method === 'POST') {
         xp_portal_regenerate($customer);
@@ -493,6 +504,9 @@ function xp_portal_create_order(array $customer): void
     $id = xp_uuid();
     $code = 'BF-' . substr(strtoupper(strtr(base64_encode(random_bytes(6)), '+/=', 'XYZ')), 0, 6);
     $mode = xp_config()['payment_mode'] ?? 'manual';
+    if ($mode === 'culqi' && !$plan['trial'] && !xp_culqi_enabled()) {
+        xp_json(503, ['ok' => false, 'error' => 'Los pagos en línea no están disponibles por ahora. Inténtalo más tarde.']);
+    }
     xp_exec(
         "INSERT INTO orders (id, code, customer_id, plan_id, plan_name, seconds, devices, kind, amount_cents, currency, status, provider, tier, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)",
@@ -507,14 +521,21 @@ function xp_portal_create_order(array $customer): void
         }
     }
     $order = xp_one('SELECT * FROM orders WHERE id = ?', [$id]);
-    if (!$paid) {
+    $online = !$paid && $mode === 'culqi';
+    if (!$paid && !$online) {
         xp_notify_order_pending($customer, $order);
     }
     xp_json(201, [
         'ok' => true,
         'paid' => $paid,
         'order' => xp_order_public($order),
-        'instructions' => $paid ? '' : (string) (xp_config()['payment_instructions']
+        'payment' => $online ? array_merge((array) xp_culqi_public_info(), [
+            'amount' => (int) $order['amount_cents'],
+            'currency' => $order['currency'],
+            'description' => mb_substr('BIM FLOW · ' . $order['plan_name'], 0, 80),
+            'orderCode' => $order['code'],
+        ]) : null,
+        'instructions' => ($paid || $online) ? '' : (string) (xp_config()['payment_instructions']
             ?? 'Realice el pago e indique el código del pedido como referencia. Envíe el comprobante a soporte; activaremos su licencia en cuanto se confirme.'),
     ]);
 }
@@ -571,7 +592,8 @@ function xp_verification_required(): bool
 
 function xp_money_text(int $cents, string $currency): string
 {
-    return $currency . ' ' . number_format($cents / 100, $cents % 100 === 0 ? 0 : 2, '.', ',');
+    $symbol = $currency === 'PEN' ? 'S/' : $currency;
+    return $symbol . ' ' . number_format($cents / 100, $cents % 100 === 0 ? 0 : 2, '.', ',');
 }
 
 /** Crea un enlace de un solo uso (se guarda su huella, no el valor) e invalida los anteriores del mismo tipo. */
@@ -798,4 +820,77 @@ function xp_installer_info(): ?array
         'sha256' => (string) ($data['sha256'] ?? ''),
         'uploadedAt' => (int) ($data['uploadedAt'] ?? 0),
     ];
+}
+
+// ---------------------------------------------------------------- cobro en línea (Culqi)
+function xp_portal_pay_order(array $customer, string $code): void
+{
+    if ((xp_config()['payment_mode'] ?? 'manual') !== 'culqi' || !xp_culqi_enabled()) {
+        xp_json(400, ['ok' => false, 'error' => 'Los pagos en línea no están activos.']);
+    }
+    if (xp_verification_required() && empty($customer['email_verified_at'])) {
+        xp_json(403, ['ok' => false, 'code' => 'unverified', 'error' => 'Confirma tu correo para continuar.']);
+    }
+    $b = xp_body() ?? [];
+    $token = is_string($b['token'] ?? null) ? trim($b['token']) : '';
+    if (!preg_match('/^[A-Za-z0-9_]{8,100}$/', $token)) {
+        xp_json(400, ['ok' => false, 'error' => 'No se recibió el medio de pago. Inténtalo de nuevo.']);
+    }
+    // El monto y la moneda salen SIEMPRE del pedido guardado: lo que mande el navegador no cuenta.
+    $order = xp_one('SELECT * FROM orders WHERE code = ? AND customer_id = ?', [$code, $customer['id']]);
+    if (!$order) {
+        xp_json(404, ['ok' => false, 'error' => 'Pedido no encontrado.']);
+    }
+    if ($order['status'] === 'processing') {
+        xp_json(409, ['ok' => false, 'error' => 'Estamos verificando el pago de este pedido. No lo repitas: te avisaremos cuando se confirme.']);
+    }
+    if ($order['status'] !== 'pending') {
+        xp_json(409, ['ok' => false, 'error' => 'Este pedido ya no está pendiente.']);
+    }
+    if (xp_count_events('payment_attempt', 'detail = ?', [$code], 3600) >= 5) {
+        xp_json(429, ['ok' => false, 'error' => 'Demasiados intentos de pago para este pedido. Inténtalo en una hora o contacta a soporte.']);
+    }
+    // Se "reserva" el pedido de forma atómica: dos clics o dos pestañas no pueden cobrar dos veces.
+    if (xp_exec("UPDATE orders SET status = 'processing', claimed_at = ? WHERE id = ? AND status = 'pending'", [time(), $order['id']]) !== 1) {
+        xp_json(409, ['ok' => false, 'error' => 'Este pedido ya se está procesando.']);
+    }
+    xp_log_event('payment_attempt', null, null, $code, xp_ip());
+    try {
+        $r = xp_culqi_charge($order, $customer, $token);
+    } catch (Throwable $e) {
+        error_log('[xportbim-culqi] ' . $e->getMessage());
+        $r = ['ok' => false, 'definitive' => false, 'chargeId' => '', 'message' => ''];
+    }
+    if ($r['ok']) {
+        try {
+            xp_mark_order_paid($order['id'], 'Culqi', $r['chargeId']);
+            xp_log_event('payment_charged', null, null, $code . ' · ' . $r['chargeId']);
+        } catch (Throwable $e) {
+            // Cobrado pero sin registrar: el pedido queda "en proceso" con el cargo anotado para que el administrador lo apruebe.
+            error_log('[xportbim-culqi] cobrado ' . $r['chargeId'] . ' pero no se pudo registrar: ' . $e->getMessage());
+            xp_exec('UPDATE orders SET provider_ref = ? WHERE id = ?', [$r['chargeId'], $order['id']]);
+            xp_log_event('payment_paid_not_recorded', null, null, $code . ' · ' . $r['chargeId']);
+            xp_json(500, ['ok' => false, 'error' => 'Tu pago se recibió pero hubo un problema al activarlo. Lo resolveremos de inmediato; no lo repitas.']);
+        }
+        $paid = xp_one('SELECT * FROM orders WHERE id = ?', [$order['id']]);
+        xp_json(200, ['ok' => true, 'paid' => true, 'order' => xp_order_public($paid)]);
+    }
+    if ($r['definitive']) {
+        xp_exec("UPDATE orders SET status = 'pending', claimed_at = NULL WHERE id = ?", [$order['id']]);
+        xp_log_event('payment_failed', null, null, $code . ' · ' . $r['message']);
+        xp_json(402, ['ok' => false, 'error' => $r['message']]);
+    }
+    // Sin respuesta clara: no se sabe si se cobró. Se deja en revisión para NO cobrar dos veces.
+    xp_log_event('payment_unknown', null, null, $code);
+    xp_json(502, ['ok' => false, 'pending' => true, 'error' => 'No pudimos confirmar el pago con el banco. Si ves el cargo en tu tarjeta, no lo repitas: lo verificaremos y activaremos tu licencia.']);
+}
+
+function xp_portal_cancel_order(array $customer, string $code): void
+{
+    $n = xp_exec("UPDATE orders SET status = 'cancelled' WHERE code = ? AND customer_id = ? AND status = 'pending'", [$code, $customer['id']]);
+    if ($n === 0) {
+        xp_json(409, ['ok' => false, 'error' => 'Solo se pueden cancelar los pedidos pendientes de pago.']);
+    }
+    xp_log_event('order_cancelled_by_customer', null, null, $code);
+    xp_json(200, ['ok' => true]);
 }

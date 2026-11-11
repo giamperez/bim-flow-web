@@ -5,6 +5,7 @@
 //   php app/bin/setup.php --public-key       muestra la clave pública para compilar el complemento
 //   php app/bin/setup.php --migrate          aplica cambios de esquema tras actualizar el código (idempotente)
 //   php app/bin/setup.php --payment-mode=test|manual   test aprueba los pedidos al instante (solo pruebas)
+//   php app/bin/setup.php --setup-culqi      guarda las llaves de Culqi (pagos con tarjeta); luego --payment-mode=culqi
 //   php app/bin/setup.php --setup-mail       configura el correo saliente (SMTP) para verificar correos y recuperar contraseñas
 //   php app/bin/setup.php --test-mail=a@b.c  envía un correo de prueba
 //   php app/bin/setup.php --ip-header=HTTP_CF_CONNECTING_IP|HTTP_X_FORWARDED_FOR|REMOTE_ADDR   de dónde tomar la IP del cliente
@@ -110,7 +111,11 @@ function migrate_schema(PDO $pdo, string $driver, string $appDir): void
             'email_verified_at' => $sqlite ? 'INTEGER' : 'BIGINT NULL',
             'session_version' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'INT NOT NULL DEFAULT 0',
         ],
-        'orders' => ['tier' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'INT NOT NULL DEFAULT 0'],
+        'orders' => [
+            'tier' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'INT NOT NULL DEFAULT 0',
+            'provider_ref' => $sqlite ? 'TEXT' : 'VARCHAR(100) NULL',
+            'claimed_at' => $sqlite ? 'INTEGER' : 'BIGINT NULL',
+        ],
     ];
     foreach ($wanted as $table => $columns) {
         $have = [];
@@ -298,19 +303,57 @@ foreach ($flags as $flag) {
     }
 }
 
+if (in_array('--setup-culqi', $flags, true)) {
+    if (!$exists) {
+        fwrite(STDERR, "Aún no hay configuración. Ejecute primero el asistente sin opciones.\n");
+        exit(1);
+    }
+    $config = require $configFile;
+    echo "Llaves de Culqi (panel de Culqi > Desarrollo > API Keys). La privada se escribe oculta y nunca se muestra.\n";
+    $public = ask('Llave pública (pk_test_… o pk_live_…)', 'XP_CULQI_PUBLIC', '');
+    $secret = ask('Llave privada (sk_test_… o sk_live_…)', 'XP_CULQI_SECRET', '', true);
+    if (!preg_match('/^pk_(test|live)_[A-Za-z0-9]+$/', $public) || !preg_match('/^sk_(test|live)_[A-Za-z0-9]+$/', $secret)) {
+        fwrite(STDERR, "Las llaves no tienen el formato esperado (pk_test_/pk_live_ y sk_test_/sk_live_). No se guardó nada.\n");
+        exit(1);
+    }
+    if (substr($public, 3, 4) !== substr($secret, 3, 4)) {
+        fwrite(STDERR, "Una llave es de prueba y la otra es real. Use las dos del mismo modo. No se guardó nada.\n");
+        exit(1);
+    }
+    $config['culqi'] = ['public_key' => $public, 'secret_key' => $secret];
+    if (getenv('XP_CULQI_API')) {
+        $config['culqi']['api_base'] = getenv('XP_CULQI_API'); // solo para pruebas con un Culqi simulado
+    }
+    write_config($configFile, $config);
+    $live = substr($secret, 3, 4) === 'live';
+    echo $live
+        ? "Llaves REALES guardadas. Con --payment-mode=culqi se cobrará dinero real.\nRecomendado: pruebe primero con las llaves de prueba (pk_test_/sk_test_) y una tarjeta de prueba.\n"
+        : "Llaves de PRUEBA guardadas. Active el cobro con: php app/bin/setup.php --payment-mode=culqi\n";
+    exit(0);
+}
+
 foreach ($flags as $flag) {
     if (strpos($flag, '--payment-mode=') === 0) {
         $mode = substr($flag, strlen('--payment-mode='));
-        if (!$exists || !in_array($mode, ['manual', 'test'], true)) {
-            fwrite(STDERR, "Uso: php app/bin/setup.php --payment-mode=manual|test (requiere configuración existente)\n");
+        if (!$exists || !in_array($mode, ['manual', 'test', 'culqi'], true)) {
+            fwrite(STDERR, "Uso: php app/bin/setup.php --payment-mode=manual|test|culqi (requiere configuración existente)\n");
             exit(1);
         }
         $config = require $configFile;
+        if ($mode === 'culqi' && (empty($config['culqi']['public_key']) || empty($config['culqi']['secret_key']))) {
+            fwrite(STDERR, "Primero configure las llaves de Culqi: php app/bin/setup.php --setup-culqi\n");
+            exit(1);
+        }
         $config['payment_mode'] = $mode;
         write_config($configFile, $config);
-        echo $mode === 'test'
-            ? "Modo de pago: PRUEBA. Los pedidos se aprueban al instante (no usar con clientes reales).\n"
-            : "Modo de pago: MANUAL. El administrador aprueba cada pedido en el panel.\n";
+        if ($mode === 'culqi') {
+            $live = strpos((string) $config['culqi']['secret_key'], 'sk_live_') === 0;
+            echo $live ? "Modo de pago: CULQI (REAL). Se cobrará a las tarjetas de los clientes.\n" : "Modo de pago: CULQI (llaves de PRUEBA). No se cobra dinero real.\n";
+        } else {
+            echo $mode === 'test'
+                ? "Modo de pago: PRUEBA. Los pedidos se aprueban al instante (no usar con clientes reales).\n"
+                : "Modo de pago: MANUAL. El administrador aprueba cada pedido en el panel.\n";
+        }
         exit(0);
     }
 }
@@ -382,6 +425,9 @@ $config = [
         ? ['driver' => 'log', 'path' => getenv('XP_MAIL_LOG') ?: ($appDir . '/data/mail.log'), 'from_email' => 'no-reply@example.test', 'from_name' => 'BIM FLOW']
         : ['driver' => 'none'],
     'admin_email' => getenv('XP_ADMIN_EMAIL') ?: '',
+    'culqi' => getenv('XP_CULQI_SECRET')
+        ? array_filter(['public_key' => getenv('XP_CULQI_PUBLIC'), 'secret_key' => getenv('XP_CULQI_SECRET'), 'api_base' => getenv('XP_CULQI_API') ?: null])
+        : [],
     'payment_instructions' => 'Realice el pago indicando el código del pedido como referencia y envíe el comprobante a soporte. Activaremos su licencia en cuanto se confirme.',
     // Encabezado del que se toma la IP del cliente (detrás de Nginx/Varnish de Cloudways suele ser este).
     'ip_header' => getenv('XP_IP_HEADER') ?: 'HTTP_X_FORWARDED_FOR',

@@ -68,7 +68,7 @@ main{padding:32px 0 80px;display:grid;gap:24px}
 .sec>h2{font-size:19px}
 .badge{display:inline-block;padding:3px 12px;border-radius:99px;font-size:12px;font-weight:700}
 .badge.active,.badge.paid{background:var(--ok-bg);color:var(--ok)}
-.badge.expiring,.badge.pending,.badge.trial{background:var(--warn-bg);color:var(--warn)}
+.badge.expiring,.badge.pending,.badge.trial,.badge.processing{background:var(--warn-bg);color:var(--warn)}
 .badge.expired,.badge.revoked{background:var(--bad-bg);color:var(--bad)}
 .badge.suspended,.badge.released,.badge.cancelled{background:var(--idle-bg);color:var(--idle)}
 .big{font-size:32px;font-weight:800;line-height:1.1;letter-spacing:-.02em}
@@ -219,10 +219,10 @@ const fmtLeft = (sec) => {
   if (sec < DAY) return Math.ceil(sec / 3600) + ' h';
   return Math.ceil(sec / DAY) + ' días';
 };
-const money = (cents, cur) => (cur || 'USD') + ' ' + (cents / 100).toLocaleString('es', { minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 });
+const money = (cents, cur) => ((cur || 'PEN') === 'PEN' ? 'S/' : cur) + ' ' + (cents / 100).toLocaleString('es', { minimumFractionDigits: cents % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 });
 const duration = (sec) => { const d = Math.round(sec / DAY); return d >= 360 ? '1 año' : d === 30 ? '1 mes' : sec < 3600 ? Math.round(sec / 60) + ' minutos' : sec < DAY ? Math.round(sec / 3600) + ' horas' : d + ' días'; };
 const STATE = { trial: 'Prueba', active: 'Activa', expiring: 'Por vencer', expired: 'Vencida', suspended: 'Suspendida', revoked: 'Revocada', released: 'Liberado' };
-const ORDER = { pending: 'Pendiente de pago', paid: 'Pagado', cancelled: 'Cancelado' };
+const ORDER = { processing: 'Verificando pago', pending: 'Pendiente de pago', paid: 'Pagado', cancelled: 'Cancelado' };
 
 async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch('/portal/api' + path, {
@@ -289,7 +289,7 @@ $('#authForm').addEventListener('submit', async (e) => {
 $('#logout').onclick = async () => { await api('/logout', { method: 'POST' }).catch(() => {}); showAuth(); };
 
 /* ---------- cuenta ---------- */
-let plansCache = [], hasLicense = false, licenseIsTrial = false, paymentMode = 'manual', needsVerification = false;
+let paymentInfo = null, plansCache = [], hasLicense = false, licenseIsTrial = false, paymentMode = 'manual', needsVerification = false;
 async function enter(customer, verificationRequired) {
   showScreen('account'); $('#whoName').textContent = customer.name;
   needsVerification = !!verificationRequired && customer.verified === false;
@@ -348,6 +348,7 @@ async function loadLicense() {
 async function loadPlans() {
   const r = await api('/plans');
   paymentMode = r.paymentMode;
+  paymentInfo = r.payment || null;
   const plans = r.plans.filter((p) => !(p.trial && r.trialAvailable === false));
   plansCache = plans;
   const t = r.tier;
@@ -362,7 +363,7 @@ async function loadPlans() {
       <div class="price">${p.priceCents === 0 ? 'Gratis' : esc(money(p.priceCents, p.currency))} ${p.priceCents === 0 ? '' : `<small>/ ${esc(duration(p.seconds))}</small>`}</div>
       <div class="muted">${esc(p.description)}</div>
       <div class="muted">Hasta <b>${p.devices}</b> equipo${p.devices === 1 ? '' : 's'}</div>
-      <button class="btn primary" data-plan="${esc(p.id)}" ${needsVerification ? 'disabled title="Confirma tu correo para continuar"' : ''}>${needsVerification ? 'Confirma tu correo primero' : p.trial ? 'Empezar prueba gratis' : paymentMode === 'test' ? 'Probar compra' : hasLicense && !licenseIsTrial ? 'Renovar con este plan' : 'Comprar este plan'}</button>
+      <button class="btn primary" data-plan="${esc(p.id)}" ${needsVerification ? 'disabled title="Confirma tu correo para continuar"' : ''}>${needsVerification ? 'Confirma tu correo primero' : p.trial ? 'Empezar prueba gratis' : paymentMode === 'test' ? 'Probar compra' : paymentMode === 'culqi' ? 'Pagar con tarjeta' : hasLicense && !licenseIsTrial ? 'Renovar con este plan' : 'Comprar este plan'}</button>
     </div>`).join('') : '<div class="empty">Los planes no están disponibles por ahora.</div>';
   $('#plans').querySelectorAll('[data-plan]').forEach((b) => b.onclick = () => buy(b.dataset.plan));
 }
@@ -375,6 +376,12 @@ async function buy(planId) {
   if (!await confirmDialog(question, plan.trial ? 'Activar prueba' : 'Continuar', false)) return;
   try {
     const r = await api('/orders', { method: 'POST', body: { planId } });
+    if (!r.paid && r.payment) {
+      await payOnline(r.order, r.payment);
+      await loadLicense();
+      await Promise.all([loadPlans(), loadOrders()]);
+      return;
+    }
     if (r.paid) {
       const m = modal(`<h3>${plan.trial ? '¡Tu prueba está activa!' : '¡Listo!'}</h3>
         <p style="margin:0">${plan.trial ? `Tienes ${esc(duration(plan.seconds))} con todas las funciones.` : 'Tu pago se confirmó y tu licencia ya está activa.'} Copia tu clave y pégala en Revit para activarla. Pedido <b class="mono">${esc(r.order.code)}</b>.</p>
@@ -393,11 +400,57 @@ async function buy(planId) {
   } catch (err) { toast(err.message); }
 }
 
+/* ---------- pago en línea (Culqi) ---------- */
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if ([...document.scripts].some((s) => s.src === src)) return resolve();
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve;
+    s.onerror = () => reject(new Error('No se pudo cargar el formulario de pago. Revisa tu conexión e inténtalo de nuevo.'));
+    document.head.append(s);
+  });
+}
+function successModal(order) {
+  const m = modal(`<h3>¡Pago confirmado!</h3><p style="margin:0">Tu licencia ya está activa. Pedido <b class="mono">${esc(order.code)}</b>. Copia tu clave y pégala en Revit para activarla.</p>
+    <div class="actions"><button class="btn primary" id="ok">Ver mi clave</button></div>`);
+  m.$('#ok').onclick = () => { m.close(); $('#licenseCard').scrollIntoView({ behavior: 'smooth' }); };
+}
+/** Abre el formulario de Culqi (llave pública), recibe el token y pide al servidor que cobre el pedido. */
+async function payOnline(order, pay) {
+  try { await loadScript('https://checkout.culqi.com/js/v4'); } catch (err) { toast(err.message); return; }
+  const Culqi = window.Culqi;
+  if (!Culqi) { toast('No se pudo iniciar el formulario de pago.'); return; }
+  Culqi.publicKey = pay.publicKey;
+  Culqi.settings({ title: 'BIM FLOW', currency: pay.currency, description: pay.description, amount: pay.amount });
+  Culqi.options({ lang: 'auto', installments: false, paymentMethods: { tarjeta: true, yape: false, bancaMovil: false, agente: false, billetera: false, cuotealo: false } });
+  const result = await new Promise((resolve) => {
+    window.culqi = async () => {
+      try { Culqi.close(); } catch { /* ya cerrado */ }
+      if (!Culqi.token) { resolve({ ok: false, error: (Culqi.error && (Culqi.error.user_message || Culqi.error.merchant_message)) || 'No se pudo procesar la tarjeta.' }); return; }
+      try { const r = await api(`/orders/${encodeURIComponent(order.code)}/pay`, { method: 'POST', body: { token: Culqi.token.id } }); resolve({ ok: true, r }); }
+      catch (err) { resolve({ ok: false, error: err.message }); }
+    };
+    Culqi.open();
+  });
+  if (result.ok) successModal(result.r.order);
+  else toast(result.error);
+}
+
 async function loadOrders() {
   const { orders } = await api('/orders');
-  $('#orders').innerHTML = orders.length ? `<div class="tablewrap"><table><thead><tr><th>Código</th><th>Plan</th><th>Monto</th><th>Tipo</th><th>Estado</th><th>Fecha</th></tr></thead><tbody>
-    ${orders.map((o) => `<tr><td class="mono"><b>${esc(o.code)}</b></td><td>${esc(o.planName)}</td><td>${o.amountCents === 0 ? 'Gratis' : esc(money(o.amountCents, o.currency))}</td><td>${o.kind === 'trial' ? 'Prueba' : o.kind === 'renew' ? 'Renovación' : 'Nueva'}</td><td><span class="badge ${esc(o.status)}">${esc(ORDER[o.status] || o.status)}</span></td><td>${esc(fmtDateTime(o.createdAt))}</td></tr>`).join('')}
+  $('#orders').innerHTML = orders.length ? `<div class="tablewrap"><table><thead><tr><th>Código</th><th>Plan</th><th>Monto</th><th>Tipo</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody>
+    ${orders.map((o) => `<tr><td class="mono"><b>${esc(o.code)}</b></td><td>${esc(o.planName)}</td><td>${o.amountCents === 0 ? 'Gratis' : esc(money(o.amountCents, o.currency))}</td><td>${o.kind === 'trial' ? 'Prueba' : o.kind === 'renew' ? 'Renovación' : 'Nueva'}</td><td><span class="badge ${esc(o.status)}">${esc(ORDER[o.status] || o.status)}</span></td><td>${esc(fmtDateTime(o.createdAt))}</td><td>${o.status === 'pending' && paymentInfo ? `<button class="btn small primary" data-pay="${esc(o.code)}">Pagar</button> ` : ''}${o.status === 'pending' ? `<button class="btn small" data-cancel="${esc(o.code)}">Cancelar</button>` : ''}</td></tr>`).join('')}
   </tbody></table></div>` : '<div class="empty">Todavía no has hecho pedidos.</div>';
+  $('#orders').querySelectorAll('[data-pay]').forEach((b) => b.onclick = async () => {
+    const o = orders.find((x) => x.code === b.dataset.pay);
+    if (!o || !paymentInfo) return;
+    await payOnline(o, { ...paymentInfo, amount: o.amountCents, currency: o.currency, description: 'BIM FLOW · ' + o.planName });
+    await loadLicense(); await Promise.all([loadPlans(), loadOrders()]);
+  });
+  $('#orders').querySelectorAll('[data-cancel]').forEach((b) => b.onclick = async () => {
+    if (!await confirmDialog('¿Cancelar este pedido?', 'Cancelar pedido', true)) return;
+    try { await api(`/orders/${encodeURIComponent(b.dataset.cancel)}/cancel`, { method: 'POST' }); toast('Pedido cancelado'); loadOrders(); } catch (err) { toast(err.message); }
+  });
 }
 
 /* ---------- verificar correo ---------- */

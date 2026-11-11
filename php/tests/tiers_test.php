@@ -54,7 +54,7 @@ function paid(array $c, int $tier, int $cents = 1000): void
 {
     xp_exec(
         "INSERT INTO orders (id, code, customer_id, plan_id, plan_name, seconds, devices, kind, amount_cents, currency, status, provider, tier, created_at, paid_at)
-         VALUES (?, ?, ?, 'mensual', 'Mensual', 2592000, 1, 'new', ?, 'USD', 'paid', 'manual', ?, ?, ?)",
+         VALUES (?, ?, ?, 'mensual', 'Mensual', 2592000, 1, 'new', ?, 'PEN', 'paid', 'manual', ?, ?, ?)",
         [xp_uuid(), 'BF-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6)), $c['id'], $cents, $tier, time(), time()]
     );
 }
@@ -86,9 +86,9 @@ check('p1 sigue pagando 1000 y p2 sigue en 1500', price(xp_plans($p1), 'mensual'
 
 echo "Pedidos gratis y pendientes no cuentan como cliente de pago\n";
 $free = customer("gratis.$stamp");
-xp_exec("INSERT INTO orders (id, code, customer_id, plan_id, plan_name, seconds, devices, kind, amount_cents, currency, status, provider, tier, created_at, paid_at) VALUES (?, ?, ?, 'prueba', 'Prueba gratis', 604800, 1, 'trial', 0, 'USD', 'paid', 'manual', 0, ?, ?)", [xp_uuid(), 'BF-GRATIS', $free['id'], time(), time()]);
+xp_exec("INSERT INTO orders (id, code, customer_id, plan_id, plan_name, seconds, devices, kind, amount_cents, currency, status, provider, tier, created_at, paid_at) VALUES (?, ?, ?, 'prueba', 'Prueba gratis', 604800, 1, 'trial', 0, 'PEN', 'paid', 'manual', 0, ?, ?)", [xp_uuid(), 'BF-GRATIS', $free['id'], time(), time()]);
 $pend = customer("pendiente.$stamp");
-xp_exec("INSERT INTO orders (id, code, customer_id, plan_id, plan_name, seconds, devices, kind, amount_cents, currency, status, provider, tier, created_at) VALUES (?, ?, ?, 'mensual', 'Mensual', 2592000, 1, 'new', 1500, 'USD', 'pending', 'manual', 1, ?)", [xp_uuid(), 'BF-PEND', $pend['id'], time()]);
+xp_exec("INSERT INTO orders (id, code, customer_id, plan_id, plan_name, seconds, devices, kind, amount_cents, currency, status, provider, tier, created_at) VALUES (?, ?, ?, 'mensual', 'Mensual', 2592000, 1, 'new', 1500, 'PEN', 'pending', 'manual', 1, ?)", [xp_uuid(), 'BF-PEND', $pend['id'], time()]);
 check('siguen siendo 3 clientes de pago', xp_paying_customers() === 3, (string) xp_paying_customers());
 
 echo "Sin congelamiento de precio\n";

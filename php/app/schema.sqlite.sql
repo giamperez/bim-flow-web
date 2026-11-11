@@ -73,6 +73,8 @@ CREATE TABLE IF NOT EXISTS orders (
   status       TEXT NOT NULL DEFAULT 'pending',
   provider     TEXT NOT NULL DEFAULT 'manual',
   tier         INTEGER NOT NULL DEFAULT 0,
+  provider_ref TEXT,
+  claimed_at   INTEGER,
   created_at   INTEGER NOT NULL,
   paid_at      INTEGER
 );

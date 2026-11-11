@@ -47,13 +47,27 @@ Otra contraseña: `php app/bin/setup.php --reset-password`. Ver la clave públic
 - **Compra:** el cliente elige un plan en el portal y se crea un pedido con un código `BF-XXXXXX`. Con `payment_mode: 'manual'` (por defecto) el cliente paga fuera de línea y el administrador pulsa **Aprobar pago** en *Pedidos*; ahí se crea o renueva su licencia. Con `payment_mode: 'test'` el pago se aprueba al instante (solo pruebas; instalar con `XP_PAYMENT_MODE=test`). Para conectar una pasarela, su webhook debe llamar a `xp_mark_order_paid($orderId)` (idempotente).
 - **Prueba gratis de 7 días:** todo cliente nuevo puede activarla sin pago; se aprueba sola (1 equipo, licencia marcada como "prueba"). Al comprar un plan de pago la misma licencia deja de ser de prueba y conserva su clave.
 - **Control de abusos de la prueba** (nadie puede fabricar pruebas sin fin creando cuentas): una prueba por cliente; **una por equipo** (la prueba de otra cuenta no se activa en un equipo que ya consumió una: error `trial_used`); un correo = una cuenta aunque use alias de Gmail (`a.b+x@gmail.com` = `ab@gmail.com`); se rechazan correos temporales (lista en `portal_api.php`, ampliable con `blocked_email_domains`); máximo 3 pruebas por red en 30 días y 10 registros por hora. No es infalible (reinstalar Windows cambia el identificador del equipo), por eso los planes de pago son la protección real. Lo más fuerte que falta es **verificar el correo**, que necesita un servicio de envío (SMTP).
-- **Precios por tramos:** el precio y los días de prueba cambian según cuántos **clientes de pago** hay (`pricing_tiers` en `config.php`; por defecto: hasta 50 clientes Mensual USD 15 / Anual USD 150 y 7 días de prueba; hasta 150, USD 19 / 190; después USD 25 / 250 y 5 días). La landing y el portal muestran "quedan N cupos" y el precio siguiente. Con `price_lock` (por defecto activo) quien compra conserva el precio del tramo en el que compró por primera vez. Los precios son de ejemplo: edítelos en `config.php`.
+- **Precios por tramos, en soles (PEN):** el precio y los días de prueba cambian según cuántos **clientes de pago** hay (`pricing_tiers` en `config.php`). Por defecto: **Fundadores** (hasta 5 clientes) Mensual S/ 25 / Anual S/ 250 y 7 días de prueba; **Lanzamiento** (hasta 20) S/ 29 / 290, 7 días; **Crecimiento** (hasta 50) S/ 35 / 350, 5 días; **Estándar** (hasta 100) S/ 45 / 450, 5 días; **Pleno** (más de 100) S/ 59 / 590, 3 días. El plan anual vale 10 mensualidades. La landing y el portal muestran "quedan N cupos" y el precio siguiente. Con `price_lock` (por defecto activo) quien compra conserva el precio del tramo en el que compró por primera vez.
+- **Pago con tarjeta (Culqi):** ver la sección siguiente.
 - **Planes:** `plans` en `config.php` (id, nombre, días, equipos, descripción); el precio sale del tramo vigente. `payment_instructions` es el texto que ve el cliente tras pedir.
 - La clave de las licencias **compradas** se guarda cifrada (AES-256-GCM) para que su dueño la vea en el portal; las creadas desde el panel solo muestran la clave una vez.
 - La landing se recompila con `cd landing && npm install && npm run build`, copiando `landing/dist` a `site/` (se versiona para no necesitar Node en el servidor). El formulario "Solicitar demo" guarda el correo como evento visible en *Actividad*.
 - Tras actualizar el código, `bash php/install.sh <app>` también migra la base de datos (`app/bin/setup.php --migrate`). Con MySQL no hace falta ninguna otra acción.
 
 > La versión Cloudflare Worker (`src/`) solo cubre la API del complemento y el panel básico; el portal, los pedidos y las licencias por minutos están únicamente en la versión PHP.
+
+## Cobro con tarjeta (Culqi)
+1. En el panel de Culqi (**Desarrollo → API Keys**) copia la llave pública (`pk_…`) y la privada (`sk_…`). **Empieza con las de PRUEBA** (`pk_test_`/`sk_test_`).
+2. Por SSH: `php app/bin/setup.php --setup-culqi` (la privada se teclea oculta y nunca se muestra ni se guarda en el repositorio) y luego `php app/bin/setup.php --payment-mode=culqi`.
+3. Prueba una compra con las tarjetas de prueba que publica Culqi. Cuando todo funcione, repite el paso 2 con las llaves reales (`pk_live_`/`sk_live_`).
+
+Cómo funciona: el navegador abre el formulario de Culqi con la llave **pública** y recibe un token; el servidor crea el cargo con la llave **privada** (`POST /v2/charges`, importe en céntimos de sol). Garantías:
+- El **monto y la moneda salen siempre del pedido guardado**, nunca del navegador.
+- Un pedido **no se puede cobrar dos veces**: se reserva de forma atómica (dos clics o dos pestañas no duplican el cobro).
+- Tarjeta rechazada → el pedido sigue pendiente y se puede reintentar. **Si la conexión se corta sin respuesta clara**, el pedido queda en **"Verificando pago"** y no se vuelve a cobrar: el administrador lo comprueba en Culqi y lo aprueba (o cancela) desde *Pedidos*.
+- Máximo 5 intentos de pago por pedido y hora. La llave privada nunca sale en ninguna respuesta.
+
+> **Limitaciones conocidas:** la integración sigue el flujo estándar de Culqi (token + cargo), pero **no se pudo contrastar con su documentación oficial** (el sitio no es legible sin navegador). No incluye **3D Secure** ni **Yape** (Yape suele requerir un flujo con "orden"). El formulario usa Culqi Checkout v4 (`checkout.culqi.com/js/v4`), que Culqi puede reemplazar. Se probó con un Culqi simulado (`test/e2e-culqi.mjs`) y con el formulario simulado en un navegador; **la primera prueba real debe hacerse con llaves de prueba**.
 
 ## Correo: verificar cuentas, recuperar contraseña y avisos
 Con el correo configurado el servidor:

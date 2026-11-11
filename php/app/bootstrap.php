@@ -299,6 +299,7 @@ function xp_uuid(): string
 require_once __DIR__ . '/license_api.php';
 require_once __DIR__ . '/admin_api.php';
 require_once __DIR__ . '/mailer.php';
+require_once __DIR__ . '/culqi.php';
 require_once __DIR__ . '/portal_api.php';
 
 // ---------------------------------------------------------------- dispatch

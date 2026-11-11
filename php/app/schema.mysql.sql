@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS orders (
   status       VARCHAR(12) NOT NULL DEFAULT 'pending',
   provider     VARCHAR(20) NOT NULL DEFAULT 'manual',
   tier         INT NOT NULL DEFAULT 0,
+  provider_ref VARCHAR(100) NULL,
+  claimed_at   BIGINT NULL,
   created_at   BIGINT NOT NULL,
   paid_at      BIGINT NULL,
   UNIQUE KEY uq_orders_code (code),
