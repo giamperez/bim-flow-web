@@ -9,144 +9,13 @@
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;450;500;550;600;650;700;800&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/portal/portal.css?v=20261111-9">
 <style>
-:root{
-  /* Manual de marca: azul #005bae, turquesa #00afb7, fondo #e7f3f7, azul oscuro #031a35 */
-  --bg:#eef6f9;--panel:#fff;--panel2:#f3f9fc;--ink:#031a35;--muted:#52677f;--line:#d9e6ee;
-  --brand:#005bae;--brand-ink:#fff;--teal:#00afb7;
-  --ok:#0b7a46;--ok-bg:#dff5e8;--warn:#8f5200;--warn-bg:#fff0cf;--bad:#b42318;--bad-bg:#fde7e4;--idle:#475467;--idle-bg:#e8edf2;
-  --shadow:0 1px 2px rgba(3,26,53,.06),0 14px 36px -14px rgba(3,26,53,.16);
-}
-*{box-sizing:border-box}
-html{color-scheme:light}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
-button,input{font:inherit;color:inherit}
-h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.01em}
-a{color:var(--brand)}
+/* Essential base defaults */
 .hidden{display:none!important}
-.muted{color:var(--muted)}
-.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
-.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
-
-header{border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(12px);position:sticky;top:0;z-index:5}
-header .wrap{display:flex;align-items:center;justify-content:space-between;height:68px;gap:12px}
-.logo img{height:42px;width:auto;display:block}
-.who{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px;font-weight:500}
-.back{font-size:14px;font-weight:600;text-decoration:none}
-
-.btn{border:1px solid var(--line);background:var(--panel);padding:10px 18px;border-radius:999px;cursor:pointer;font-weight:700;transition:filter .15s,transform .15s}
-.btn:hover{filter:brightness(.97)}
-.btn.primary{background:linear-gradient(120deg,var(--brand),#0a6fcc);border-color:transparent;color:var(--brand-ink);box-shadow:0 12px 28px -14px rgba(0,91,174,.7)}
-.btn.primary:hover{filter:brightness(1.07);transform:translateY(-1px)}
-.btn.small{padding:6px 14px;font-size:13px}
-.btn.danger{color:var(--bad)}
-.btn[disabled]{opacity:.5;cursor:not-allowed}
-.btn:focus-visible,input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-label{display:grid;gap:6px;font-weight:600;font-size:13px}
-input{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;width:100%;font-weight:500}
-.err{color:var(--bad);font-weight:600;min-height:1.3em;font-size:14px}
-
-.auth{display:grid;place-items:center;padding:56px 0}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:28px}
-.auth .card{width:100%;max-width:430px;display:grid;gap:15px}
-.eyebrow{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--teal)}
-.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--panel2);border-radius:999px;padding:4px;gap:4px}
-.tabs button{all:unset;text-align:center;padding:9px;border-radius:999px;cursor:pointer;font-weight:700;color:var(--muted)}
-.tabs button[aria-selected=true]{background:var(--brand);color:var(--brand-ink)}
-
-main{padding:32px 0 80px;display:grid;gap:24px}
-.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:24px}
-@media (max-width:820px){.grid2{grid-template-columns:1fr}}
-.sec{display:grid;gap:14px;align-content:start}
-.sec>h2{font-size:19px}
-.badge{display:inline-block;padding:3px 12px;border-radius:99px;font-size:12px;font-weight:700}
-.badge.active,.badge.paid{background:var(--ok-bg);color:var(--ok)}
-.badge.expiring,.badge.pending,.badge.trial,.badge.processing{background:var(--warn-bg);color:var(--warn)}
-.badge.expired,.badge.revoked{background:var(--bad-bg);color:var(--bad)}
-.badge.suspended,.badge.released,.badge.cancelled{background:var(--idle-bg);color:var(--idle)}
-.big{font-size:32px;font-weight:800;line-height:1.1;letter-spacing:-.02em}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;margin:0}
-.kv dt{color:var(--muted)}.kv dd{margin:0;font-weight:500}
-.keybox{background:var(--panel2);border:1.5px dashed var(--line);border-radius:14px;padding:15px;font-size:18px;font-weight:700;letter-spacing:.05em;text-align:center;word-break:break-all;user-select:all}
-.row{display:flex;gap:10px;flex-wrap:wrap}
-.tablewrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse}
-th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
-th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
-tr:last-child td{border-bottom:0}
-.tier{background:color-mix(in srgb,var(--teal) 10%,var(--panel));border:1px solid color-mix(in srgb,var(--teal) 38%,var(--line));border-radius:16px;padding:13px 16px;font-size:14px}
-.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-top:4px}
-.plan{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:22px;display:grid;gap:8px;align-content:start;position:relative}
-.plan.best{border-color:var(--brand);background:var(--panel);box-shadow:var(--shadow)}
-.plan .tag{position:absolute;top:-11px;left:18px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 11px;border-radius:99px;background:var(--brand);color:var(--brand-ink)}
-.plan .tag.teal{background:var(--teal);color:#031a35}
-.plan .price{font-size:30px;font-weight:800;letter-spacing:-.02em}
-.plan .price small{font-size:13px;color:var(--muted);font-weight:500;letter-spacing:0}
-.steps{margin:0;padding-left:20px;display:grid;gap:8px;color:var(--muted)}
-.steps b{color:var(--ink)}
-.empty{padding:22px;text-align:center;color:var(--muted)}
-.overlay{position:fixed;inset:0;background:rgba(3,26,53,.62);display:grid;place-items:center;padding:16px;z-index:20}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);width:100%;max-width:480px;padding:26px;display:grid;gap:14px}
-.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;z-index:30;font-weight:600}
-.notice{background:var(--warn-bg);color:var(--warn);border-radius:14px;padding:12px 15px;font-weight:600;font-size:14px}
-.notice.info{background:color-mix(in srgb,var(--brand) 10%,var(--panel));color:var(--ink);font-weight:500}
-
-/* Acceso: identidad arquitectónica y un formulario de lectura rápida. */
-body{background:#f4f7fa}
-header{background:#fff;border-color:#e5ebf1;position:relative;backdrop-filter:none}
-header .wrap{max-width:1240px;height:84px;padding:0 32px}
-.logo img{height:38px}
-.back{color:#52677f;font-size:12px;display:flex;align-items:center;gap:9px}
-.back::before{content:'←';font-size:18px;font-weight:400}
-body>.wrap{max-width:1240px;padding:0 32px}
-.auth{padding:48px 0;min-height:calc(100svh - 84px)}
-.auth .card{max-width:460px;padding:36px;gap:20px;border-radius:18px}
-#auth{grid-template-columns:1.1fr 1fr;gap:0;align-items:stretch;justify-items:stretch;min-height:0;margin:48px 0;overflow:hidden;border:1px solid #e0e7ef;border-radius:24px;box-shadow:0 24px 70px -40px #163a6566;background:#fff;padding:0}
-.auth-story{background:#071f3b;color:#fff;padding:44px 44px 30px;display:flex;flex-direction:column;position:relative;overflow:hidden;isolation:isolate}
-.auth-story::before{content:'';position:absolute;inset:0;z-index:-1;background:radial-gradient(ellipse at 80% 65%,#065b7166,transparent 65%),linear-gradient(145deg,#ffffff04,transparent)}
-.story-kicker{display:flex;align-items:center;gap:10px;margin:0 0 26px;color:#7ee0e3;font-size:10px;letter-spacing:.17em;font-weight:700;text-transform:uppercase}
-.story-kicker::before{content:'';width:20px;height:1px;background:#42c7ce}
-.auth-story h2{font-size:clamp(30px,3vw,40px);line-height:1.2;letter-spacing:-.045em;font-weight:600;max-width:390px}
-.auth-story h2 span{color:#55d1d6}
-.story-copy{color:#b9cbdd;font-size:13px;line-height:1.8;max-width:330px;margin:18px 0 0}
-.model-visual{width:100%;max-width:370px;align-self:center;margin:8px 0 0;display:block;height:218px}
-.story-bottom{margin-top:auto;display:flex;align-items:center;gap:14px;border-top:1px solid #ffffff20;padding-top:22px}
-.trial-number{font-size:42px;line-height:1;font-weight:500;letter-spacing:-.06em;color:#6fd9dc}
-.story-bottom strong{display:block;font-size:12px;font-weight:600}
-.story-bottom p{margin:4px 0 0;font-size:11px;color:#b9cbdd}
-#auth .card{width:100%;max-width:none;background:#fff;box-shadow:none;border:0;border-radius:0;padding:44px 48px;gap:18px;align-content:center}
-#auth .eyebrow{color:#567086;font-size:10px;letter-spacing:.16em}
-#auth h1{font-size:28px;line-height:1.25;letter-spacing:-.04em;font-weight:700}
-#authLead{font-size:12px;line-height:1.8;max-width:330px}
-.tabs{padding:0;gap:24px;border-radius:0;background:none;border-bottom:1px solid #e3eaf1;margin:2px 0 4px}
-.tabs button{font-size:12px;border-radius:0;padding:10px 0 12px;position:relative;color:#607185;font-weight:600}
-.tabs button[aria-selected=true]{color:#005bae;background:none}
-.tabs button[aria-selected=true]::after{content:'';position:absolute;height:2px;background:#005bae;bottom:-1px;left:0;right:0}
-.tabs button:focus-visible,.password-toggle:focus-visible{outline:2px solid #005bae;outline-offset:4px}
-#auth label{font-size:11px;gap:8px;color:#31465c;font-weight:600}
-.auth input{height:47px;border-radius:8px;border-color:#dbe3ec;background:#fff;font-size:13px;transition:border-color .15s,box-shadow .15s}
-.auth input:hover{border-color:#a8bacb}
-.auth input:focus{border-color:#005bae;box-shadow:0 0 0 3px #005bae12;outline:0}
-.auth input::placeholder{color:#8593a4;font-weight:400}
-.password-field{position:relative;display:block}
-.password-field input{padding-right:66px}
-.password-toggle{position:absolute;right:10px;top:0;height:47px;border:0;background:none;color:#45627e;font-size:10px;font-weight:600;cursor:pointer;padding:0 4px}
-.auth .btn.primary{border-radius:8px;min-height:47px;background:#005bae;color:#fff;box-shadow:0 4px 10px #005bae12;font-size:12px}
-.auth .btn.primary:hover{background:#004c93;transform:none}
-.auth .err:empty{display:none}
-.auth .err{font-size:12px;min-height:0}
-.auth-footnote{display:flex;align-items:center;justify-content:center;gap:7px;color:#607185;font-size:10px;margin:0}
-.auth-footnote svg{width:13px;height:13px;flex:none}
-.portal-footer{display:flex;justify-content:space-between;gap:12px;color:#6a7d90;font-size:10px;padding:0 4px 24px}
-.portal-footer a{color:#52677f;text-decoration:none}
-.portal-footer a:hover{text-decoration:underline}
-@media(min-width:1500px){#auth{margin-top:64px}}
-@media(max-width:900px){.auth-story{padding:36px 28px}#auth .card{padding:36px 30px}.auth-story h2{font-size:31px}.story-copy{font-size:12px}}
-@media(max-width:680px){header .wrap{height:70px;padding:0 20px}.logo img{height:32px}body>.wrap{padding:0 20px}#auth{grid-template-columns:1fr;margin:24px 0;border-radius:18px}.auth-story{padding:24px 26px}.story-kicker{margin-bottom:12px;font-size:9px}.auth-story h2{font-size:24px;max-width:none}.story-copy,.model-visual,.story-bottom{display:none}#auth .card{padding:28px 26px;gap:18px}#auth h1{font-size:25px}.portal-footer{font-size:9px;flex-wrap:wrap}.auth{padding:28px 0;min-height:calc(100svh - 70px)}.auth .card{padding:26px}.who{gap:8px;font-size:12px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 </style>
-<link rel="stylesheet" href="/portal/portal.css?v=20261111-3">
 </head>
 <body>
 
@@ -287,7 +156,30 @@ body>.wrap{max-width:1240px;padding:0 32px}
         </section>
         <section class="view-panel hidden" data-view="licencia" aria-labelledby="licenseTitle">
           <div class="page-heading"><div><div class="page-label">Tu herramienta, donde la necesitas</div><h1 id="licenseTitle">Licencia y equipos</h1><p>Activa Xport y administra las computadoras de tu plan.</p></div><a class="btn" href="#comprar">Cambiar de plan <i data-icon="arrow"></i></a></div>
-          <div class="grid2"><section class="card sec" id="licenseCard"></section><section class="card sec"><h2>De aquí a tu próxima entrega</h2><ol class="steps"><li>Descarga el instalador y cierra Revit antes de instalar.</li><li>Abre un proyecto. En la pestaña <b>BimFlow</b>, elige <b>Exportar Planos</b>.</li><li>Pega tu <b>clave de licencia</b> y pulsa <b>Activar</b>.</li></ol><div class="notice info">Xport Gratuito y la prueba Full usan una computadora. Los planes de pago permiten 1, 3 o 7, según tu plan. Libera un equipo para trasladarla a otro.</div><div id="downloadBox"></div></section></div>
+          <div class="grid2">
+            <section class="card sec" id="licenseCard"></section>
+            <section class="card sec instructions-card">
+              <div class="instructions-header">
+                <span class="instructions-badge"><i data-icon="spark"></i> Instalación rápida</span>
+                <h2>De aquí a tu próxima entrega</h2>
+                <p class="instructions-desc">3 sencillos pasos para activar Xport en tu Revit.</p>
+              </div>
+              <div id="downloadBox"></div>
+              <div class="instructions-divider"></div>
+              <ol class="steps-compact">
+                <li><span class="step-num">01</span><div><strong>Descarga e instala</strong><p>Cierra Revit antes de iniciar el instalador.</p></div></li>
+                <li><span class="step-num">02</span><div><strong>Abre tu proyecto</strong><p>En la pestaña <b>BimFlow</b>, pulsa <b>Exportar Planos</b>.</p></div></li>
+                <li><span class="step-num">03</span><div><strong>Activa con tu clave</strong><p>Copia la clave de tu licencia y pulsa <b>Activar</b>.</p></div></li>
+              </ol>
+              <div class="instructions-tip">
+                <i data-icon="monitor"></i>
+                <div>
+                  <strong>¿Cambio de equipo?</strong>
+                  <p>Libera una computadora activa para trasladar tu licencia a otra máquina sin costo adicional.</p>
+                </div>
+              </div>
+            </section>
+          </div>
         </section>
         <section class="view-panel hidden" data-view="comprar" aria-labelledby="plansHeading">
           <div class="page-heading"><div><div class="page-label">Crece a tu ritmo</div><h1 id="plansHeading">Un plan para cada forma de trabajar</h1><p>Precios en soles. Una licencia compartida entre las computadoras de tu plan.</p></div></div>
@@ -302,12 +194,97 @@ body>.wrap{max-width:1240px;padding:0 32px}
         </section>
         <section class="view-panel hidden" data-view="facturacion" aria-labelledby="billingTitle">
           <div class="page-heading"><div><div class="page-label">Tus datos, siempre a mano</div><h1 id="billingTitle">Facturación y pagos</h1><p>Guarda tus datos de facturación y elige cómo pagar tu próxima compra.</p></div></div>
-          <div class="billing-grid"><form class="card form-stack" id="billingForm"><div class="section-title" style="margin:0"><h2>Datos de facturación</h2><i data-icon="receipt"></i></div><p class="card-description">Estos datos identifican al titular o empresa de tus compras.</p><div class="form-grid">
-            <label class="full">Nombre o razón social<input id="billingName" maxlength="160" autocomplete="organization" placeholder="Nombre del titular o empresa"></label>
-            <label>Tipo de documento<select id="billingDocumentType"><option value="">Seleccionar</option><option>DNI</option><option>RUC</option><option>CE</option></select></label><label>Número de documento<input id="billingDocument" maxlength="20" placeholder="Número de documento"></label>
-            <label class="full">Dirección<input id="billingAddress" maxlength="200" autocomplete="street-address" placeholder="Calle, número y distrito"></label><label>Ciudad<input id="billingCity" maxlength="80" autocomplete="address-level2" placeholder="Lima"></label><label>País (código de 2 letras)<input id="billingCountry" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" autocomplete="country" placeholder="PE"></label>
-          </div><div class="err" id="billingErr" role="alert"></div><div class="form-actions"><button class="btn primary" type="submit">Guardar datos</button><p>Puedes actualizarlos cuando lo necesites.</p></div></form>
-          <section class="card sec"><div class="section-title" style="margin:0"><h2>Tarjetas guardadas</h2><i data-icon="card"></i></div><p class="card-description">Agiliza tus próximas compras. Tú decides cuándo pagar.</p><div id="cards" class="cards-list"></div><button class="btn" id="addCard"><i data-icon="plus"></i>Añadir tarjeta</button><div class="secure-note"><i data-icon="lock"></i><span>Culqi custodia tu tarjeta. Xport conserva una referencia, la marca y los últimos cuatro dígitos. Guardarla no activa cobros automáticos.</span></div></section></div>
+          <div class="billing-grid">
+            <form class="card form-stack" id="billingForm">
+              <div class="section-title" style="margin:0">
+                <h2>Datos de facturación</h2>
+                <i data-icon="receipt"></i>
+              </div>
+              <p class="card-description">Estos datos identifican al titular o empresa en tus comprobantes de pago.</p>
+              <div class="form-grid">
+                <label class="full">
+                  <span>Nombre o razón social</span>
+                  <input id="billingName" maxlength="160" autocomplete="organization" placeholder="Nombre completo o razón social">
+                </label>
+                <label>
+                  <span>Tipo de documento</span>
+                  <select id="billingDocumentType">
+                    <option value="">Seleccionar</option>
+                    <option>DNI</option>
+                    <option>RUC</option>
+                    <option>CE</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Número de documento</span>
+                  <input id="billingDocument" maxlength="20" placeholder="Ej. 20601234567">
+                </label>
+                <label class="full">
+                  <span>Dirección fiscal</span>
+                  <input id="billingAddress" maxlength="200" autocomplete="street-address" placeholder="Av., calle, número y oficina / distrito">
+                </label>
+                <label>
+                  <span>Ciudad</span>
+                  <input id="billingCity" maxlength="80" autocomplete="address-level2" placeholder="Lima">
+                </label>
+                <label>
+                  <span>País</span>
+                  <input id="billingCountry" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" autocomplete="country" placeholder="PE" value="PE">
+                </label>
+              </div>
+              <div class="err" id="billingErr" role="alert"></div>
+              <div class="form-actions">
+                <button class="btn primary" type="submit"><i data-icon="check"></i> Guardar datos</button>
+                <p><i data-icon="lock"></i> Se aplicará a tus próximas compras.</p>
+              </div>
+            </form>
+
+            <div class="billing-side-col">
+              <section class="card sec">
+                <div class="section-title" style="margin:0">
+                  <h2>Tarjetas guardadas</h2>
+                  <i data-icon="card"></i>
+                </div>
+                <p class="card-description">Agiliza tus pagos. Tú decides cuándo confirmar cada compra.</p>
+                <div id="cards" class="cards-list"></div>
+                <button class="btn add-card-btn" id="addCard" type="button"><i data-icon="plus"></i> Añadir tarjeta</button>
+                <div class="secure-note">
+                  <i data-icon="shield"></i>
+                  <span><b>Seguridad Culqi:</b> Datos custodiados con cifrado PCI-DSS. Xport no almacena números completos ni CVV.</span>
+                </div>
+              </section>
+
+              <section class="card sec billing-info-card">
+                <div class="section-title" style="margin:0">
+                  <h2>Comprobantes y tributación</h2>
+                  <i data-icon="fileText"></i>
+                </div>
+                <ul class="billing-info-list">
+                  <li>
+                    <span class="info-bullet">✓</span>
+                    <div>
+                      <strong>Factura con RUC o Boleta con DNI</strong>
+                      <p>Emitida con los datos fiscales registrados en este formulario.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="info-bullet">✓</span>
+                    <div>
+                      <strong>Precios en Soles con IGV incluido</strong>
+                      <p>Todos nuestros planes contemplan el 18% de impuesto legal.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="info-bullet">✓</span>
+                    <div>
+                      <strong>Entrega electrónica inmediata</strong>
+                      <p>Recibirás el PDF y XML de tu comprobante en tu correo.</p>
+                    </div>
+                  </li>
+                </ul>
+              </section>
+            </div>
+          </div>
         </section>
         <section class="view-panel hidden" data-view="perfil" aria-labelledby="profileTitle">
           <div class="page-heading"><div><div class="page-label">Un espacio a tu nombre</div><h1 id="profileTitle">Mi perfil</h1><p>Actualiza tus datos y mantén segura tu cuenta.</p></div></div>
@@ -387,7 +364,20 @@ function modal(html) {
 function confirmDialog(message, okLabel, danger) {
   return new Promise((resolve) => {
     let done = false;
-    const m = modal(`<h3>Confirmar</h3><p style="margin:0">${esc(message)}</p><div class="actions"><button class="btn" id="no">Cancelar</button><button class="btn ${danger ? 'danger' : 'primary'}" id="yes">${esc(okLabel)}</button></div>`);
+    const m = modal(`
+      <div class="modal-header">
+        <div class="modal-icon-badge ${danger ? 'badge-danger' : 'badge-primary'}">
+          ${icon(danger ? 'trash' : 'help')}
+        </div>
+        <div>
+          <h3>Confirmar acción</h3>
+          <p class="modal-subtitle">${esc(message)}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="no" type="button">Cancelar</button>
+        <button class="btn ${danger ? 'danger' : 'primary'}" id="yes" type="button">${esc(okLabel)}</button>
+      </div>`);
     const finish = (v) => { if (done) return; done = true; m.close(); resolve(v); };
     m.root.addEventListener('dialogclose', () => finish(false));
     m.$('#no').onclick = () => finish(false); m.$('#yes').onclick = () => finish(true);
@@ -466,20 +456,81 @@ async function loadLicense() {
   const active = l.devices.filter((d) => d.status === 'active');
   const shownState = l.isTrial && l.state === 'expiring' ? 'trial' : l.state;
   card.innerHTML = `
-    <div class="row" style="justify-content:space-between;align-items:center"><div><p class="eyebrow" style="margin:0 0 4px">Mi licencia</p><h2>${l.isTrial ? 'Prueba Full · 14 días' : esc(l.plan)}</h2></div><span class="badge ${esc(shownState)}">${esc(STATE[shownState] || shownState)}</span></div>
-    <div><div class="big">${free ? Math.max(0,150-l.exportsUsed) + ' archivos' : esc(fmtLeft(l.secondsLeft))}</div><div class="muted">${free ? 'disponibles este mes · reinicia el ' + esc(fmtDateTime(l.usageResetsAt)) : 'restante · vence el ' + esc(fmtDateTime(l.expiresAt))}</div></div>
-    ${l.isTrial && l.state !== 'expired' ? '<div class="notice info">Tu prueba Full incluye todos los formatos y ajustes durante 14 días. Después continúas en Gratuito con 150 archivos al mes, sin cargos automáticos.</div>' : ''}
-    ${l.state === 'expired' ? '<div class="notice">Tu licencia venció. Elige un plan abajo para reactivarla con la misma clave.</div>' : ''}
-    ${l.state === 'expiring' && !l.isTrial ? '<div class="notice">Tu licencia vence pronto. Renuévala abajo para no interrumpir tu trabajo.</div>' : ''}
-    ${l.state === 'suspended' || l.state === 'revoked' ? '<div class="notice">Esta licencia fue bloqueada. Contacta a soporte.</div>' : ''}
-    <dl class="kv"><dt>Plan</dt><dd>${esc(l.isTrial ? 'Prueba Full · 14 días' : l.plan)}</dd><dt>Equipos</dt><dd>${active.length} de ${l.maxDevices} en uso</dd></dl>
-    ${l.key ? `<div><div class="muted" style="margin-bottom:6px;font-weight:600">Tu clave de licencia</div>
-      <div class="keybox mono" id="keybox" data-key="${esc(l.key)}">••••• ••••• ••••• •••••</div>
-      <div class="row" style="margin-top:10px"><button class="btn small" id="showKey">Mostrar</button><button class="btn small" id="copyKey">Copiar</button><button class="btn small danger" id="regen">Generar otra</button></div></div>` : '<div class="muted">La clave de esta licencia no está disponible en el portal. Contacta a soporte.</div>'}
-    <div><div class="muted" style="margin:6px 0;font-weight:600">Mis computadoras</div>
-    ${active.length ? `<div class="tablewrap"><table><thead><tr><th>Equipo</th><th>Revit</th><th>Último uso</th><th></th></tr></thead><tbody>
-      ${active.map((d) => `<tr><td>${esc(d.name) || 'Sin nombre'}</td><td>${esc(d.revitVersion)}</td><td>${esc(fmtDateTime(d.lastSeen))}</td><td><button class="btn small" data-rel="${esc(d.id)}">Liberar</button></td></tr>`).join('')}
-    </tbody></table></div>` : '<div class="empty">Aún no la has activado en ningún equipo.</div>'}</div>`;
+    <div class="lic-card-wrapper">
+      <div class="lic-header">
+        <div class="lic-header-info">
+          <span class="lic-plan-badge">${l.isTrial ? 'PRUEBA FULL · 14 DÍAS' : free ? 'XPORT GRATUITO' : 'PLAN ' + esc(l.plan).toUpperCase()}</span>
+          <h2 class="lic-title">${l.isTrial ? 'Prueba Full · 14 días' : free ? 'Xport Gratuito' : 'Plan ' + esc(l.plan)}</h2>
+          <p class="lic-subtitle">${free ? '150 archivos al mes · Reinicia el ' + esc(fmtDateTime(l.usageResetsAt)) : 'Vigencia activa · Vence el ' + esc(fmtDateTime(l.expiresAt))}</p>
+        </div>
+        <div class="lic-header-state">
+          <span class="badge ${esc(shownState)}">${esc(STATE[shownState] || shownState)}</span>
+        </div>
+      </div>
+
+      ${l.isTrial && l.state !== 'expired' ? '<div class="notice info">' + icon('spark') + ' Tu prueba Full incluye todos los formatos y ajustes avanzados durante 14 días. Al terminar continúas en Gratuito con 150 archivos al mes, sin cargos automáticos.</div>' : ''}
+      ${l.state === 'expired' ? '<div class="notice">' + icon('lock') + ' Tu licencia venció. Elige un plan abajo para reactivarla con tu misma clave.</div>' : ''}
+      ${l.state === 'expiring' && !l.isTrial ? '<div class="notice">' + icon('lock') + ' Tu licencia vence pronto. Renuévala abajo para no interrumpir tu trabajo.</div>' : ''}
+      ${l.state === 'suspended' || l.state === 'revoked' ? '<div class="notice">Esta licencia fue bloqueada. Contacta a soporte.</div>' : ''}
+
+      <div class="lic-metrics-grid">
+        <div class="lic-metric-item">
+          <div class="lic-metric-label">${icon('layers')} ${free ? 'Cupo de archivos' : 'Vigencia restante'}</div>
+          <div class="lic-metric-val">${free ? Math.max(0,150-l.exportsUsed) + ' <small>/ 150</small>' : esc(fmtLeft(l.secondsLeft))}</div>
+          <div class="lic-metric-sub">${free ? 'Disponibles este mes calendario' : 'Tiempo hasta renovación'}</div>
+        </div>
+        <div class="lic-metric-item">
+          <div class="lic-metric-label">${icon('monitor')} Computadoras activas</div>
+          <div class="lic-metric-val">${active.length} <small>/ ${l.maxDevices}</small></div>
+          <div class="lic-metric-progress">
+            <div class="lic-progress-bar"><div class="lic-progress-fill" style="width:${Math.min(100, Math.round(100*active.length/l.maxDevices))}%"></div></div>
+            <span class="lic-metric-sub">${active.length} de ${l.maxDevices} equipos ocupados</span>
+          </div>
+        </div>
+      </div>
+
+      ${l.key ? `
+      <div class="lic-key-box">
+        <div class="lic-key-header">
+          <div>
+            <div class="lic-key-title">${icon('key')} Clave de activación para Revit</div>
+            <p class="lic-key-desc">Pega esta clave en Revit desde la pestaña <b>BimFlow → Exportar Planos</b> para activar tu equipo.</p>
+          </div>
+          <div class="lic-key-actions">
+            <button class="btn small" id="showKey" type="button">${icon('eye')} Mostrar</button>
+            <button class="btn small primary" id="copyKey" type="button">${icon('copy')} Copiar clave</button>
+            <button class="btn small danger-outline" id="regen" type="button" title="Generar otra clave invalida la actual">${icon('refresh')} Regenerar</button>
+          </div>
+        </div>
+        <div class="lic-key-display mono" id="keybox" data-key="${esc(l.key)}">••••• ••••• ••••• •••••</div>
+      </div>` : '<div class="muted">La clave de esta licencia no está disponible en el portal. Contacta a soporte.</div>'}
+
+      <div class="lic-devices-box">
+        <div class="lic-devices-header">
+          <div>
+            <h3 class="lic-devices-title">${icon('monitor')} Computadoras conectadas</h3>
+            <p class="lic-devices-desc">Equipos con Xport activado en tu plan. Si cambias de PC, libera un equipo para activar el nuevo.</p>
+          </div>
+          <span class="badge active">${active.length} de ${l.maxDevices} en uso</span>
+        </div>
+        ${active.length ? `
+        <div class="lic-device-list">
+          ${active.map((d) => `
+          <div class="lic-device-card">
+            <div class="lic-device-icon">${icon('monitor')}</div>
+            <div class="lic-device-details">
+              <div class="lic-device-name">${esc(d.name) || 'Computadora de trabajo'}</div>
+              <div class="lic-device-meta">
+                <span class="lic-device-pill">Revit ${esc(d.revitVersion || 'BIM')}</span>
+                ${d.appVersion ? `<span class="lic-device-pill">v${esc(d.appVersion)}</span>` : ''}
+                <span class="lic-device-time">Último uso: ${esc(fmtDateTime(d.lastSeen))}</span>
+              </div>
+            </div>
+            <button class="btn small danger-outline" type="button" data-rel="${esc(d.id)}">Liberar equipo</button>
+          </div>`).join('')}
+        </div>` : '<div class="empty">${icon("monitor")}<strong>Sin computadoras activas aún</strong>Abre Revit y activa tu primera computadora con la clave de arriba.</div>'}
+      </div>
+    </div>`;
   const kb = $('#keybox');
   if (kb) {
     let shown = false;
@@ -544,15 +595,27 @@ async function buyPlan(planId) {
       return;
     }
     if (r.paid) {
-      const m = modal(`<h3>${plan.trial ? '¡Tu prueba está activa!' : '¡Listo!'}</h3>
-        <p style="margin:0">${plan.trial ? `Tienes ${esc(duration(plan.seconds))} con todas las funciones.` : 'Tu pago se confirmó y tu licencia ya está activa.'} Copia tu clave y pégala en Revit para activarla. Pedido <b class="mono">${esc(r.order.code)}</b>.</p>
+      const m = modal(`
+        <div class="modal-header">
+          <div class="modal-icon-badge badge-success">${icon('check')}</div>
+          <div>
+            <h3>${plan.trial ? '¡Tu prueba está activa!' : '¡Listo!'}</h3>
+            <p class="modal-subtitle">${plan.trial ? `Tienes ${esc(duration(plan.seconds))} con todas las funciones.` : 'Tu pago se confirmó y tu licencia ya está activa.'} Copia tu clave y pégala en Revit para activarla. Pedido <b class="mono">${esc(r.order.code)}</b>.</p>
+          </div>
+        </div>
         <div class="actions"><button class="btn primary" id="ok">Ver mi clave</button></div>`);
       m.$('#ok').onclick = () => { m.close(); location.hash = '#licencia'; };
     } else {
-      const m = modal(`<h3>Pedido creado</h3>
-        <p style="margin:0">Código de pedido: <b class="mono" style="font-size:20px">${esc(r.order.code)}</b></p>
+      const m = modal(`
+        <div class="modal-header">
+          <div class="modal-icon-badge badge-primary">${icon('receipt')}</div>
+          <div>
+            <h3>Pedido creado</h3>
+            <p class="modal-subtitle">Código de pedido: <b class="mono" style="font-size:16px">${esc(r.order.code)}</b></p>
+          </div>
+        </div>
         <div class="notice" style="font-weight:500">${esc(r.instructions)}</div>
-        <p class="muted" style="margin:0">Total: <b>${esc(money(r.order.amountCents, r.order.currency))}</b>. Tu licencia aparecerá aquí cuando se confirme el pago.</p>
+        <p class="muted" style="margin:0;font-size:12.5px">Total: <b>${esc(money(r.order.amountCents, r.order.currency))}</b>. Tu licencia aparecerá aquí cuando se confirme el pago.</p>
         <div class="actions"><button class="btn primary" id="ok">Entendido</button></div>`);
       m.$('#ok').onclick = m.close;
     }
@@ -575,7 +638,14 @@ function loadScript(src) {
   return promise;
 }
 function successModal(order) {
-  const m = modal(`<h3>¡Pago confirmado!</h3><p style="margin:0">Tu licencia ya está activa. Pedido <b class="mono">${esc(order.code)}</b>. Copia tu clave y pégala en Revit para activarla.</p>
+  const m = modal(`
+    <div class="modal-header">
+      <div class="modal-icon-badge badge-success">${icon('check')}</div>
+      <div>
+        <h3>¡Pago confirmado!</h3>
+        <p class="modal-subtitle">Tu licencia ya está activa. Pedido <b class="mono">${esc(order.code)}</b>. Copia tu clave y actívala en Revit.</p>
+      </div>
+    </div>
     <div class="actions"><button class="btn primary" id="ok">Ver mi clave</button></div>`);
   m.$('#ok').onclick = () => { m.close(); location.hash = '#licencia'; };
 }
@@ -599,7 +669,15 @@ async function payOnline(order, pay) {
     const r = await api(`/orders/${encodeURIComponent(order.code)}/pay`, { method:'POST', body });
     successModal(r.order);
   } catch (err) {
-    const m = modal(`<h3>No se pudo confirmar el pago</h3><p role="alert">${esc(err.message)}</p><div class="actions"><button class="btn primary" id="closePayment">Ver pedidos</button></div>`);
+    const m = modal(`
+      <div class="modal-header">
+        <div class="modal-icon-badge badge-danger">${icon('help')}</div>
+        <div>
+          <h3>No se pudo confirmar el pago</h3>
+          <p class="modal-subtitle" role="alert">${esc(err.message)}</p>
+        </div>
+      </div>
+      <div class="actions"><button class="btn primary" id="closePayment">Ver pedidos</button></div>`);
     m.$('#closePayment').onclick = () => { m.close(); location.hash = '#pedidos'; };
   }
 }
@@ -687,9 +765,15 @@ async function loadDownload() {
     const { installer: i } = await api('/download');
     const mb = i ? (i.size / 1048576).toFixed(1) : '';
     box.innerHTML = (i
-      ? `<a class="btn primary" style="display:inline-block;text-decoration:none;text-align:center" href="${esc(i.url)}" download>Descargar instalador${i.version ? ' v' + esc(i.version) : ''} (${esc(mb)} MB)</a>`
-      : '<div class="notice info">El instalador estará disponible muy pronto.</div>')
-      + '<p style="margin:10px 0 0;font-size:13px"><a href="/instalacion/">¿Windows muestra un aviso al instalar? Te explicamos qué hacer</a></p>';
+      ? `<a class="btn primary lic-download-btn" href="${esc(i.url)}" download>
+          <span class="lic-dl-icon">${icon('download')}</span>
+          <span class="lic-dl-info">
+            <strong>Descargar Instalador${i.version ? ' v' + esc(i.version) : ''}</strong>
+            <small>${esc(mb)} MB · Revit 2023–2027</small>
+          </span>
+        </a>`
+      : '<div class="notice info">' + icon('download') + ' El instalador estará disponible muy pronto.</div>')
+      + '<p class="lic-guide-link"><a href="/instalacion/">' + icon('help') + ' ¿Windows muestra aviso al instalar? Ver guía →</a></p>';
   } catch { box.innerHTML = '<p style="margin:0;font-size:13px"><a href="/instalacion/">Guía de instalación</a></p>'; }
 }
 
@@ -713,7 +797,12 @@ const ICON_PATHS = {
   menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
   refresh:'<path d="M20 7v5h-5M4 17v-5h5m11-1a8 8 0 0 0-14-5M4 13a8 8 0 0 0 14 5"/>',
   plus:'<path d="M12 4v16M4 12h16"/>',
-  check:'<path d="m5 12 4 4L19 6"/>'
+  check:'<path d="m5 12 4 4L19 6"/>',
+  eye:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  trash:'<path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2m-6 5v6m4-6v6"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  fileText:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'
 };
 function icon(name) { return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${ICON_PATHS[name] || ICON_PATHS.grid}</svg>`; }
 document.querySelectorAll('[data-icon]').forEach(el => el.outerHTML = icon(el.dataset.icon));
@@ -809,7 +898,25 @@ formAction('#securityForm','#securityErr',async()=>{
 });
 async function loadCards() {
   const {cards}=await api('/cards');
-  $('#cards').innerHTML=cards.length ? cards.map(c=>`<div class="payment-card"><span class="card-brand">${esc(c.brand)}</span><div><strong>•••• ${esc(c.lastFour)}</strong><p>Disponible para tus compras</p></div><button class="icon-button" data-delete-card="${esc(c.id)}" aria-label="Eliminar tarjeta terminada en ${esc(c.lastFour)}">${icon('logout')}</button></div>`).join('') : `<div class="empty">${icon('card')}<strong>Tus pagos, a tu manera</strong>Aún no tienes tarjetas guardadas.<br>Puedes pagar sin guardar una tarjeta.</div>`;
+  $('#cards').innerHTML=cards.length ? cards.map(c=>{
+    const last = esc(c.lastFour || c.last_four || '••••');
+    const brand = esc(c.brand || 'Tarjeta');
+    const bLower = brand.toLowerCase();
+    const brandClass = bLower.includes('visa') ? 'brand-visa' : bLower.includes('master') ? 'brand-master' : 'brand-default';
+    return `<div class="payment-card">
+      <div class="card-brand-chip ${brandClass}"><span>${brand}</span></div>
+      <div class="payment-card-body">
+        <div class="card-num-row">
+          <strong class="mono">•••• •••• •••• ${last}</strong>
+          <span class="card-verified-badge"><span class="pulse-dot-green"></span> Lista</span>
+        </div>
+        <p class="card-sub-info">Disponible para renovar o comprar planes</p>
+      </div>
+      <button class="icon-button card-del-btn" data-delete-card="${esc(c.id)}" title="Eliminar tarjeta" aria-label="Eliminar tarjeta terminada en ${last}">
+        ${icon('trash')}
+      </button>
+    </div>`;
+  }).join('') : `<div class="empty">${icon('card')}<strong>Tus pagos, a tu manera</strong>Aún no tienes tarjetas guardadas.<br>Puedes pagar directamente en Culqi sin guardar tu tarjeta.</div>`;
   $('#cards').querySelectorAll('[data-delete-card]').forEach(btn=>btn.onclick=async()=>{
     if (!await confirmDialog('¿Eliminar esta tarjeta guardada de tu cuenta y de Culqi?', 'Eliminar tarjeta',true)) return;
     btn.disabled=true;
@@ -820,7 +927,23 @@ async function loadCards() {
 function choosePayment(order,cards) {
   return new Promise(resolve=>{
     let done=false;
-    const m=modal(`<h3>Elige cómo pagar</h3><p>Total: <strong>${esc(money(order.amountCents,order.currency))}</strong>. Este pago cubre ${esc(duration(order.seconds || 30 * DAY))}.</p>${cards.map(c=>`<label class="payment-choice"><input type="radio" name="payChoice" value="${esc(c.id)}"><span>${esc(c.brand)} · •••• ${esc(c.lastFour)}</span></label>`).join('')}<label class="payment-choice"><input type="radio" name="payChoice" value="" checked><span>Usar otra tarjeta con Culqi</span></label><p class="muted">Solo se hará el cobro que confirmas ahora. Sin renovación automática.</p><div class="actions"><button class="btn" id="paymentCancel">Cancelar</button><button class="btn primary" id="paymentContinue">Continuar</button></div>`);
+    const m=modal(`
+      <div class="modal-header">
+        <div class="modal-icon-badge badge-primary">${icon('card')}</div>
+        <div>
+          <h3>Elige cómo pagar</h3>
+          <p class="modal-subtitle">Total a pagar: <strong>${esc(money(order.amountCents,order.currency))}</strong> por ${esc(duration(order.seconds || 30 * DAY))}.</p>
+        </div>
+      </div>
+      <div style="display:grid;gap:10px;margin-top:6px">
+        ${cards.map(c=>`<label class="payment-choice"><input type="radio" name="payChoice" value="${esc(c.id)}"><span>${esc(c.brand)} · •••• ${esc(c.lastFour || c.last_four || '')}</span></label>`).join('')}
+        <label class="payment-choice"><input type="radio" name="payChoice" value="" checked><span>Usar otra tarjeta con Culqi</span></label>
+      </div>
+      <p class="muted" style="font-size:12px;margin:2px 0 0">Solo se hará el cobro confirmado. Sin renovación automática.</p>
+      <div class="actions">
+        <button class="btn" id="paymentCancel">Cancelar</button>
+        <button class="btn primary" id="paymentContinue">Continuar</button>
+      </div>`);
     const finish=value=>{if(done)return;done=true;m.close();resolve(value);};
     m.root.addEventListener('dialogclose',()=>finish(null));
     m.$('#paymentCancel').onclick=()=>finish(null);
@@ -841,7 +964,19 @@ async function checkoutToken(settings) {
     Culqi.options({lang:'es',installments:false,paymentMethods:{tarjeta:true,yape:false,bancaMovil:false,agente:false,billetera:false,cuotealo:false},style:{logo:location.origin+'/brand/logo-header.png',bannerColor:'#082744',buttonBackground:'#075abd',buttonTextColor:'#ffffff',linksColor:'#075abd',buttonText:settings.amount===0?'Guardar tarjeta':'Pagar'}});
     return await new Promise((resolve,reject)=>{
       let done=false;
-      const m=modal(`<h3>Continúa en Culqi</h3><p>Ingresa los datos de tu tarjeta en el formulario seguro de Culqi. Si lo cerraste, puedes volver a abrirlo o regresar a tu cuenta.</p><div class="actions"><button class="btn" id="checkoutCancel">Volver a mi cuenta</button><button class="btn primary" id="checkoutReopen">Abrir formulario</button></div>`);
+      const m=modal(`
+        <div class="modal-header">
+          <div class="modal-icon-badge badge-primary">${icon('lock')}</div>
+          <div>
+            <h3>Continúa en Culqi</h3>
+            <p class="modal-subtitle">Ingresa los datos de tu tarjeta en el formulario seguro de Culqi.</p>
+          </div>
+        </div>
+        <div class="notice">Si cerraste la ventana de pago, puedes volver a abrirla o regresar a tu cuenta.</div>
+        <div class="actions">
+          <button class="btn" id="checkoutCancel">Volver a mi cuenta</button>
+          <button class="btn primary" id="checkoutReopen">Abrir formulario</button>
+        </div>`);
       const finish=(token,error)=>{if(done)return;done=true;window.culqi=()=>{};try{Culqi.close();}catch{}m.close();error?reject(error):resolve(token);};
       m.root.addEventListener('dialogclose',()=>finish(null));
       m.$('#checkoutCancel').onclick=()=>finish(null);
@@ -859,7 +994,19 @@ $('#addCard').onclick=async()=>{
   if (!currentCustomer.billing?.address || !currentCustomer.billing?.city) { toast('Guarda tu dirección y ciudad de facturación antes de añadir una tarjeta.'); return; }
   const accepted=await new Promise(resolve=>{
     let done=false;
-    const m=modal(`<h3>Guarda tu tarjeta con Culqi</h3><p>Podrás elegirla al pagar tus próximas compras. Esta acción no compra un plan ni activa cobros automáticos.</p><label class="check-consent"><input type="checkbox" id="cardConsent"><span>Autorizo a Culqi a guardar mi tarjeta para futuras compras que yo confirme. Podré eliminarla desde mi cuenta.</span></label><div class="actions"><button class="btn" id="saveCardCancel">Cancelar</button><button class="btn primary" id="saveCardContinue" disabled>Continuar a Culqi</button></div>`);
+    const m=modal(`
+      <div class="modal-header">
+        <div class="modal-icon-badge badge-primary">${icon('shield')}</div>
+        <div>
+          <h3>Guardar tarjeta con Culqi</h3>
+          <p class="modal-subtitle">Podrás elegirla al pagar tus próximas compras. No activa cobros automáticos.</p>
+        </div>
+      </div>
+      <label class="check-consent"><input type="checkbox" id="cardConsent"><span>Autorizo a Culqi a guardar mi tarjeta para futuras compras que yo confirme expresamente. Podré eliminarla desde mi cuenta en cualquier momento.</span></label>
+      <div class="actions">
+        <button class="btn" id="saveCardCancel">Cancelar</button>
+        <button class="btn primary" id="saveCardContinue" disabled>Continuar a Culqi</button>
+      </div>`);
     const finish=value=>{if(done)return;done=true;m.close();resolve(value);};
     m.root.addEventListener('dialogclose',()=>finish(false));
     m.$('#cardConsent').onchange=()=>m.$('#saveCardContinue').disabled=!m.$('#cardConsent').checked;

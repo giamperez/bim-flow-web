@@ -136,6 +136,12 @@ export function App() {
           <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-5 pt-16 pb-20 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:pt-24 lg:pb-28">
             <div>
               <Reveal>
+                <div className="inline-flex items-center gap-2.5 rounded-full border border-brand/20 bg-brand/[0.06] px-4 py-1.5 text-xs font-semibold text-brand mb-4 shadow-sm backdrop-blur-sm">
+                  <span className="flex h-2 w-2 rounded-full bg-brand-teal animate-pulse" />
+                  <span>Xport v3.3 para Revit 2023–2027</span>
+                  <span className="text-slate-300">·</span>
+                  <span className="text-slate-600 font-medium">Prueba Full gratis sin tarjeta</span>
+                </div>
                 <Eyebrow>Xport por BimFlow · Exportación para Revit</Eyebrow>
               </Reveal>
               <Reveal delay={0.08}>
