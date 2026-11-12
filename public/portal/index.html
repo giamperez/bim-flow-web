@@ -543,7 +543,7 @@ async function loadLicense() {
             </div>
             <button class="btn small danger-outline" type="button" data-rel="${esc(d.id)}">Liberar equipo</button>
           </div>`).join('')}
-        </div>` : '<div class="empty">${icon("monitor")}<strong>Sin computadoras activas aún</strong>Abre Revit y activa tu primera computadora con la clave de arriba.</div>'}
+        </div>` : `<div class="empty">${icon("monitor")}<strong>Sin computadoras activas aún</strong>Abre Revit y activa tu primera computadora con la clave de arriba.</div>`}
       </div>
     </div>`;
   const kb = $('#keybox');
