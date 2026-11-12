@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS customers (
   email_norm    TEXT,
   email_verified_at INTEGER,
   session_version INTEGER NOT NULL DEFAULT 0,
+  password_set INTEGER NOT NULL DEFAULT 1,
   phone TEXT NOT NULL DEFAULT '',
   company TEXT NOT NULL DEFAULT '',
   billing_json TEXT,

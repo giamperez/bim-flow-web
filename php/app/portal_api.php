@@ -213,6 +213,7 @@ function xp_customer_public(array $c): array
 {
     return ['id' => $c['id'], 'email' => $c['email'], 'name' => $c['name'], 'verified' => !empty($c['email_verified_at']),
         'phone' => $c['phone'] ?? '', 'company' => $c['company'] ?? '', 'createdAt' => (int) $c['created_at'],
+        'hasPassword' => (int) ($c['password_set'] ?? 1) === 1,
         'billing' => json_decode($c['billing_json'] ?? '{}', true) ?: new stdClass()];
 }
 
@@ -685,7 +686,7 @@ function xp_portal_reset(): void
     xp_tx(function () use ($row, $c, $password) {
         xp_exec('UPDATE email_tokens SET used_at = ? WHERE customer_id = ? AND type = ? AND used_at IS NULL', [time(), $c['id'], 'reset']);
         xp_exec(
-            'UPDATE customers SET password_hash = ?, session_version = session_version + 1, email_verified_at = COALESCE(email_verified_at, ?) WHERE id = ?',
+            'UPDATE customers SET password_hash = ?, password_set = 1, session_version = session_version + 1, email_verified_at = COALESCE(email_verified_at, ?) WHERE id = ?',
             [password_hash($password, PASSWORD_DEFAULT), time(), $c['id']]
         );
     });

@@ -59,7 +59,7 @@ function xp_admin_customer_update(string $id): void
         xp_exec('UPDATE customers SET name = ?, email = ?, email_norm = ?, company = ?, phone = ? WHERE id = ?',
             [$name, $email, xp_normalize_email($email), $company, $phone, $id]);
         if ($password !== '') {
-            xp_exec('UPDATE customers SET password_hash = ?, session_version = session_version + 1 WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $id]);
+            xp_exec('UPDATE customers SET password_hash = ?, password_set = 1, session_version = session_version + 1 WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $id]);
             xp_log_event('admin_customer_password_set', null, null, $id);
         }
         xp_exec('UPDATE licenses SET customer_name = ?, customer_email = ?, updated_at = ? WHERE customer_id = ?', [$name, $email, time(), $id]);
@@ -125,8 +125,8 @@ function xp_admin_customer_create(): void
     $result = xp_tx(function () use ($id, $name, $email, $company, $phone, $password, $verified, $invite) {
         if (xp_one('SELECT id FROM customers WHERE email = ? OR email_norm = ?', [$email, xp_normalize_email($email)])) { return 409; }
         $hash = password_hash($invite ? bin2hex(random_bytes(32)) : $password, PASSWORD_DEFAULT);
-        xp_exec('INSERT INTO customers (id, email, email_norm, name, password_hash, company, phone, created_at, email_verified_at, session_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
-            [$id, $email, xp_normalize_email($email), $name, $hash, $company, $phone, time(), ($verified || $invite) ? time() : null]);
+        xp_exec('INSERT INTO customers (id, email, email_norm, name, password_hash, company, phone, created_at, email_verified_at, session_version, password_set) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)',
+            [$id, $email, xp_normalize_email($email), $name, $hash, $company, $phone, time(), ($verified || $invite) ? time() : null, $invite ? 0 : 1]);
         return 200;
     });
     if ($result === 409) { xp_json(409, ['ok' => false, 'error' => 'Ya existe un usuario con ese correo.']); }

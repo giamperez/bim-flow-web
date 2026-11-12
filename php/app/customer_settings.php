@@ -39,6 +39,9 @@ function xp_portal_profile(array $customer): void
     }
     $emailChanged = $email !== $customer['email'];
     if ($emailChanged) {
+        if ((int) ($customer['password_set'] ?? 1) === 0) {
+            xp_json(400, ['ok' => false, 'error' => 'Tu cuenta entra con Google o Microsoft y aún no tiene contraseña. Crea una contraseña primero para poder cambiar el correo.']);
+        }
         xp_check_current_password($customer, $b['currentPassword'] ?? '');
         if (xp_one('SELECT id FROM customers WHERE (email = ? OR email_norm = ?) AND id <> ?', [$email, xp_normalize_email($email), $customer['id']])) {
             xp_json(409, ['ok' => false, 'error' => 'Ese correo ya tiene una cuenta.']);
@@ -90,17 +93,19 @@ function xp_check_current_password(array $customer, $password): void
 function xp_portal_password(array $customer): void
 {
     $b = xp_body() ?? [];
-    xp_check_current_password($customer, $b['currentPassword'] ?? '');
+    // Una cuenta creada con Google/Microsoft no tiene contraseña actual: ya está autenticada por su sesión.
+    $hasPassword = (int) ($customer['password_set'] ?? 1) === 1;
+    if ($hasPassword) { xp_check_current_password($customer, $b['currentPassword'] ?? ''); }
     $password = $b['password'] ?? '';
     if (!is_string($password) || strlen($password) < 8 || strlen($password) > 200) {
         xp_json(400, ['ok' => false, 'error' => 'Usa una contraseña de entre 8 y 200 caracteres.']);
     }
     xp_tx(function () use ($customer, $password) {
-        xp_exec('UPDATE customers SET password_hash = ?, session_version = session_version + 1 WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $customer['id']]);
+        xp_exec('UPDATE customers SET password_hash = ?, password_set = 1, session_version = session_version + 1 WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $customer['id']]);
         xp_exec('UPDATE email_tokens SET used_at = ? WHERE customer_id = ? AND used_at IS NULL AND type = ?', [time(), $customer['id'], 'reset']);
     });
     $updated = xp_one('SELECT * FROM customers WHERE id = ?', [$customer['id']]);
     xp_set_user_cookie($customer['id'], (int) $updated['session_version']);
-    xp_log_event('password_changed', null, null, $customer['id'], xp_ip());
+    xp_log_event($hasPassword ? 'password_changed' : 'password_created', null, null, $customer['id'], xp_ip());
     xp_json(200, ['ok' => true]);
 }

@@ -379,6 +379,14 @@ try{
   check('Perfil Google correcto y correo confirmado',googleCustomer.name==='SSO google'&&googleCustomer.email==='google-sso@example.test'&&googleCustomer.verified);
   check('SSO nunca concede permisos admin',(await call('socialGoogle','/admin/api/stats')).status===401);
   check('SSO obtiene licencia gratuita',(await por('socialGoogle','/license')).data.license.accessMode==='free');
+  check('Cuenta de Google se marca sin contraseña',(await por('socialGoogle','/me')).data.customer.hasPassword===false);
+  check('Cuenta con contraseña propia sí la tiene',(await por('a','/me')).data.customer.hasPassword===true);
+  check('Google sin contraseña no puede cambiar el correo',(await por('socialGoogle','/profile','PATCH',{email:'nuevo-google@example.test'})).status===400);
+  check('Crear contraseña exige mínimo 8 caracteres',(await por('socialGoogle','/password','POST',{password:'corta'})).status===400);
+  check('Cuenta de Google crea contraseña sin pedir la actual',(await por('socialGoogle','/password','POST',{password:'mi-clave-google-1'})).status===200);
+  check('Tras crearla ya cuenta con contraseña',(await por('socialGoogle','/me')).data.customer.hasPassword===true);
+  check('Ahora puede ingresar con correo y contraseña',(await por('googlePw','/login','POST',{email:'google-sso@example.test',password:'mi-clave-google-1'})).status===200);
+  check('Con contraseña propia vuelve a exigir la actual',(await por('socialGoogle','/password','POST',{password:'otra-clave-google-2'})).status===400);
   const replay=await socialFinish(social);
   check('Callback no se puede reutilizar',replay.headers.get('location').includes('invalid_state'));
   social=await socialBegin('google');

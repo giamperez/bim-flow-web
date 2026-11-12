@@ -186,7 +186,7 @@ function xp_oauth_customer(string $provider, array $claims): array
         if (xp_ip() !== '' && xp_count_events('portal_register', 'ip = ?', [xp_ip()], 3600) >= 10) { return ['error' => 'limited']; }
         $id = xp_uuid(); $name = xp_clip($claims['name'] ?? '', 120) ?: explode('@', $email)[0];
         $verified = $provider === 'google' ? time() : null;
-        xp_exec('INSERT INTO customers (id, email, email_norm, name, password_hash, created_at, email_verified_at, session_version) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+        xp_exec('INSERT INTO customers (id, email, email_norm, name, password_hash, created_at, email_verified_at, session_version, password_set) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)',
             [$id, $email, xp_normalize_email($email), $name, password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT), time(), $verified]);
         xp_exec('INSERT INTO oauth_identities (provider, subject_hash, customer_id, created_at) VALUES (?, ?, ?, ?)', [$provider, $subject, $id, time()]);
         xp_log_event('portal_register', null, null, $email, xp_ip());

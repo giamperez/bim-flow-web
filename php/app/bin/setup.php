@@ -118,6 +118,7 @@ function migrate_schema(PDO $pdo, string $driver, string $appDir): void
             'email_norm' => $sqlite ? 'TEXT' : 'VARCHAR(160) NULL',
             'email_verified_at' => $sqlite ? 'INTEGER' : 'BIGINT NULL',
             'session_version' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'INT NOT NULL DEFAULT 0',
+            'password_set' => $sqlite ? 'INTEGER NOT NULL DEFAULT 1' : 'TINYINT NOT NULL DEFAULT 1',
         ],
         'orders' => [
             'tier' => $sqlite ? 'INTEGER NOT NULL DEFAULT 0' : 'INT NOT NULL DEFAULT 0',
@@ -143,6 +144,10 @@ function migrate_schema(PDO $pdo, string $driver, string $appDir): void
                 if ($table === 'customers' && $name === 'email_verified_at') {
                     // Clientes anteriores a la verificación de correo: se consideran verificados para no bloquearlos.
                     $pdo->exec('UPDATE customers SET email_verified_at = created_at');
+                }
+                if ($table === 'customers' && $name === 'password_set') {
+                    // Cuentas creadas con Google/Microsoft: su contraseña es aleatoria y nadie la conoce.
+                    $pdo->exec('UPDATE customers SET password_set = 0 WHERE id IN (SELECT customer_id FROM oauth_identities)');
                 }
             }
         }
