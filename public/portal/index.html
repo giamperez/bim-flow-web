@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<script src="/ui/theme.js?v=20261112-1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mi cuenta · Xport</title>
 <meta name="description" content="Prueba gratis, compra, renueva y gestiona tu licencia de Xport para Revit.">
@@ -10,12 +11,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;450;500;550;600;650;700;800&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/portal/portal.css?v=20261111-9">
+<link rel="stylesheet" href="/portal/portal.css?v=20261112-1">
 <style>
 /* Essential base defaults */
 .hidden{display:none!important}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 </style>
+<link rel="stylesheet" href="/ui/theme.css?v=20261112-1">
 </head>
 <body>
 
@@ -24,7 +26,7 @@
     <a class="logo" href="/" aria-label="Xport por BimFlow, inicio">
 <span class="product-brand"><img src="/brand/isotipo.png" alt="" width="40" height="40"><span>Xport<small>por BimFlow</small></span></span>
     </a>
-    <div class="who">
+    <div class="who"><button type="button" class="theme-toggle" data-theme-toggle aria-label="Cambiar tema"></button>
       <a class="back" href="/">Inicio</a>
       <span class="hidden" id="who"><span id="whoName"></span> <button class="btn small" id="logout">Salir</button></span>
     </div>
@@ -138,7 +140,7 @@
     <div class="workspace">
       <header class="workspace-top">
         <div style="display:flex;align-items:center;gap:12px"><button class="icon-button mobile-menu" id="menuToggle" aria-label="Abrir navegación" aria-expanded="false" aria-controls="sidebar"><i data-icon="menu"></i></button><div class="breadcrumbs"><span>Mi espacio</span><span aria-hidden="true">/</span><b id="viewBreadcrumb">Resumen</b></div></div>
-        <div class="top-actions"><span class="top-status">Xport para Revit</span><a class="btn" href="/">Ir al sitio <i data-icon="external"></i></a><div class="avatar" data-initials aria-hidden="true">BF</div></div>
+        <div class="top-actions"><button type="button" class="theme-toggle" data-theme-toggle aria-label="Cambiar tema"></button><span class="top-status">Xport para Revit</span><a class="btn" href="/">Ir al sitio <i data-icon="external"></i></a><div class="avatar" data-initials aria-hidden="true">BF</div></div>
       </header>
       <div class="workspace-content">
         <div class="notice hidden" id="verifyBanner" role="status" style="margin-bottom:20px"></div>
