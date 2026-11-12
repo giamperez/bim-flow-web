@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;450;500;550;600;650;700;800&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/portal/portal.css?v=20261112-3">
+<link rel="stylesheet" href="/portal/portal.css?v=20261112-4">
 <style>
 /* Essential base defaults */
 .hidden{display:none!important}
@@ -64,8 +64,11 @@
       <p class="eyebrow" style="margin:0">Mi cuenta</p>
       <h1 id="authTitle" tabindex="-1">Qué bueno verte de nuevo</h1>
       <p class="muted" style="margin:0" id="authLead">Ingresa con tu correo y contraseña para continuar.</p>
+      <div id="socialSignup" class="social-signup hidden">
+        <div class="social-options" id="socialOptions"></div>
+        <div class="signup-divider"><span>o usa tu correo</span></div>
+      </div>
       <div id="authFields" style="display:grid;gap:18px">
-      <label id="nameRow" class="hidden">Nombre o empresa<input id="name" autocomplete="organization" maxlength="120" placeholder="Tu nombre o el de tu estudio"></label>
       <label>Correo electrónico<input id="email" type="email" autocomplete="email" required maxlength="160" placeholder="nombre@empresa.com"></label>
       <label for="password">Contraseña</label>
       <div class="password-field" style="margin-top:-10px"><input id="password" aria-describedby="authLead" type="password" autocomplete="current-password" required maxlength="200" placeholder="Tu contraseña"><button type="button" class="password-toggle" id="togglePassword" aria-label="Mostrar contraseña" aria-pressed="false">Mostrar</button></div>
@@ -73,9 +76,10 @@
       <p id="forgotLink" style="margin:-4px 0 0;font-size:13px"><a href="#" id="goForgot">¿Olvidaste tu contraseña?</a></p>
       <div class="err" id="authErr" role="alert"></div>
       <button class="btn primary" type="submit" id="authBtn">Ingresar</button>
+      <p class="signup-legal hidden" id="signupLegal">Al crear tu cuenta, aceptas los <a href="/legal/terminos/" target="_blank" rel="noopener">Términos</a> y la <a href="/legal/privacidad/" target="_blank" rel="noopener">Política de Privacidad</a>.</p>
       <div class="auth-switch" id="registerCta"><span>¿Es tu primera vez en Xport?</span><button class="btn" type="button" id="goRegister">Crear cuenta gratis</button></div>
-      <div class="auth-switch hidden" id="loginCta"><span>¿Ya tienes una cuenta?</span><button class="btn" type="button" id="goLogin">Ingresar a mi cuenta</button></div>
-      <p class="auth-footnote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Tu licencia y tus proyectos, bajo tu control.</p>
+      <p class="signup-login hidden" id="loginCta">¿Ya tienes una cuenta? <a href="#" id="goLogin">Ingresa aquí</a></p>
+      <p class="auth-footnote" id="authTrust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Tu licencia y tus proyectos, bajo tu control.</p>
     </form>
   </section>
   <footer class="portal-footer hidden" id="authFooter"><span>Xport <span aria-hidden="true">/</span> por BimFlow</span><a href="/instalacion/">¿Necesitas ayuda para instalar?</a></footer>
@@ -387,14 +391,16 @@ function confirmDialog(message, okLabel, danger) {
 
 /* ---------- acceso ---------- */
 let mode = 'login';
+let signupProviders = [];
 function setMode(m) {
   mode = m;
   $('#registerCta').classList.toggle('hidden', m !== 'login');
   $('#loginCta').classList.toggle('hidden', m !== 'register');
-  $('#name').required = m === 'register';
+  $('#socialSignup').classList.toggle('hidden', m !== 'register' || signupProviders.length === 0);
+  $('#signupLegal').classList.toggle('hidden', m !== 'register');
+  $('#authTrust').classList.toggle('hidden', m === 'register');
   $('#password').minLength = m === 'register' ? 8 : 1;
-  $('#nameRow').classList.toggle('hidden', m === 'login');
-  $('#authBtn').textContent = m === 'login' ? 'Ingresar' : 'Crear cuenta';
+  $('#authBtn').textContent = m === 'login' ? 'Ingresar' : 'Probar Xport gratis';
   $('#authTitle').textContent = m === 'login' ? 'Qué bueno verte de nuevo' : 'Crea tu espacio de trabajo';
   $('#authLead').textContent = m === 'login' ? 'Ingresa con tu correo y contraseña para continuar.' : 'Empieza gratis con 150 archivos al mes. Prueba todas las opciones de Full durante 14 días, sin tarjeta.';
   $('#password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
@@ -402,8 +408,21 @@ function setMode(m) {
   $('#authErr').textContent = '';
   $('#forgotLink').classList.toggle('hidden', m !== 'login');
 }
-$('#goLogin').onclick = () => { setMode('login'); $('#authTitle').focus(); };
+$('#goLogin').onclick = (e) => { e.preventDefault(); setMode('login'); $('#authTitle').focus(); };
 $('#goRegister').onclick = () => { setMode('register'); $('#authTitle').focus(); };
+async function loadSignupProviders() {
+  try {
+    const r = await api('/oauth/providers');
+    signupProviders = r.providers.filter(p => p === 'google' || p === 'microsoft');
+    const logos = {
+      google: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-1.99 3.02v2.51h3.22c1.89-1.74 2.99-4.3 2.99-7.36Z"/><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.41l-3.22-2.51c-.9.6-2.05.96-3.39.96-2.6 0-4.81-1.76-5.6-4.12H3.08v2.59A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.4 13.92a6 6 0 0 1 0-3.84V7.49H3.08a10 10 0 0 0 0 9.02l3.32-2.59Z"/><path fill="#EA4335" d="M12 5.96c1.47 0 2.79.5 3.83 1.5l2.87-2.88A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.92 5.49l3.32 2.59c.79-2.36 3-4.12 5.6-4.12Z"/></svg>',
+      microsoft: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#f25022" d="M2 2h9v9H2z"/><path fill="#7fba00" d="M13 2h9v9h-9z"/><path fill="#00a4ef" d="M2 13h9v9H2z"/><path fill="#ffb900" d="M13 13h9v9h-9z"/></svg>'
+    };
+    const next = ['comprar','prueba','resumen'].includes(location.hash.slice(1)) ? '?next=' + location.hash.slice(1) : '';
+    $('#socialOptions').innerHTML = signupProviders.map(p => `<a class="btn social-provider" href="/portal/api/oauth/${p}/start${next}">${logos[p]}Continuar con ${p === 'google' ? 'Google' : 'Microsoft'}</a>`).join('');
+    $('#socialSignup').classList.toggle('hidden', mode !== 'register' || signupProviders.length === 0);
+  } catch { /* El registro por correo permanece disponible. */ }
+}
 $('#togglePassword').onclick = () => {
   const visible = $('#password').type === 'password';
   $('#password').type = visible ? 'text' : 'password';
@@ -416,7 +435,6 @@ $('#authForm').addEventListener('submit', async (e) => {
   e.preventDefault(); $('#authErr').textContent = ''; $('#authBtn').disabled = true;
   try {
     const body = { email: $('#email').value, password: $('#password').value };
-    if (mode === 'register') body.name = $('#name').value;
     const r = await api(mode === 'login' ? '/login' : '/register', { method: 'POST', body });
     if (r.role === 'admin') { $('#password').value = ''; location.assign('/admin/'); return; }
     $('#password').value = ''; enter(r.customer, r.verificationRequired);
@@ -1020,6 +1038,18 @@ $('#addCard').onclick=async()=>{
 
 /* ---------- inicio ---------- */
 (async () => {
+  loadSignupProviders();
+  const ssoError = new URLSearchParams(location.search).get('sso_error');
+  if (ssoError) {
+    showAuth(); if (ssoError !== 'account_exists') setMode('register');
+    const errors = {account_exists:'Ya tienes una cuenta con ese correo. Ingresa con tu contraseña para conservar tus licencias.',
+      cancelled:'Cancelaste el acceso. Puedes intentarlo de nuevo o usar tu correo.', limited:'Demasiados intentos. Espera unos minutos antes de continuar.',
+      email_required:'El proveedor no compartió un correo válido. Regístrate con tu correo y contraseña.',
+      invalid_state:'El enlace de acceso venció o ya fue utilizado. Inténtalo de nuevo.'};
+    $('#authErr').textContent = errors[ssoError] || 'No pudimos completar el acceso. Inténtalo de nuevo o usa tu correo.';
+    const u = new URL(location.href); u.searchParams.delete('sso_error'); history.replaceState(null,'',u.pathname+u.search+u.hash);
+    return;
+  }
   const link = location.hash.match(/^#(verify|reset)=([A-Za-z0-9_-]{20,100})$/);
   if (link && link[1] === 'verify') { await handleVerify(link[2]); return; }
   if (link && link[1] === 'reset') { showReset(link[2]); return; }

@@ -1,0 +1,4 @@
+.legal-content { display: grid; gap: 24px; padding: 32px !important; }
+.legal-content p { color: var(--muted); margin: 10px 0 0; font-size: 13px; line-height: 1.9; }
+.ui-guide .legal-content h2 { font-size: 17px; }
+@media(max-width:600px) { .legal-content { padding: 22px !important; gap: 22px; } }

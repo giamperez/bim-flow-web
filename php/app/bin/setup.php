@@ -12,6 +12,7 @@
 //   php app/bin/setup.php --public-url=https://dominio   URL base que usan los enlaces de los correos
 //   php app/bin/setup.php --admin-email=a@b.c   correo al que avisar de pedidos por aprobar
 //   php app/bin/setup.php --admin-login-email=a@b.c   correo para entrar al admin desde /portal/ (con la contraseña admin existente)
+//   php app/bin/setup.php --setup-google|--setup-microsoft   configura registro con Google o Microsoft
 //   php app/bin/setup.php --force            REGENERA la clave de firma (invalida todas las DLL ya repartidas)
 // Variables de entorno opcionales (modo no interactivo): XP_DRIVER=mysql|sqlite, XP_DB_HOST, XP_DB_NAME,
 // XP_DB_USER, XP_DB_PASS, XP_SQLITE_PATH, XP_IP_HEADER.
@@ -322,6 +323,27 @@ foreach ($flags as $flag) {
         echo $ok ? "Correo de prueba enviado a $to. Revise también la carpeta de spam.\n" : "No se pudo enviar. Revise el error en el log de PHP de la aplicación (logs/*error*.log).\n";
         exit($ok ? 0 : 1);
     }
+}
+
+foreach (['google', 'microsoft'] as $provider) {
+    if (!in_array('--setup-' . $provider, $flags, true)) { continue; }
+    if (!$exists) { fwrite(STDERR, "Configure primero el servidor.\n"); exit(1); }
+    $config = require $configFile;
+    $base = rtrim((string) ($config['public_url'] ?? ''), '/');
+    if (!preg_match('#^https://[^/]+$#', $base)) { fwrite(STDERR, "Configure primero --public-url=https://su-dominio\n"); exit(1); }
+    $prefix = 'XP_' . strtoupper($provider);
+    echo "Configure una aplicación web de $provider. URI de redirección exacta:\n$base/portal/api/oauth/$provider/callback\n";
+    $id = ask('ID de cliente (Client ID)', $prefix . '_CLIENT_ID');
+    $secret = ask('Secreto de cliente (se escribe oculto)', $prefix . '_CLIENT_SECRET', '', true);
+    $tenant = $provider === 'microsoft' ? ask('Tenant: common, organizations, consumers o ID del directorio', 'XP_MICROSOFT_TENANT', 'common') : 'common';
+    if ($id === '' || strlen($id) > 300 || preg_match('/\s/', $id) || strlen($secret) < 8 || strlen($secret) > 1000
+        || !preg_match('/^(common|organizations|consumers|[a-f0-9-]{36})$/i', $tenant)) {
+        fwrite(STDERR, "Datos inválidos. No se guardó ningún cambio.\n"); exit(1);
+    }
+    $config['oauth'][$provider] = ['client_id' => $id, 'client_secret' => $secret, 'tenant' => $tenant];
+    write_config($configFile, $config);
+    echo "Acceso con $provider configurado. El botón aparecerá en Crear cuenta. Pruebe un registro antes de anunciarlo.\n";
+    exit(0);
 }
 
 if (in_array('--setup-culqi', $flags, true)) {

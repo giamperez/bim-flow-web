@@ -156,3 +156,19 @@ CREATE TABLE IF NOT EXISTS payment_methods (
   UNIQUE KEY uq_payment_provider (provider_id, environment),
   KEY idx_payment_customer (customer_id, environment)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS oauth_identities (
+  provider VARCHAR(16) NOT NULL,
+  subject_hash CHAR(64) NOT NULL,
+  customer_id CHAR(36) NOT NULL,
+  created_at BIGINT NOT NULL,
+  PRIMARY KEY (provider, subject_hash),
+  KEY idx_oauth_customer (customer_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS oauth_flows (
+  state_hash CHAR(64) NOT NULL PRIMARY KEY,
+  provider VARCHAR(16) NOT NULL,
+  verifier VARCHAR(100) NOT NULL,
+  nonce VARCHAR(100) NOT NULL,
+  next_view VARCHAR(24) NOT NULL DEFAULT '',
+  expires_at BIGINT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

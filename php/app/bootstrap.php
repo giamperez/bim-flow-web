@@ -305,6 +305,7 @@ require_once __DIR__ . '/portal_api.php';
 require_once __DIR__ . '/customer_settings.php';
 require_once __DIR__ . '/payment_methods.php';
 require_once __DIR__ . '/export_allowance.php';
+require_once __DIR__ . '/oauth.php';
 
 // ---------------------------------------------------------------- dispatch
 function xp_dispatch(): void

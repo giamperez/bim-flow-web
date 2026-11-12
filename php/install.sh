@@ -25,7 +25,7 @@ else
 fi
 mkdir -p "$WEB/admin"
 
-mkdir -p "$WEB/portal" "$WEB/instalacion" "$WEB/downloads" "$WEB/ui"
+mkdir -p "$WEB/portal" "$WEB/instalacion" "$WEB/downloads" "$WEB/ui" "$WEB/legal"
 
 cp -r "$HERE/app/." "$APPDIR/" \
   && cp "$HERE/public/index.php" "$HERE/public/.htaccess" "$WEB/" \
@@ -34,6 +34,7 @@ cp -r "$HERE/app/." "$APPDIR/" \
   && cp "$ROOT/public/portal/portal.css" "$ROOT/public/portal/.htaccess" "$WEB/portal/" \
   && cp "$ROOT/public/instalacion/index.html" "$WEB/instalacion/index.html" \
   && cp -r "$ROOT/public/ui/." "$WEB/ui/" \
+  && cp -r "$ROOT/public/legal/." "$WEB/legal/" \
   && cp -r "$ROOT/site/." "$WEB/" \
   || { echo "No se pudieron copiar los archivos (permisos). Revise que el usuario pueda escribir en $WEB"; exit 1; }
 echo "Archivos copiados: código en $APPDIR, sitio en $WEB"

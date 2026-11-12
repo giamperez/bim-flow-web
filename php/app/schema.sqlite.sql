@@ -147,4 +147,20 @@ CREATE TABLE IF NOT EXISTS payment_methods (
   created_at INTEGER NOT NULL,
   UNIQUE (provider_id, environment)
 );
+CREATE TABLE IF NOT EXISTS oauth_identities (
+  provider TEXT NOT NULL,
+  subject_hash TEXT NOT NULL,
+  customer_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (provider, subject_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_customer ON oauth_identities (customer_id);
+CREATE TABLE IF NOT EXISTS oauth_flows (
+  state_hash TEXT PRIMARY KEY,
+  provider TEXT NOT NULL,
+  verifier TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  next_view TEXT NOT NULL DEFAULT '',
+  expires_at INTEGER NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_payment_customer ON payment_methods (customer_id, environment);

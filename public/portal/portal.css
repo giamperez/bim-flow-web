@@ -1235,6 +1235,18 @@ body:not([data-screen=account]) > .wrap { margin: auto; }
 .auth-switch { display: grid; gap: 12px; padding-top: 20px; border-top: 1px solid var(--line); text-align: center; }
 .auth-switch > span { font-size: 12px; color: var(--muted); }
 .auth-switch > .btn { width: 100%; min-height: 44px; }
+.social-signup { display: grid; gap: 20px; }
+.social-options { display: grid; gap: 10px; }
+.social-provider { min-height: 46px; font-size: 12px; gap: 12px; }
+.social-provider svg { width: 19px; height: 19px; flex: none; }
+.signup-divider { display: flex; align-items: center; gap: 14px; font-size: 11px; color: var(--muted); }
+.signup-divider::before,.signup-divider::after { content: ''; height: 1px; flex: 1; background: var(--line); }
+.signup-legal { color: var(--muted); font-size: 10.5px; line-height: 1.8; text-align: center; margin: -4px 0 0; }
+.signup-legal a { color: var(--muted); text-underline-offset: 2px; }
+.signup-legal a:hover { color: var(--brand); }
+.signup-login { color: var(--muted); font-size: 12px; text-align: center; margin: 0; }
+.signup-login a { font-weight: 650; text-decoration: none; }
+.signup-login a:hover { text-decoration: underline; }
 .portal-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1100px; margin: 0 auto 24px; }
 body:not([data-screen=account]) > header .wrap { max-width: 1240px; height: 84px; }
 body:not([data-screen=account]) > .wrap { max-width: 1240px; padding: 0 32px; }

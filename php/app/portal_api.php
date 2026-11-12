@@ -225,6 +225,7 @@ function xp_count_events(string $type, string $where, array $params, int $second
 // ---------------------------------------------------------------- rutas
 function xp_route_portal(string $method, string $route): void
 {
+    if (strpos($route, 'oauth/') === 0) { xp_route_oauth($method, $route); }
     if ($route === 'plans' && $method === 'GET') {
 $who = xp_current_customer();
         xp_json(200, [
@@ -323,7 +324,7 @@ function xp_portal_register(): void
         xp_json(400, ['ok' => false, 'error' => 'Ingrese un correo válido.']);
     }
     if ($name === '') {
-        xp_json(400, ['ok' => false, 'error' => 'Ingrese su nombre o el de su empresa.']);
+        $name = xp_clip(explode('@', $email, 2)[0], 120);
     }
     if (xp_is_disposable_email($email)) {
         xp_json(400, ['ok' => false, 'error' => 'Use un correo personal o de su empresa; los correos temporales no se aceptan.']);

@@ -6,7 +6,7 @@ import {join,resolve} from 'node:path';
 import {spawn,spawnSync} from 'node:child_process';
 import http from 'node:http';
 import assert from 'node:assert/strict';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,generateKeyPairSync,sign,createHash} from 'node:crypto';
 const PHP=process.env.PHP||'php', root=resolve(import.meta.dirname,'..');
 const PORT=Number(process.env.QA_PORT||8788);
 const sandbox=mkdtempSync(join(tmpdir(),'bimflow-dashboard-'));
@@ -32,9 +32,29 @@ assert.equal(php(`require ${quote(bootstrap)};$r=xp_one("SELECT * FROM customers
 assert.equal(php(`require ${quote(bootstrap)};$r=xp_one("SELECT * FROM licenses WHERE id = 'legacy-free'");echo $r['access_mode'].'|'.$r['expires_at'].'|'.$r['is_trial'];`),'free|253402300799|0','Old daily-free license migrates to monthly free without expiry');
 assert.equal(php(`require ${quote(bootstrap)};$r=xp_one("SELECT * FROM licenses WHERE id = 'legacy-paid'");echo $r['access_mode'].'|'.$r['plan'].'|'.$r['max_devices'].'|'.$r['expires_at'];`),'paid|Anual|2|4102444800','Paid historical annual license remains unchanged');
 const charges=[], providerCards=new Map(); let seq=0;
+const oidcKey=generateKeyPairSync('rsa',{modulusLength:2048});
+const oidcJwk={...oidcKey.publicKey.export({format:'jwk'}),kid:'qa-oidc',use:'sig',alg:'RS256'};
+const oidcCodes=new Map(); let oidcExchanges=0;
 const fake=http.createServer((req,res)=>{let raw='';req.on('data',d=>raw+=d);req.on('end',()=>{
-  const body=raw?JSON.parse(raw):{};
   const send=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
+  if(req.url.startsWith('/oidc/')){
+    if(req.url.endsWith('/keys'))return send(200,{keys:[oidcJwk]});
+    if(req.url.endsWith('/token')){
+      oidcExchanges++;const form=new URLSearchParams(raw),record=oidcCodes.get(form.get('code'));oidcCodes.delete(form.get('code'));
+      if(!record||form.get('client_id')!=='qa-'+record.provider||form.get('client_secret')!=='qa-oauth-secret-1234'||form.get('redirect_uri')!==record.redirect
+        ||createHash('sha256').update(form.get('code_verifier')||'').digest('base64url')!==record.challenge)return send(400,{error:'invalid_grant'});
+      const tenant='aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+      const claims={iss:record.provider==='google'?'https://accounts.google.com':`https://login.microsoftonline.com/${tenant}/v2.0`,tid:tenant,
+        aud:'qa-'+record.provider,sub:'subject-'+record.provider,iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+300,
+        nonce:record.nonce,email:record.provider+'-sso@example.test',email_verified:true,name:'SSO '+record.provider,...record.claims};
+      const header=Buffer.from(JSON.stringify({alg:'RS256',kid:'qa-oidc',...record.header})).toString('base64url');
+      const body=Buffer.from(JSON.stringify(claims)).toString('base64url'),payload=header+'.'+body;
+      const signature=sign('RSA-SHA256',Buffer.from(record.badSignature?payload+'tamper':payload),oidcKey.privateKey).toString('base64url');
+      return send(200,{id_token:payload+'.'+signature,access_token:'qa-only-unused'});
+    }
+    return send(404,{error:'not_found'});
+  }
+  const body=raw?JSON.parse(raw):{};
   if(req.headers.authorization!=='Bearer sk_test_FAKEKEY123')return send(401,{object:'error'});
   if(req.url==='/v2/customers')return send(201,{object:'customer',id:'cus_test_qa1234'});
   if(req.url==='/v2/cards'&&req.method==='POST'){
@@ -258,6 +278,76 @@ try{
   for(let i=0;i<5;i++)await limitedLogin('/portal/api/login',{email:'owner@example.test',password:'wrong-password'});
   check('Login común limita intentos admin',(await limitedLogin('/portal/api/login',{email:'owner@example.test',password})).status===429);
   check('Comparte límite con acceso admin directo',(await limitedLogin('/admin/api/login',{password})).status===429);
+  check('Registro sin campo nombre',(await por('noName','/register','POST',{email:'carlos.perez@example.test',password})).status===201);
+  check('Nombre provisional desde correo',(await por('noName','/me')).data.customer.name==='carlos.perez');
+  check('Registro muestra CTA y enlaces legales',doc.includes('Probar Xport gratis')&&doc.includes('/legal/terminos/')&&doc.includes('/legal/privacidad/')&&!doc.includes('id="nameRow"'));
+  for(const path of ['/legal/terminos/','/legal/privacidad/']){
+    const response=await fetch(base+path),html=await response.text();
+    check('Documento disponible '+path,response.status===200&&html.includes('contacto@vertexdev.tech'));
+  }
+  check('SSO sin configurar no publica proveedores',(await por('none','/oauth/providers')).data.providers.length===0);
+  php(`$c=require ${quote(configPath)};$c['public_url']='https://bimflow.vertexdev.tech';file_put_contents(${quote(configPath)},'<?php return '.var_export($c,true).';');`);
+  for(const provider of ['google','microsoft']){
+    const env={...process.env,[`XP_${provider.toUpperCase()}_CLIENT_ID`]:'qa-'+provider,[`XP_${provider.toUpperCase()}_CLIENT_SECRET`]:'hidden-qa-secret-1234',XP_MICROSOFT_TENANT:'common'};
+    const result=spawnSync(PHP,[join(sandbox,'php/app/bin/setup.php'),'--setup-'+provider],{env,encoding:'utf8'});
+    check('Asistente '+provider+' conserva secreto',result.status===0&&!result.stdout.includes('hidden-qa-secret-1234')&&result.stdout.includes('/oauth/'+provider+'/callback'));
+  }
+  php(`$c=require ${quote(configPath)};$c['public_url']=${quote(base)};file_put_contents(${quote(configPath)},'<?php return '.var_export($c,true).';');`);
+  const oauthConfig={test_base:'http://127.0.0.1:8799/oidc',google:{client_id:'qa-google',client_secret:'qa-oauth-secret-1234'},microsoft:{client_id:'qa-microsoft',client_secret:'qa-oauth-secret-1234',tenant:'common'}};
+  php(`$c=require ${quote(configPath)};$c['oauth']=json_decode(base64_decode('${Buffer.from(JSON.stringify(oauthConfig)).toString('base64')}'),true);file_put_contents(${quote(configPath)},'<?php return '.var_export($c,true).';');`);
+  const providers=(await por('none','/oauth/providers')).data;
+  check('Publica Google y Microsoft configurados',providers.providers.join(',')==='google,microsoft');
+  check('Config pública no revela secretos',!JSON.stringify(providers).includes('qa-oauth-secret')&&!JSON.stringify(providers).includes('client_id'));
+  const socialFetch=(url,cookie)=>fetch(url,{redirect:'manual',headers:{'X-Forwarded-For':'10.7.2.1',...(cookie?{Cookie:cookie}:{})}});
+  async function socialBegin(provider='google',next=''){
+    const res=await socialFetch(base+'/portal/api/oauth/'+provider+'/start?next='+encodeURIComponent(next));
+    const location=new URL(res.headers.get('location'));return {res,provider,location,cookie:res.headers.getSetCookie()[0].split(';')[0]};
+  }
+  async function socialFinish(flow,claims={},extra={}){
+    const code=randomUUID();oidcCodes.set(code,{provider:flow.provider,nonce:flow.location.searchParams.get('nonce'),
+      challenge:flow.location.searchParams.get('code_challenge'),redirect:flow.location.searchParams.get('redirect_uri'),claims,...extra});
+    return socialFetch(base+'/portal/api/oauth/'+flow.provider+'/callback?'+new URLSearchParams({state:flow.location.searchParams.get('state'),code}),flow.cookie);
+  }
+  let social=await socialBegin('google','comprar');
+  check('OAuth inicia con PKCE y nonce',social.res.status===302&&social.location.searchParams.get('code_challenge_method')==='S256'&&social.location.searchParams.get('nonce')?.length>30&&!social.location.searchParams.has('client_secret'));
+  check('Cookie OAuth HttpOnly y Lax',social.res.headers.getSetCookie()[0].includes('HttpOnly')&&social.res.headers.getSetCookie()[0].includes('SameSite=Lax'));
+  const beforeExchange=oidcExchanges;
+  const badState=await socialFetch(base+'/portal/api/oauth/google/callback?state=wrong&code=stolen',social.cookie);
+  check('State inválido se rechaza antes de intercambiar código',badState.headers.get('location').includes('invalid_state')&&oidcExchanges===beforeExchange);
+  const googleResult=await socialFinish(social);
+  check('Google crea sesión y conserva destino',googleResult.status===303&&googleResult.headers.get('location')==='/portal/#comprar');
+  jar.socialGoogle=googleResult.headers.getSetCookie().find(c=>c.startsWith('bf_user=')).split(';')[0];
+  const googleCustomer=(await por('socialGoogle','/me')).data.customer;
+  check('Perfil Google correcto y correo confirmado',googleCustomer.name==='SSO google'&&googleCustomer.email==='google-sso@example.test'&&googleCustomer.verified);
+  check('SSO nunca concede permisos admin',(await call('socialGoogle','/admin/api/stats')).status===401);
+  check('SSO obtiene licencia gratuita',(await por('socialGoogle','/license')).data.license.accessMode==='free');
+  const replay=await socialFinish(social);
+  check('Callback no se puede reutilizar',replay.headers.get('location').includes('invalid_state'));
+  social=await socialBegin('google');
+  const repeatGoogle=await socialFinish(social,{email:'changed-google@example.test'});
+  jar.repeatGoogle=repeatGoogle.headers.getSetCookie().find(c=>c.startsWith('bf_user=')).split(';')[0];
+  check('Sub estable mantiene cuenta sin cambiar correo local',(await por('repeatGoogle','/me')).data.customer.id===googleCustomer.id&&(await por('repeatGoogle','/me')).data.customer.email==='google-sso@example.test');
+  const invalidClaims=[['audiencia',{aud:'another-app'}],['nonce',{nonce:'wrong'}],['emisor',{iss:'https://attacker.example'}],['vencido',{exp:1}],['not-before',{nbf:Math.floor(Date.now()/1000)+600}]];
+  for(const [label,claims]of invalidClaims){const flow=await socialBegin();check('JWT rechaza '+label,(await socialFinish(flow,claims)).headers.get('location').includes('invalid_response'));}
+  check('JWT rechaza firma alterada',(await socialFinish(await socialBegin(),{},{badSignature:true})).headers.get('location').includes('invalid_response'));
+  check('JWT rechaza algoritmo distinto',(await socialFinish(await socialBegin(),{},{header:{alg:'HS256'}})).headers.get('location').includes('invalid_response'));
+  check('JWT rechaza clave desconocida',(await socialFinish(await socialBegin(),{},{header:{kid:'unknown'}})).headers.get('location').includes('invalid_response'));
+  check('Google no crea con correo sin verificar',(await socialFinish(await socialBegin(),{sub:'unverified',email_verified:false})).headers.get('location').includes('email_required'));
+  check('No vincula cuenta local por coincidencia de correo',(await socialFinish(await socialBegin(),{sub:'another-sub',email:'owner@example.test'})).headers.get('location').includes('account_exists'));
+  const microsoftResult=await socialFinish(await socialBegin('microsoft'));
+  check('Microsoft crea sesión',microsoftResult.status===303&&microsoftResult.headers.get('location')==='/portal/');
+  jar.socialMicrosoft=microsoftResult.headers.getSetCookie().find(c=>c.startsWith('bf_user=')).split(';')[0];
+  const microsoftCustomer=(await por('socialMicrosoft','/me')).data.customer;
+  check('Microsoft no asume que correo está verificado',microsoftCustomer.email==='microsoft-sso@example.test'&&!microsoftCustomer.verified);
+  check('Identidades de proveedores no se mezclan',(await socialFinish(await socialBegin('microsoft'),{sub:'collision',email:'google-sso@example.test'})).headers.get('location').includes('account_exists'));
+  check('Microsoft valida emisor y tenant',(await socialFinish(await socialBegin('microsoft'),{tid:'bbbbbbbb-cccc-dddd-eeee-ffffffffffff'})).headers.get('location').includes('invalid_response'));
+  const cancelled=await socialBegin();
+  const cancelResponse=await socialFetch(base+'/portal/api/oauth/google/callback?'+new URLSearchParams({state:cancelled.location.searchParams.get('state'),error:'access_denied'}),cancelled.cookie);
+  check('Cancelación vuelve al registro con mensaje',cancelResponse.headers.get('location').includes('cancelled'));
+  const expired=await socialBegin();
+  sql(`xp_exec('UPDATE oauth_flows SET expires_at = ? WHERE state_hash = ?', [1,xp_sha256('${expired.location.searchParams.get('state')}')]);`);
+  check('Estado OAuth expira',(await socialFinish(expired)).headers.get('location').includes('invalid_state'));
+  check('Destino externo no se propaga',(await socialBegin('google','https://evil.example')).location.searchParams.get('redirect_uri')===base+'/portal/api/oauth/google/callback');
   if(process.env.EXTRA_SUITES==='1'){
     await new Promise(r=>fake.close(r));
     const pub=JSON.parse(php(`$c=require ${quote(configPath)};$ec=openssl_pkey_get_details(openssl_pkey_get_private($c['signing_key_pem']))['ec'];echo json_encode(['x'=>base64_encode($ec['x']),'y'=>base64_encode($ec['y'])]);`));
