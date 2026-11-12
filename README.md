@@ -94,6 +94,14 @@ Proveedores: **Brevo** (gratis 300/día; `smtp-relay.brevo.com`, 587, `tls`), **
 
 Pruebas: `test/e2e-mail.mjs` (44 comprobaciones, correo en modo `log`) y `test/smtp-test.mjs` (protocolo SMTP contra un servidor simulado; no cubre STARTTLS/SSL reales: usa `--test-mail` con tu proveedor).
 
+## Panel de administración: usuarios y acceso con Google
+
+- **Usuarios** (`/admin/` → Usuarios): crear, editar, eliminar y gestionar cuentas.
+  - **Nuevo usuario**: por invitación (le llega un correo para que elija su contraseña, vale 48 h) o con una contraseña que tú defines. Requiere correo configurado solo para la invitación.
+  - **Ficha del usuario**: datos de contacto, correo verificado sí/no, enviar enlace de contraseña (vale 6 h), definir contraseña, cerrar sesiones, licencias vinculadas.
+  - **Eliminar**: pide escribir el correo de la cuenta. Las licencias de pago se **conservan** (quedan sin cuenta) o se **eliminan** con ella, a elección; la licencia gratuita siempre se elimina con la cuenta. Los pedidos pendientes se cancelan y se bloquea si hay un pago en verificación. Las huellas de equipo de la prueba se conservan para que borrar y volver a registrarse no reinicie la prueba.
+- **Google para el administrador**: con `--setup-google` configurado, el botón *Continuar con Google* aparece en el ingreso y en el registro del portal. Si el correo verificado por Google coincide con el correo de acceso del administrador (`--admin-login-email=`), abre directamente `/admin/`. Cualquier otro correo entra como cliente. Microsoft nunca concede acceso de administrador. La contraseña de administrador sigue funcionando como respaldo.
+
 ## Instalador para clientes
 En el panel de administración, **Resumen → Instalador para clientes → Publicar instalador**: sube el `.exe` que descargas de GitHub Actions. Queda en `/downloads/Xport_Setup.exe` con su versión y su **huella SHA-256**, y aparece en el portal y en `/instalacion/`, la guía amable con los pasos para cada aviso de Windows (SmartScreen, Control inteligente de aplicaciones, navegador, antivirus, Revit).
 

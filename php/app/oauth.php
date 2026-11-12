@@ -81,6 +81,14 @@ function xp_route_oauth(string $method, string $route): void
             'grant_type' => 'authorization_code', 'code' => $code, 'redirect_uri' => $c['redirect_uri'], 'code_verifier' => $flow['verifier']]);
         $claims = xp_oauth_verify((string) ($token['id_token'] ?? ''), $provider, $c, $flow['nonce']);
         if (!$claims) { xp_oauth_error('invalid_response'); }
+        // Only Google's verified address is trusted for the administrator; Microsoft claims are never used for this.
+        $adminEmail = xp_admin_login_email();
+        if ($provider === 'google' && $adminEmail !== '' && ($claims['email_verified'] ?? false) === true
+            && strtolower((string) ($claims['email'] ?? '')) === $adminEmail) {
+            xp_admin_start_session();
+            setcookie(XP_USER_COOKIE, '', ['expires' => 1, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict']);
+            header('Cache-Control: no-store'); header('Location: /admin/', true, 303); exit;
+        }
         $result = xp_oauth_customer($provider, $claims);
         if (isset($result['error'])) { xp_oauth_error($result['error']); }
         if (!empty($result['created']) && $provider === 'microsoft' && xp_verification_required()) {

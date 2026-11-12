@@ -28,9 +28,14 @@ function xp_route_admin(string $method, string $route): void
     $n = count($parts);
 
     if ($route === 'customers' && $method === 'GET') { xp_admin_customers(); }
+    if ($route === 'customers' && $method === 'POST') { xp_admin_customer_create(); }
     if ($n === 2 && $parts[0] === 'customers') {
         if ($method === 'GET') { xp_admin_customer_detail($parts[1]); }
         if ($method === 'PATCH') { xp_admin_customer_update($parts[1]); }
+        if ($method === 'DELETE') { xp_admin_customer_delete($parts[1]); }
+    }
+    if ($n === 3 && $parts[0] === 'customers' && $parts[2] === 'send-reset' && $method === 'POST') {
+        xp_admin_customer_send_reset($parts[1]);
     }
     if ($n === 3 && $parts[0] === 'customers' && $parts[2] === 'revoke-sessions' && $method === 'POST') {
         xp_admin_customer_revoke_sessions($parts[1]);

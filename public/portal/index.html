@@ -396,7 +396,7 @@ function setMode(m) {
   mode = m;
   $('#registerCta').classList.toggle('hidden', m !== 'login');
   $('#loginCta').classList.toggle('hidden', m !== 'register');
-  $('#socialSignup').classList.toggle('hidden', m !== 'register' || signupProviders.length === 0);
+  $('#socialSignup').classList.toggle('hidden', signupProviders.length === 0);
   $('#signupLegal').classList.toggle('hidden', m !== 'register');
   $('#authTrust').classList.toggle('hidden', m === 'register');
   $('#password').minLength = m === 'register' ? 8 : 1;
@@ -420,7 +420,7 @@ async function loadSignupProviders() {
     };
     const next = ['comprar','prueba','resumen'].includes(location.hash.slice(1)) ? '?next=' + location.hash.slice(1) : '';
     $('#socialOptions').innerHTML = signupProviders.map(p => `<a class="btn social-provider" href="/portal/api/oauth/${p}/start${next}">${logos[p]}Continuar con ${p === 'google' ? 'Google' : 'Microsoft'}</a>`).join('');
-    $('#socialSignup').classList.toggle('hidden', mode !== 'register' || signupProviders.length === 0);
+    $('#socialSignup').classList.toggle('hidden', signupProviders.length === 0);
   } catch { /* El registro por correo permanece disponible. */ }
 }
 $('#togglePassword').onclick = () => {
