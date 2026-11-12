@@ -249,8 +249,9 @@
                   <h2>Tarjetas guardadas</h2>
                   <i data-icon="card"></i>
                 </div>
-                <p class="card-description">Agiliza tus pagos. Tú decides cuándo confirmar cada compra.</p>
+                <p class="card-description">Agiliza tus pagos. Tú decides cuándo confirmar cada compra. Para guardar una tarjeta necesitamos tu nombre y apellido, teléfono, dirección y ciudad.</p>
                 <div id="cards" class="cards-list"></div>
+                <div class="notice hidden" id="cardRequirements" role="alert"></div>
                 <button class="btn add-card-btn" id="addCard" type="button"><i data-icon="plus"></i> Añadir tarjeta</button>
                 <div class="secure-note">
                   <i data-icon="shield"></i>
@@ -1004,9 +1005,26 @@ async function checkoutToken(settings) {
     });
   } finally { checkoutBusy=false; }
 }
+// Culqi exige crear primero un cliente con estos datos; se avisa con claridad qué falta en lugar de un aviso pasajero.
+function cardMissingFields() {
+  const missing = [], c = currentCustomer;
+  if (c.name.trim().split(/\s+/).length < 2) missing.push('nombre y apellido (en Mi perfil)');
+  if (!c.phone) missing.push('teléfono (en Mi perfil)');
+  if (!c.billing?.address) missing.push('dirección fiscal');
+  if (!c.billing?.city) missing.push('ciudad');
+  return missing;
+}
 $('#addCard').onclick=async()=>{
-  if (!currentCustomer.phone || currentCustomer.name.trim().split(/\s+/).length < 2) { toast('Completa tu nombre y apellido y teléfono antes de añadir una tarjeta.'); location.hash='#perfil'; return; }
-  if (!currentCustomer.billing?.address || !currentCustomer.billing?.city) { toast('Guarda tu dirección y ciudad de facturación antes de añadir una tarjeta.'); return; }
+  const missing = cardMissingFields(), note = $('#cardRequirements');
+  if (missing.length) {
+    note.innerHTML = '<b>Antes de guardar una tarjeta completa:</b> ' + esc(missing.join(', ')) + '. Después pulsa «Guardar datos».';
+    note.classList.remove('hidden');
+    const field = !currentCustomer.billing?.address ? $('#billingAddress') : !currentCustomer.billing?.city ? $('#billingCity') : null;
+    if (field) { field.focus(); field.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    else { toast('Completa ' + missing.join(' y ') + '.'); location.hash = '#perfil'; }
+    return;
+  }
+  note.classList.add('hidden');
   const accepted=await new Promise(resolve=>{
     let done=false;
     const m=modal(`

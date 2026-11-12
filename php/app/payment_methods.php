@@ -7,6 +7,12 @@ function xp_culqi_request(string $method, string $resource, ?array $body = null)
         ['Authorization: Bearer ' . xp_culqi_cfg()['secret_key'], 'Content-Type: application/json'], $body);
 }
 
+/** Diagnostic only: status and Culqi's own error codes, never customer data or keys. */
+function xp_culqi_log_failure(string $where, int $status, array $r): void
+{
+    error_log('[xportbim-culqi] ' . $where . ' status=' . $status . ' ' . json_encode(array_intersect_key($r, array_flip(['object', 'type', 'code', 'decline_code', 'merchant_message', 'user_message']))));
+}
+
 function xp_require_culqi(array $customer): void
 {
     if ((xp_config()['payment_mode'] ?? 'manual') !== 'culqi' || !xp_culqi_enabled()) {
@@ -51,7 +57,7 @@ function xp_portal_save_card(array $customer): void
         [$status, $r] = xp_culqi_request('POST', '/customers', ['first_name' => $names[0], 'last_name' => $names[1],
             'email' => $customer['email'], 'phone_number' => preg_replace('/\D/', '', $customer['phone']), 'address' => $billing['address'],
             'address_city' => $billing['city'], 'country_code' => $billing['country'] ?: 'PE']);
-        if (!in_array($status, [200, 201], true) || ($r['object'] ?? '') !== 'customer' || empty($r['id'])) { return null; }
+        if (!in_array($status, [200, 201], true) || ($r['object'] ?? '') !== 'customer' || empty($r['id'])) { xp_culqi_log_failure('customers', (int) $status, is_array($r) ? $r : []); return null; }
         xp_exec('INSERT INTO payment_customers (customer_id, environment, provider_id) VALUES (?, ?, ?)', [$customer['id'], $env, $r['id']]);
         return $r['id'];
     });
@@ -60,6 +66,7 @@ function xp_portal_save_card(array $customer): void
     $source = $r['source'] ?? $r['token'] ?? [];
     $last = (string) ($source['last_four'] ?? '');
     if (!in_array($status, [200, 201], true) || ($r['object'] ?? '') !== 'card' || empty($r['id']) || !preg_match('/^\d{4}$/', $last)) {
+        xp_culqi_log_failure('cards', (int) $status, is_array($r) ? $r : []);
         xp_json(502, ['ok' => false, 'error' => 'No pudimos confirmar el guardado de la tarjeta con Culqi. No se realizó ningún cobro.']);
     }
     $id = xp_uuid();
