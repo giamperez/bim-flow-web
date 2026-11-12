@@ -165,3 +165,24 @@ CREATE TABLE IF NOT EXISTS oauth_flows (
   expires_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_payment_customer ON payment_methods (customer_id, environment);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL UNIQUE,
+  license_id TEXT NOT NULL,
+  plan_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  period_end INTEGER NOT NULL,
+  auto_renew INTEGER NOT NULL DEFAULT 0,
+  payment_method_id TEXT,
+  pending_plan_id TEXT,
+  consent_at INTEGER,
+  consent_ip TEXT,
+  consent_version TEXT,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at INTEGER,
+  notice_period_end INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_due ON subscriptions (auto_renew, status, period_end);

@@ -137,6 +137,7 @@ function xp_mark_order_paid(string $orderId, string $actor = 'system', string $p
         }
         $cust = xp_one('SELECT * FROM customers WHERE id = ?' . xp_for_update(), [$o['customer_id']]);
         $lic = xp_one('SELECT * FROM licenses WHERE customer_id = ? ORDER BY created_at DESC LIMIT 1' . xp_for_update(), [$o['customer_id']]);
+        $subscription = xp_one('SELECT * FROM subscriptions WHERE customer_id = ?' . xp_for_update(), [$o['customer_id']]);
         $t = time();
         xp_exec('UPDATE customers SET free_started_at = COALESCE(free_started_at, ?) WHERE id = ?', [$t, $cust['id']]);
         if (!$lic) {
@@ -150,6 +151,13 @@ function xp_mark_order_paid(string $orderId, string $actor = 'system', string $p
             // Un cambio de capacidad empieza un período nuevo; renovar el mismo plan conserva los días restantes.
             $samePlan = ($lic['access_mode'] ?? 'paid') === 'paid' && $lic['plan'] === $o['plan_name'];
             $expires = ($samePlan ? max((int) $lic['expires_at'], $t) : $t) + (int) $o['seconds'];
+            if ($o['kind'] === 'upgrade' && $subscription) {
+                // Subir de plan es inmediato y NO mueve la fecha de renovación: solo cambia la categoría.
+                $expires = (int) $subscription['period_end'];
+            } elseif ($o['kind'] === 'auto' && $subscription) {
+                // Renovación automática: sin huecos ni tiempo gratis (si el cobro se retrasó, el período nuevo empieza ahora).
+                $expires = max((int) $subscription['period_end'], $t) + (int) $o['seconds'];
+            }
             xp_exec(
                 "UPDATE licenses SET expires_at = ?, max_devices = ?, plan = ?, is_trial = 0, access_mode = 'paid', updated_at = ? WHERE id = ?",
                 [$expires, (int) $o['devices'], $o['plan_name'], $t, $licenseId]
@@ -160,11 +168,15 @@ function xp_mark_order_paid(string $orderId, string $actor = 'system', string $p
                 xp_log_event('released_plan_change', $licenseId, $extra['id'], $o['code']);
             }
         }
+        if ($o['kind'] !== 'trial') {
+            $periodEnd = (int) xp_one('SELECT expires_at FROM licenses WHERE id = ?', [$licenseId])['expires_at'];
+            xp_sub_after_payment($cust, $o, $licenseId, $periodEnd);
+        }
         xp_exec("UPDATE orders SET status = 'paid', paid_at = ?, license_id = ?, provider_ref = COALESCE(NULLIF(?, ''), provider_ref) WHERE id = ?", [$t, $licenseId, $providerRef, $orderId]);
         xp_log_event('order_paid', $licenseId, null, $o['code'] . ' · ' . $o['plan_name'] . ' · ' . $actor);
-        return ['licenseId' => $licenseId, 'code' => $o['code']];
+        return ['licenseId' => $licenseId, 'code' => $o['code'], 'kind' => $o['kind']];
     });
-    if ($result) {
+    if ($result && $result['kind'] !== 'auto') {
         xp_notify_license_ready($orderId);
     }
     return $result;
@@ -281,6 +293,9 @@ $who = xp_current_customer();
     if ($route === 'profile' && $method === 'PATCH') { xp_portal_profile($customer); }
     if ($route === 'trial' && $method === 'POST') { xp_portal_start_trial($customer); }
     if ($route === 'password' && $method === 'POST') { xp_portal_password($customer); }
+    if ($route === 'subscription' && $method === 'GET') { xp_portal_subscription($customer); }
+    if ($route === 'subscription/auto' && $method === 'POST') { xp_portal_sub_auto($customer); }
+    if ($route === 'subscription/schedule' && $method === 'POST') { xp_portal_sub_schedule($customer); }
     if ($route === 'cards' && $method === 'GET') { xp_portal_cards($customer); }
     if ($route === 'cards' && $method === 'POST') { xp_portal_save_card($customer); }
     if (count($parts) === 2 && $parts[0] === 'cards' && $method === 'DELETE') { xp_portal_delete_card($customer, $parts[1]); }
@@ -420,7 +435,7 @@ function xp_portal_license(array $customer): void
 function xp_order_public(array $o): array
 {
     return [
-        'code' => $o['code'], 'planName' => $o['plan_name'], 'amountCents' => (int) $o['amount_cents'], 'currency' => $o['currency'],
+        'code' => $o['code'], 'planId' => $o['plan_id'], 'planName' => $o['plan_name'], 'amountCents' => (int) $o['amount_cents'], 'currency' => $o['currency'],
         'status' => $o['status'], 'kind' => $o['kind'], 'createdAt' => (int) $o['created_at'],
         'seconds' => (int) $o['seconds'], 'devices' => (int) $o['devices'],
         'paidAt' => $o['paid_at'] === null ? null : (int) $o['paid_at'],
@@ -430,6 +445,8 @@ function xp_order_public(array $o): array
 
 function xp_order_offer_current(array $order): bool
 {
+    if ($order['kind'] === 'upgrade') { return xp_upgrade_order_current($order); }
+    if ($order['kind'] === 'auto') { return false; }
     foreach (xp_plans() as $plan) {
         if ($plan['id'] === $order['plan_id'] && empty($plan['free']) && $plan['priceCents'] === (int) $order['amount_cents']
             && $plan['devices'] === (int) $order['devices'] && $plan['seconds'] === (int) $order['seconds'] && $plan['currency'] === $order['currency']) { return true; }
@@ -468,6 +485,24 @@ function xp_portal_create_order(array $customer): void
         }
     }
     $kind = xp_portal_license_row($customer) ? 'renew' : 'new';
+    $amount = (int) $plan['priceCents']; $seconds = (int) $plan['seconds'];
+    $subscription = xp_sub_for($customer);
+    if (xp_sub_is_live($subscription)) {
+        if ($subscription['status'] === 'review') {
+            xp_json(409, ['ok' => false, 'error' => 'Estamos verificando un cobro de tu renovación. Inténtalo cuando se confirme.']);
+        }
+        $change = xp_plan_change_kind($subscription, $plan);
+        if ($change === 'same') {
+            if ((int) $subscription['auto_renew'] && $subscription['status'] === 'active') {
+                xp_json(409, ['ok' => false, 'error' => 'Tu plan ya se renueva automáticamente. No hace falta pagar de nuevo.']);
+            }
+        } elseif ($change === 'upgrade') {
+            $quote = xp_upgrade_quote($subscription, $plan);
+            $kind = 'upgrade'; $amount = $quote['amountCents']; $seconds = $quote['remaining'];
+        } else {
+            xp_json(409, ['ok' => false, 'code' => 'use_schedule', 'error' => 'Bajar de plan o cambiar de ciclo se programa para el final de tu período actual, sin costo. Hazlo desde «Tu suscripción».']);
+        }
+    }
     $id = xp_uuid();
     $code = 'BF-' . substr(strtoupper(strtr(base64_encode(random_bytes(6)), '+/=', 'XYZ')), 0, 6);
     $mode = xp_config()['payment_mode'] ?? 'manual';
@@ -477,11 +512,13 @@ function xp_portal_create_order(array $customer): void
     xp_exec(
         "INSERT INTO orders (id, code, customer_id, plan_id, plan_name, seconds, devices, kind, amount_cents, currency, status, provider, tier, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)",
-        [$id, $code, $customer['id'], $plan['id'], $plan['name'], $plan['seconds'], $plan['devices'], $kind, $plan['priceCents'], $plan['currency'], $mode, 0, time()]
+        [$id, $code, $customer['id'], $plan['id'], $plan['name'], $seconds, $plan['devices'], $kind, $amount, $plan['currency'], $mode, 0, time()]
     );
     xp_log_event('order_created', null, null, $code . ' · ' . $plan['name'] . ' · ' . $customer['email']);
     $paid = false;
     if ($mode === 'test') { $paid = xp_mark_order_paid($id, 'modo de prueba') !== null; }
+    // La diferencia de una subida pequeña no se cobra (menos que el mínimo de cobro): el cambio es inmediato.
+    if (!$paid && $kind === 'upgrade' && $amount === 0) { $paid = xp_mark_order_paid($id, 'subida sin cargo') !== null; }
     $order = xp_one('SELECT * FROM orders WHERE id = ?', [$id]);
     $online = !$paid && $mode === 'culqi';
     if (!$paid && !$online) {
@@ -796,10 +833,15 @@ function xp_portal_pay_order(array $customer, string $code): void
     }
     $b = xp_body() ?? [];
     $token = is_string($b['token'] ?? null) ? trim($b['token']) : '';
+    $wantAuto = ($b['autoRenew'] ?? false) === true;
+    $saveCard = $wantAuto || ($b['saveCard'] ?? false) === true;
+    if ($saveCard && ($b['consent'] ?? null) !== true) {
+        xp_json(400, ['ok' => false, 'error' => 'Para guardar tu tarjeta y renovar automáticamente necesitamos tu autorización expresa.']);
+    }
+    $method = null;
     if (!empty($b['cardId'])) {
-        $card = xp_one('SELECT provider_id FROM payment_methods WHERE id = ? AND customer_id = ? AND environment = ?', [xp_clip($b['cardId'], 36), $customer['id'], xp_culqi_environment()]);
-        if (!$card) { xp_json(404, ['ok' => false, 'error' => 'Tarjeta no encontrada.']); }
-        $token = $card['provider_id'];
+        $method = xp_one('SELECT * FROM payment_methods WHERE id = ? AND customer_id = ? AND environment = ?', [xp_clip($b['cardId'], 36), $customer['id'], xp_culqi_environment()]);
+        if (!$method) { xp_json(404, ['ok' => false, 'error' => 'Tarjeta no encontrada.']); }
     } elseif (!preg_match('/^tkn_' . xp_culqi_environment() . '_[A-Za-z0-9]{4,80}$/', $token)) {
         xp_json(400, ['ok' => false, 'error' => 'No se recibió el medio de pago. Inténtalo de nuevo.']);
     }
@@ -820,13 +862,27 @@ function xp_portal_pay_order(array $customer, string $code): void
     if (xp_count_events('payment_attempt', 'detail = ?', [$code], 3600) >= 5) {
         xp_json(429, ['ok' => false, 'error' => 'Demasiados intentos de pago para este pedido. Inténtalo en una hora o contacta a soporte.']);
     }
+    // Tarjeta nueva que el cliente quiere conservar: Culqi la guarda a partir del token (de un solo uso) y se cobra con la referencia
+    // guardada. Se hace antes de reservar el pedido: si falla, no se cobró nada y el pedido sigue pendiente.
+    if (!$method && $saveCard) {
+        $stored = xp_card_store($customer, $token);
+        if (!$stored['ok']) {
+            xp_json($stored['status'], array_filter(['ok' => false, 'error' => $stored['error'], 'code' => $stored['code'] ?? null, 'missing' => $stored['missing'] ?? null]));
+        }
+        $method = xp_one('SELECT * FROM payment_methods WHERE id = ?', [$stored['id']]);
+    }
+    $source = $token;
+    if ($method) {
+        $source = xp_card_ref($method);
+        if ($source === null) { xp_json(500, ['ok' => false, 'error' => 'No se pudo leer la tarjeta guardada.']); }
+    }
     // Se "reserva" el pedido de forma atómica: dos clics o dos pestañas no pueden cobrar dos veces.
     if (xp_exec("UPDATE orders SET status = 'processing', claimed_at = ? WHERE id = ? AND status = 'pending'", [time(), $order['id']]) !== 1) {
         xp_json(409, ['ok' => false, 'error' => 'Este pedido ya se está procesando.']);
     }
     xp_log_event('payment_attempt', null, null, $code, xp_ip());
     try {
-        $r = xp_culqi_charge($order, $customer, $token);
+        $r = xp_culqi_charge($order, $customer, $source);
     } catch (Throwable $e) {
         error_log('[xportbim-culqi] ' . $e->getMessage());
         $r = ['ok' => false, 'definitive' => false, 'chargeId' => '', 'message' => ''];
@@ -842,8 +898,10 @@ function xp_portal_pay_order(array $customer, string $code): void
             xp_log_event('payment_paid_not_recorded', null, null, $code . ' · ' . $r['chargeId']);
             xp_json(500, ['ok' => false, 'error' => 'Tu pago se recibió pero hubo un problema al activarlo. Lo resolveremos de inmediato; no lo repitas.']);
         }
+        $autoOn = false;
+        if ($wantAuto && $method) { $autoOn = xp_sub_enable_auto($customer, $method['id']); }
         $paid = xp_one('SELECT * FROM orders WHERE id = ?', [$order['id']]);
-        xp_json(200, ['ok' => true, 'paid' => true, 'order' => xp_order_public($paid)]);
+        xp_json(200, ['ok' => true, 'paid' => true, 'order' => xp_order_public($paid), 'autoRenew' => $autoOn]);
     }
     if ($r['definitive']) {
         xp_exec("UPDATE orders SET status = 'pending', claimed_at = NULL WHERE id = ?", [$order['id']]);

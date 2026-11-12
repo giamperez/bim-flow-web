@@ -32,7 +32,8 @@ function xp_admin_customer_detail(string $id): void
     $r['licenses_count'] = (int) xp_one('SELECT COUNT(*) AS n FROM licenses WHERE customer_id = ?', [$id])['n'];
     $orders = xp_one("SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid FROM orders WHERE customer_id = ?", [$id]);
     $providers = array_column(xp_all('SELECT provider FROM oauth_identities WHERE customer_id = ?', [$id]), 'provider');
-    xp_json(200, ['ok' => true, 'customer' => xp_admin_customer_public($r) + ['providers' => $providers],
+    $sub = xp_sub_public($r);
+    xp_json(200, ['ok' => true, 'customer' => xp_admin_customer_public($r) + ['providers' => $providers], 'subscription' => $sub,
         'licenses' => array_map('xp_license_public', $licenses),
         'ordersCount' => (int) $orders['total'], 'paidOrders' => (int) $orders['paid']]);
 }
@@ -171,7 +172,7 @@ function xp_admin_customer_delete(string $id): void
         }
         xp_exec('UPDATE licenses SET customer_id = NULL, updated_at = ? WHERE customer_id = ?', [time(), $id]);
         xp_exec("UPDATE orders SET status = 'cancelled' WHERE customer_id = ? AND status = 'pending'", [$id]);
-        foreach (['email_tokens', 'oauth_identities', 'payment_methods', 'payment_customers'] as $table) {
+        foreach (['email_tokens', 'oauth_identities', 'payment_methods', 'payment_customers', 'subscriptions'] as $table) {
             xp_exec("DELETE FROM $table WHERE customer_id = ?", [$id]);
         }
         xp_exec('DELETE FROM customers WHERE id = ?', [$id]);
@@ -179,5 +180,14 @@ function xp_admin_customer_delete(string $id): void
     });
     if ($result[0] !== 200) { xp_json($result[0], ['ok' => false, 'error' => $result[1]]); }
     xp_log_event('admin_customer_deleted', null, null, $result[2]);
+    xp_json(200, ['ok' => true]);
+}
+
+/** Soporte: dejar de cobrar a un cliente (por ejemplo tras una disputa). El plan sigue hasta el final del período pagado. */
+function xp_admin_customer_stop_auto(string $id): void
+{
+    $n = xp_exec('UPDATE subscriptions SET auto_renew = 0, pending_plan_id = NULL, next_attempt_at = NULL, updated_at = ? WHERE customer_id = ? AND auto_renew = 1', [time(), $id]);
+    if ($n === 0) { xp_json(409, ['ok' => false, 'error' => 'Este usuario no tiene renovación automática activa.']); }
+    xp_log_event('admin_auto_renew_off', null, null, $id);
     xp_json(200, ['ok' => true]);
 }

@@ -4,6 +4,7 @@
 //   php app/bin/setup.php --reset-password   genera otra contraseña de administrador
 //   php app/bin/setup.php --public-key       muestra la clave pública para compilar el complemento
 //   php app/bin/setup.php --migrate          aplica cambios de esquema tras actualizar el código (idempotente)
+//   php app/bin/setup.php --run-renewals     cobra renovaciones automáticas vencidas y envía avisos; programar cada hora con cron
 //   php app/bin/setup.php --payment-mode=test|manual   test aprueba los pedidos al instante (solo pruebas)
 //   php app/bin/setup.php --setup-culqi      guarda las llaves de Culqi (pagos con tarjeta); luego --payment-mode=culqi
 //   php app/bin/setup.php --setup-mail       configura el correo saliente (SMTP) para verificar correos y recuperar contraseñas
@@ -94,6 +95,33 @@ function allow_web_user_to_read(string $file): void
 ";
 }
 
+/**
+ * Crea la llave de cifrado de referencias de pago (si falta) y cifra las que aún estén en claro. Seguro de repetir.
+ * La llave se guarda solo en config.php: hay que incluirla en el respaldo de ese archivo, porque sin ella las
+ * tarjetas guardadas no se pueden usar (los clientes tendrían que volver a guardarlas).
+ */
+function protect_payment_references(PDO $pdo, array $config, string $configFile, string $appDir): void
+{
+    if (!preg_match('/^[a-f0-9]{64}$/', (string) ($config['vault_key'] ?? ''))) {
+        $config['vault_key'] = bin2hex(random_bytes(32));
+        write_config($configFile, $config);
+        echo "Llave de cifrado de pagos creada en config.php (inclúyala en su respaldo).\n";
+    }
+    require_once $appDir . '/bootstrap.php';
+    xp_vault_set_key($config['vault_key']);
+    $sealed = 0;
+    foreach (['payment_methods' => 'pm', 'payment_customers' => 'pc'] as $table => $kind) {
+        foreach ($pdo->query("SELECT customer_id, environment, provider_id FROM $table")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            if (strpos($row['provider_id'], 'v1.') === 0) { continue; }
+            $blob = xp_vault_seal($row['provider_id'], xp_vault_aad($kind, $row['customer_id'], $row['environment']));
+            $st = $pdo->prepare("UPDATE $table SET provider_id = ? WHERE customer_id = ? AND environment = ? AND provider_id = ?");
+            $st->execute([$blob, $row['customer_id'], $row['environment'], $row['provider_id']]);
+            $sealed++;
+        }
+    }
+    if ($sealed) { echo "Referencias de pago cifradas: $sealed\n"; }
+}
+
 /** Crea tablas faltantes y agrega columnas nuevas. Seguro de repetir. */
 function migrate_schema(PDO $pdo, string $driver, string $appDir): void
 {
@@ -151,6 +179,11 @@ function migrate_schema(PDO $pdo, string $driver, string $appDir): void
                 }
             }
         }
+    }
+    if (!$sqlite) {
+        // Las referencias cifradas son más largas que los identificadores originales de Culqi.
+        $pdo->exec('ALTER TABLE payment_methods MODIFY provider_id VARCHAR(255) NOT NULL');
+        $pdo->exec('ALTER TABLE payment_customers MODIFY provider_id VARCHAR(255) NOT NULL');
     }
     // Clientes creados antes de existir email_norm: se rellena para que el control de duplicados los incluya.
     $pdo->exec("UPDATE licenses SET access_mode = 'free', is_trial = 0, plan = 'Gratuito', expires_at = 253402300799 WHERE is_trial = 1 AND access_mode = 'paid'");
@@ -412,8 +445,21 @@ if (in_array('--migrate', $flags, true)) {
         exit(1);
     }
     $config = require $configFile;
-    migrate_schema(open_pdo($config['db']), $config['db']['driver'], $appDir);
+    $pdo = open_pdo($config['db']);
+    migrate_schema($pdo, $config['db']['driver'], $appDir);
     echo "Esquema al día.\n";
+    protect_payment_references($pdo, $config, $configFile, $appDir);
+    exit(0);
+}
+
+if (in_array('--run-renewals', $flags, true)) {
+    if (!$exists) { fwrite(STDERR, "Aún no hay configuración.
+"); exit(1); }
+    require_once $appDir . '/bootstrap.php';
+    $stats = xp_run_renewals();
+    echo ($stats['skipped'] === -1 ? "Pagos en línea apagados: no se cobró nada.
+" : json_encode($stats) . "
+");
     exit(0);
 }
 

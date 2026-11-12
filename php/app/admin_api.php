@@ -34,6 +34,9 @@ function xp_route_admin(string $method, string $route): void
         if ($method === 'PATCH') { xp_admin_customer_update($parts[1]); }
         if ($method === 'DELETE') { xp_admin_customer_delete($parts[1]); }
     }
+    if ($n === 3 && $parts[0] === 'customers' && $parts[2] === 'stop-auto-renew' && $method === 'POST') {
+        xp_admin_customer_stop_auto($parts[1]);
+    }
     if ($n === 3 && $parts[0] === 'customers' && $parts[2] === 'send-reset' && $method === 'POST') {
         xp_admin_customer_send_reset($parts[1]);
     }
@@ -507,13 +510,17 @@ function xp_admin_order_approve(string $id): void
 
 function xp_admin_order_cancel(string $id): void
 {
-    $order = xp_one('SELECT code FROM orders WHERE id = ?', [$id]);
+    $order = xp_one('SELECT code, kind, customer_id FROM orders WHERE id = ?', [$id]);
     if (!$order) {
         xp_json(404, ['ok' => false, 'error' => 'Pedido no encontrado.']);
     }
     $n = xp_exec("UPDATE orders SET status = 'cancelled' WHERE id = ? AND status IN ('pending', 'processing')", [$id]);
     if ($n === 0) {
         xp_json(409, ['ok' => false, 'error' => 'El pedido ya no está pendiente.']);
+    }
+    if ($order['kind'] === 'auto') {
+        // El cobro automático en revisión resultó no cobrado: vuelve a quedar pendiente de reintento (gracia habitual).
+        xp_exec("UPDATE subscriptions SET status = 'past_due', next_attempt_at = ?, updated_at = ? WHERE customer_id = ? AND status = 'review'", [time() + XP_RETRY_SECONDS, time(), $order['customer_id']]);
     }
     xp_log_event('order_cancelled', null, null, $order['code']);
     xp_json(200, ['ok' => true]);

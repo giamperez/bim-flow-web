@@ -94,6 +94,31 @@ Proveedores: **Brevo** (gratis 300/día; `smtp-relay.brevo.com`, 587, `tls`), **
 
 Pruebas: `test/e2e-mail.mjs` (44 comprobaciones, correo en modo `log`) y `test/smtp-test.mjs` (protocolo SMTP contra un servidor simulado; no cubre STARTTLS/SSL reales: usa `--test-mail` con tu proveedor).
 
+## Suscripción, cambios de plan y cobro automático
+
+Cada cliente tiene **un** plan de pago vigente (no se acumulan planes):
+
+| Cambio | Cuándo se aplica | Cobro |
+|---|---|---|
+| **Subir** de categoría (más computadoras, mismo ciclo) | Al instante | Solo la diferencia: (precio nuevo − precio actual) × tiempo restante ÷ duración del ciclo. La fecha de renovación no cambia. Si la diferencia es menor a S/ 3 no se cobra (`XP_MIN_CHARGE_CENTS` en `subscriptions.php`). |
+| **Bajar** de categoría, o cambiar mensual ↔ anual | Al terminar el período (requiere renovación automática activa) | Ninguno hoy; al renovar se cobra el plan nuevo. |
+| Pasar a Gratuito | Al terminar el período | Se cancela la renovación automática. |
+
+**Renovación automática** (opcional, nunca marcada por defecto): se ofrece al pagar («Guardar mi tarjeta y renovar automáticamente») y en *Tu suscripción*. Exige una casilla de autorización expresa; se guarda la fecha, la IP y la versión del texto aceptado. Se avisa por correo 3 días antes de cada cobro, y también al activarla, cancelarla, renovar y fallar. Si el cobro es rechazado se reintenta **una vez al día durante 3 días** (el acceso continúa); tras el último intento se cancela y la licencia vence sola. Un cobro con respuesta ambigua **no se reintenta** (queda «en verificación» para el administrador). Nunca se cobra una licencia suspendida o revocada.
+
+### Programar el cobro (obligatorio para que las renovaciones ocurran)
+El cobro lo ejecuta un comando que debe correr con cron, por ejemplo cada hora. En Cloudways: *Application Management → Cron Job Management* (o `crontab -e` por SSH):
+```bash
+0 * * * * cd /home/master/applications/<app>/public_html/app && php bin/setup.php --run-renewals >> ~/renovaciones.log 2>&1
+```
+Sin este cron no se cobra nada automáticamente. Es seguro ejecutarlo con frecuencia y en paralelo.
+
+### Protección de los datos de pago
+- Xport **nunca** recibe ni guarda el número de tarjeta ni el CVV: el navegador los envía directo a Culqi, que devuelve un token de un solo uso.
+- Solo se guarda la referencia de Culqi (`crd_…`, `cus_…`), la marca y los últimos 4 dígitos. Las referencias van **cifradas (AES-256-GCM)** con una llave propia, `vault_key`, que vive en `app/config.php` y no en la base de datos, ligadas a su dueño (copiar el valor a otra fila no lo descifra). La crea `php app/bin/setup.php --migrate`; **inclúyela en el respaldo de `config.php`**: sin ella las tarjetas guardadas dejan de ser utilizables.
+- Cada cobro toma el importe de la base de datos, nunca del navegador; las referencias no aparecen en listados, ni en el panel de admin, ni en registros.
+- Una tarjeta que paga una renovación automática no puede borrarse hasta cambiarla o cancelar la renovación.
+
 ## Panel de administración: usuarios y acceso con Google
 
 - **Usuarios** (`/admin/` → Usuarios): crear, editar, eliminar y gestionar cuentas.

@@ -96,7 +96,7 @@ try {
   tag('Tarjeta rechazada: se puede reintentar sin duplicar');
   const o2 = await por('a', 'POST', '/orders', { planId: 'equipo' });
   const code2 = o2.json.order.code;
-  check('pedido Equipo a S/ 49.90', o2.json.payment.amount === 4990 && o2.json.order.kind === 'renew', JSON.stringify(o2.json.payment));
+  check('subir a Equipo cobra solo la diferencia prorrateada (S/ 30 menos el tiempo ya usado)', o2.json.payment.amount >= 2900 && o2.json.payment.amount <= 3000 && o2.json.order.kind === 'upgrade', JSON.stringify(o2.json.payment));
   const before = charges.length;
   const declined = await por('a', 'POST', `/orders/${code2}/pay`, { token: 'tkn_test_declined' });
   check('rechazo → 402 con el mensaje del banco', declined.status === 402 && declined.json.error.includes('rechazada'), JSON.stringify(declined.json));
@@ -105,10 +105,10 @@ try {
   check('reintento con otra tarjeta → pagado', retry.status === 200 && retry.json.paid === true);
   check('Culqi vio exactamente 2 cargos nuevos (1 rechazado + 1 aceptado)', charges.length === before + 2, String(charges.length - before));
   const L2 = (await por('a', 'GET', '/license')).json.license;
-  check('cambio a Equipo inicia 30 días para 3 computadoras', L2.maxDevices === 3 && L2.secondsLeft > 29 * 86400 && L2.secondsLeft <= 30 * 86400);
+  check('subir a Equipo es inmediato (3 computadoras) y no mueve la fecha de renovación', L2.maxDevices === 3 && L2.secondsLeft > 29 * 86400 && L2.secondsLeft <= 30 * 86400);
 
   tag('Corte de conexión: no se vuelve a cobrar');
-  const o3 = await por('a', 'POST', '/orders', { planId: 'mensual' });
+  const o3 = await por('a', 'POST', '/orders', { planId: 'estudio' });
   const code3 = o3.json.order.code;
   const boom = await por('a', 'POST', `/orders/${code3}/pay`, { token: 'tkn_test_boom00' });
   check('error 5xx de Culqi → 502 con aviso de "no lo repitas"', boom.status === 502 && boom.json.pending === true && boom.json.error.includes('no lo repitas'), JSON.stringify(boom.json));
@@ -122,7 +122,7 @@ try {
 
   tag('Respuestas que no se pueden interpretar: no se reintenta');
   for (const [token, expectRef] of [['tkn_test_weird00', 'chr_test_weird'], ['tkn_test_noid000', null]]) {
-    const o = await por('a', 'POST', '/orders', { planId: 'mensual' });
+    const o = await por('a', 'POST', '/orders', { planId: 'estudio' });
     const r = await por('a', 'POST', `/orders/${o.json.order.code}/pay`, { token });
     check(`${token}: 502 y el pedido queda en verificación (NO vuelve a pendiente)`, r.status === 502 && r.json.pending === true, JSON.stringify(r.json));
     check(`${token}: no se puede reintentar`, (await por('a', 'POST', `/orders/${o.json.order.code}/pay`, { token: 'tkn_test_ok1234' })).status === 409);
@@ -133,11 +133,11 @@ try {
 
   tag('Seguridad');
   const regB = await por('b', 'POST', '/register', { email: `otro.${stamp}@example.test`, name: 'Otro', password: 'clave-segura-2' }, { ip: '10.7.0.2' });
-  const o4 = await por('a', 'POST', '/orders', { planId: 'mensual' });
+  const o4 = await por('a', 'POST', '/orders', { planId: 'estudio' });
   check('otro cliente no puede pagar un pedido ajeno', regB.status === 201 && (await por('b', 'POST', `/orders/${o4.json.order.code}/pay`, { token: 'tkn_test_ok1234' })).status === 404);
   check('el cliente puede cancelar un pedido pendiente', (await por('a', 'POST', `/orders/${o4.json.order.code}/cancel`)).status === 200);
   check('no puede cancelar uno ya pagado', (await por('a', 'POST', `/orders/${code1}/cancel`)).status === 409);
-  const o5 = await por('a', 'POST', '/orders', { planId: 'mensual' });
+  const o5 = await por('a', 'POST', '/orders', { planId: 'estudio' });
   let last = 0;
   for (let i = 0; i < 6; i++) last = (await por('a', 'POST', `/orders/${o5.json.order.code}/pay`, { token: 'tkn_test_declined' })).status;
   check('tope de intentos de pago por pedido (5 por hora) → 429', last === 429, String(last));

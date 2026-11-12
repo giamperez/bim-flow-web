@@ -189,8 +189,9 @@
           <div class="page-heading"><div><div class="page-label">Crece a tu ritmo</div><h1 id="plansHeading">Un plan para cada forma de trabajar</h1><p>Precios en soles. Una licencia compartida entre las computadoras de tu plan.</p></div></div>
           <div class="trial-offer hidden"><div><span class="eyebrow">Descubre todo lo que Xport puede hacer</span><h3>Prueba Xport Full durante 14 días.</h3><p>Todos los formatos, ajustes avanzados y archivos sin límite. Sin tarjeta; después continúas en Gratuito.</p></div><button class="btn primary start-trial">Probar Full gratis <i data-icon="arrow"></i></button></div>
           <div class="notice hidden" id="paymentEnvironment" role="status"></div>
-          <section class="card sec" id="comprar"><div class="section-title" style="margin:0"><h2 id="plansTitle">Elige tu plan</h2><div class="period-switch" role="group" aria-label="Período de facturación"><button type="button" data-cycle="monthly" aria-pressed="true">Mensual</button><button type="button" data-cycle="annual" aria-pressed="false">Anual <span>Ahorra 33%</span></button></div></div><div id="tierBox" class="hidden"></div><div class="plans" id="plans"></div><p class="plan-meta">Renovación manual. Solo se realiza un cobro cuando confirmas una compra.</p></section>
-          <div class="notice info">Planes mensuales por 30 días y anuales por 365 días. Al cambiar de plan comienza un período nuevo; al renovar el mismo plan conservas tus días restantes. Si reduces la cantidad de computadoras, se conservan las usadas más recientemente.</div>
+          <section class="card sec hidden" id="subscriptionCard" aria-live="polite"></section>
+          <section class="card sec" id="comprar"><div class="section-title" style="margin:0"><h2 id="plansTitle">Elige tu plan</h2><div class="period-switch" role="group" aria-label="Período de facturación"><button type="button" data-cycle="monthly" aria-pressed="true">Mensual</button><button type="button" data-cycle="annual" aria-pressed="false">Anual <span>Ahorra 33%</span></button></div></div><div id="tierBox" class="hidden"></div><div class="plans" id="plans"></div><p class="plan-meta">Solo cobramos lo que confirmas. La renovación automática es opcional y puedes cancelarla cuando quieras.</p></section>
+          <div class="notice info">Planes mensuales por 30 días y anuales por 365 días. <b>Subir de categoría es inmediato</b>: pagas solo la diferencia por el tiempo que te queda y tu fecha de renovación no cambia. <b>Bajar de categoría o cambiar de ciclo</b> se aplica al terminar tu período, sin costo. La renovación automática es opcional y puedes cancelarla cuando quieras.</div>
         </section>
         <section class="view-panel hidden" data-view="pedidos" aria-labelledby="ordersTitle">
           <div class="page-heading"><div><div class="page-label">Todo en orden</div><h1 id="ordersTitle">Mis pedidos</h1><p>Consulta tus compras, completa un pago pendiente o revisa su estado.</p></div><button class="btn" id="refreshOrders"><i data-icon="refresh"></i>Actualizar</button></div>
@@ -564,29 +565,132 @@ async function loadLicense() {
 }
 
 let billingCycle = new URLSearchParams(location.search).get('ciclo') === 'anual' ? 'annual' : 'monthly', fullTrialAvailable = false;
+let subscription = null;
 async function loadPlans() {
   const r = await api('/plans'); paymentMode = r.paymentMode; paymentInfo = r.payment || null;
   plansCache = r.plans; fullTrialAvailable = !!r.trialAvailable;
+  try { subscription = (await api('/subscription')).subscription; } catch { subscription = null; }
   document.querySelectorAll('.trial-offer').forEach(el => el.classList.toggle('hidden', !fullTrialAvailable));
   document.querySelectorAll('.start-trial').forEach(btn => btn.disabled = needsVerification);
   const banner = $('#paymentEnvironment');
   banner.classList.toggle('hidden', !['test', 'culqi'].includes(paymentMode) || (paymentMode === 'culqi' && paymentInfo?.environment !== 'test'));
   banner.textContent = paymentMode === 'test' ? 'Modo de demostración: los pedidos se aprueban sin pasar por Culqi.' : 'Culqi en modo de prueba: usa una tarjeta de prueba. No se cobra dinero real.';
-  renderPlanCards();
+  renderPlanCards(); renderSubscription();
   $('#addCard').disabled = paymentMode !== 'culqi' || !paymentInfo || needsVerification;
+}
+const dateText = (ts) => new Date(ts * 1000).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+const cycleText = (c) => c === 'annual' ? 'anual' : 'mensual';
+/** Qué ofrece cada plan según la suscripción vigente: comprar, subir (inmediato), programar (al terminar) o nada. */
+function planAction(p) {
+  const s = subscription && subscription.live ? subscription : null;
+  const name = esc(p.displayName || p.name);
+  if (p.free) {
+    if (s && s.autoRenew) return { text: 'Gratuito al terminar el período', act: 'cancel-auto' };
+    return { text: s ? 'Gratuito cuando venza tu plan' : 'Incluido en tu cuenta', disabled: true };
+  }
+  if (needsVerification) return { text: 'Confirma tu correo', disabled: true };
+  if (!s) return { text: 'Elegir ' + name, act: 'buy' };
+  if (s.status === 'review') return { text: 'Verificando tu cobro', disabled: true };
+  if (p.id === s.plan.id) return s.status === 'past_due' ? { text: 'Pagar ahora', act: 'buy' } : s.autoRenew ? { text: 'Tu plan actual', disabled: true } : { text: 'Renovar ahora', act: 'buy' };
+  if (s.status === 'past_due') return { text: 'Resuelve tu pago primero', disabled: true };
+  const q = s.quotes[p.id];
+  if (q) return { text: q.amountCents ? 'Subir ahora · pagas ' + money(q.amountCents, p.currency) : 'Subir ahora · sin costo hoy', act: 'buy' };
+  if (s.autoRenew) return s.pendingPlan && s.pendingPlan.id === p.id ? { text: 'Programado para el ' + dateText(s.periodEnd), disabled: true } : { text: 'Cambiar al terminar el período', act: 'schedule' };
+  return { text: 'Disponible al vencer tu plan', act: 'info' };
 }
 function renderPlanCards() {
   document.querySelectorAll('[data-cycle]').forEach(el => el.setAttribute('aria-pressed', String(el.dataset.cycle === billingCycle)));
   $('#plansTitle').textContent = 'Gratuito para empezar. Full para llegar más lejos.';
   const plans = plansCache.filter(p => p.free || p.cycle === billingCycle);
-  $('#plans').innerHTML = plans.map(p => `<article class="plan ${p.devices === 3 ? 'best' : ''}">
-    ${p.devices === 3 ? '<span class="tag">Para trabajar en equipo</span>' : ''}
+  const live = subscription && subscription.live ? subscription : null;
+  $('#plans').innerHTML = plans.map(p => {
+    const a = planAction(p), current = live && live.plan.id === p.id;
+    return `<article class="plan ${p.devices === 3 ? 'best' : ''} ${current ? 'current' : ''}">
+    ${current ? '<span class="tag">Tu plan actual</span>' : p.devices === 3 ? '<span class="tag">Para trabajar en equipo</span>' : ''}
     <h3>${esc(p.displayName || p.name)}</h3><div class="price">${p.priceCents ? '<span class="currency">S/</span>' + (p.priceCents / 100).toFixed(2) : 'Gratis'}<small>${p.free ? 'para seguir creando' : p.cycle === 'annual' ? 'por año · 365 días' : 'por mes · 30 días'}</small></div>
     <p class="muted" style="margin:0">${esc(p.description)}</p>
     <ul class="plan-features"><li>${icon('check')}${p.devices} computadora${p.devices === 1 ? '' : 's'} por licencia</li><li>${icon('check')}${p.free ? '150 archivos al mes' : 'Archivos sin límite'}</li><li>${icon('check')}${p.free ? 'PDF y DWG · ajustes esenciales' : '6 formatos y ajustes avanzados'}</li><li>${icon('check')}${p.free ? 'Sin tarjeta de crédito' : 'Perfiles reutilizables y todas las opciones'}</li></ul>
-    <button class="btn ${p.devices === 3 ? 'primary' : ''}" data-plan="${esc(p.id)}" ${p.free || needsVerification ? 'disabled' : ''}>${p.free ? 'Incluido en tu cuenta' : needsVerification ? 'Confirma tu correo' : 'Elegir ' + esc(p.displayName || p.name)}</button>
-  </article>`).join('');
-  $('#plans').querySelectorAll('[data-plan]').forEach(b => b.onclick = () => buy(b.dataset.plan));
+    <button class="btn ${p.devices === 3 && !current ? 'primary' : ''}" data-plan="${esc(p.id)}" data-act="${a.act || ''}" ${a.disabled ? 'disabled' : ''}>${a.text}</button>
+  </article>`; }).join('');
+  $('#plans').querySelectorAll('[data-plan]').forEach(b => b.onclick = () => {
+    const act = b.dataset.act;
+    if (act === 'buy') buy(b.dataset.plan);
+    else if (act === 'schedule') scheduleChange(b.dataset.plan);
+    else if (act === 'cancel-auto') disableAutoRenew();
+    else if (act === 'info') toast('Puedes elegir este plan cuando venza el actual, o activar la renovación automática para programar el cambio.');
+  });
+}
+
+/* ---------- Tu suscripción ---------- */
+function renderSubscription() {
+  const el = $('#subscriptionCard'), s = subscription;
+  if (!s || !s.live) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.classList.remove('hidden');
+  const past = s.status === 'past_due', review = s.status === 'review';
+  const badge = review ? ['expiring', 'Verificando cobro'] : past ? ['expired', 'Cobro pendiente'] : s.autoRenew ? ['active', 'Renovación automática'] : ['suspended', 'Renovación manual'];
+  const days = Math.max(0, Math.ceil((s.periodEnd * 1000 - Date.now()) / 86400000));
+  const next = s.pendingPlan || s.plan;
+  const renewal = s.autoRenew
+    ? `<strong>Automática</strong><small>El ${dateText(s.periodEnd)} se cobrarán ${money(s.nextChargeCents, s.plan.currency)}${s.card ? ' a ' + esc(s.card.brand) + ' •••• ' + esc(s.card.lastFour) : ''}</small>`
+    : `<strong>Manual</strong><small>Tu plan termina el ${dateText(s.periodEnd)} si no lo renuevas</small>`;
+  el.innerHTML = `<div class="section-title" style="margin:0"><h2>Tu suscripción</h2><span class="sub-badge ${badge[0]}">${badge[1]}</span></div>
+    <div class="sub-grid">
+      <div><span class="sub-label">Plan actual</span><strong>${esc(s.plan.name)} · ${cycleText(s.plan.cycle)}</strong><small>${money(s.plan.priceCents, s.plan.currency)} por ${s.plan.cycle === 'annual' ? 'año' : 'mes'} · ${s.plan.devices} computadora${s.plan.devices === 1 ? '' : 's'}</small></div>
+      <div><span class="sub-label">Vigente hasta</span><strong>${dateText(s.periodEnd)}</strong><small>${past ? 'En gracia: seguimos reintentando el cobro' : days + ' día' + (days === 1 ? '' : 's') + ' restantes'}</small></div>
+      <div><span class="sub-label">Renovación</span>${renewal}</div>
+    </div>
+    ${s.pendingPlan ? `<div class="notice info">Cambio programado: el ${dateText(s.periodEnd)} pasarás a <b>${esc(s.pendingPlan.name)} ${cycleText(s.pendingPlan.cycle)}</b> (${money(s.pendingPlan.priceCents, s.pendingPlan.currency)}, ${s.pendingPlan.devices} computadora${s.pendingPlan.devices === 1 ? '' : 's'}).</div>` : ''}
+    ${past ? '<div class="notice" style="border-color:var(--bad-border,#fecaca)">No pudimos cobrar tu renovación. Tu plan sigue activo durante la gracia y reintentamos cada día. Puedes pagar ahora o cambiar de tarjeta.</div>' : ''}
+    ${review ? '<div class="notice">Estamos verificando un cobro con el banco. No lo repitas: te avisaremos cuando se confirme.</div>' : ''}
+    <div class="sub-actions">
+      ${past ? '<button class="btn primary" id="subPayNow">Pagar ahora</button>' : ''}
+      ${s.autoRenew && !review ? '<button class="btn" id="subChangeCard">Cambiar de tarjeta</button><button class="btn danger-outline" id="subCancelAuto">Cancelar renovación automática</button>' : ''}
+      ${!s.autoRenew && !review ? '<button class="btn primary" id="subEnableAuto">Activar renovación automática</button>' : ''}
+      ${s.pendingPlan ? '<button class="btn" id="subClearPending">Quitar cambio programado</button>' : ''}
+    </div>
+    <p class="card-description" style="margin:0;font-size:11.5px">Xport no guarda el número de tu tarjeta ni el CVV: los custodia Culqi. Solo conservamos una referencia cifrada y los últimos 4 dígitos.</p>`;
+  const on = (id, fn) => { const b = $('#' + id); if (b) b.onclick = fn; };
+  on('subPayNow', () => buy(s.plan.id));
+  on('subEnableAuto', () => openAutoRenewModal());
+  on('subChangeCard', () => openAutoRenewModal());
+  on('subCancelAuto', () => disableAutoRenew());
+  on('subClearPending', async () => { try { await api('/subscription/schedule', { method: 'POST', body: { planId: null } }); await loadPlans(); toast('Cambio programado eliminado'); } catch (e) { toast(e.message); } });
+}
+async function disableAutoRenew() {
+  const s = subscription;
+  if (!s || !await confirmDialog('No volveremos a cobrar tu tarjeta. Tu plan sigue activo hasta el ' + dateText(s.periodEnd) + '; después pasarás al plan gratuito. Puedes volver a activarla cuando quieras.', 'Cancelar renovación', true)) return;
+  try { await api('/subscription/auto', { method: 'POST', body: { enabled: false } }); await loadPlans(); toast('Renovación automática cancelada'); } catch (e) { toast(e.message); }
+}
+async function scheduleChange(planId) {
+  const s = subscription, plan = plansCache.find(p => p.id === planId);
+  if (!s || !plan) return;
+  const fewer = plan.devices < s.plan.devices ? ` Tu capacidad bajará a ${plan.devices} computadora${plan.devices === 1 ? '' : 's'}; se conservan las usadas más recientemente.` : '';
+  if (!await confirmDialog(`Tu plan ${s.plan.name} sigue activo hasta el ${dateText(s.periodEnd)}. Ese día se cobrarán ${money(plan.priceCents, plan.currency)} (${plan.displayName} ${cycleText(plan.cycle)}).${fewer} Hoy no hay ningún cobro ni reembolso.`, 'Programar cambio', false)) return;
+  try { await api('/subscription/schedule', { method: 'POST', body: { planId } }); await loadPlans(); toast('Cambio programado para el ' + dateText(s.periodEnd)); } catch (e) { toast(e.message); }
+}
+/** Activa la renovación automática con una tarjeta ya guardada (o lleva a guardar una). */
+async function openAutoRenewModal() {
+  const s = subscription; if (!s) return;
+  let cards = [];
+  try { cards = (await api('/cards')).cards; } catch (e) { toast(e.message); return; }
+  if (!cards.length) {
+    const m = modal(`<div class="modal-header"><div class="modal-icon-badge badge-primary">${icon('card')}</div><div><h3>Primero guarda una tarjeta</h3><p class="modal-subtitle">Para renovar automáticamente necesitamos una tarjeta guardada. Puedes añadirla en Facturación y pagos, o activar la renovación al pagar tu próxima compra.</p></div></div><div class="actions"><button class="btn" id="later">Ahora no</button><button class="btn primary" id="goCards">Añadir tarjeta</button></div>`);
+    m.$('#later').onclick = m.close; m.$('#goCards').onclick = () => { m.close(); location.hash = '#facturacion'; };
+    return;
+  }
+  const chosen = s.card ? s.card.id : cards[0].id;
+  const m = modal(`<div class="modal-header"><div class="modal-icon-badge badge-primary">${icon('card')}</div><div><h3>Renovación automática</h3><p class="modal-subtitle">Elige la tarjeta con la que se pagará tu plan ${esc(s.plan.name)} cada ${s.plan.cycle === 'annual' ? 'año' : 'mes'}.</p></div></div>
+    <div style="display:grid;gap:10px">${cards.map(c => `<label class="payment-choice"><input type="radio" name="autoCard" value="${esc(c.id)}" ${c.id === chosen ? 'checked' : ''}><span>${esc(c.brand)} · •••• ${esc(c.lastFour)}</span></label>`).join('')}</div>
+    <div class="consent-box"><label class="check-consent"><input type="checkbox" id="autoOk"><span>Autorizo a Xport a cobrar ${money(s.nextChargeCents, s.plan.currency)} a esta tarjeta el ${dateText(s.periodEnd)} y en cada renovación, hasta que yo cancele.</span></label><p class="consent-fine">Te avisamos 3 días antes de cada cobro. Puedes cancelar cuando quieras desde esta misma pantalla; tu plan sigue activo hasta el final del período pagado.</p></div>
+    <div class="err" id="autoErr" role="alert"></div>
+    <div class="actions"><button class="btn" id="autoCancel">Cancelar</button><button class="btn primary" id="autoGo" disabled>Activar renovación</button></div>`);
+  m.$('#autoOk').onchange = () => m.$('#autoGo').disabled = !m.$('#autoOk').checked;
+  m.$('#autoCancel').onclick = m.close;
+  m.$('#autoGo').onclick = async () => {
+    m.$('#autoGo').disabled = true; m.$('#autoErr').textContent = '';
+    try { await api('/subscription/auto', { method: 'POST', body: { enabled: true, cardId: m.$('input[name=autoCard]:checked').value, consent: true } }); m.close(); await Promise.all([loadPlans(), loadCards()]); toast('Renovación automática activada'); }
+    catch (e) { m.$('#autoErr').textContent = e.message; m.$('#autoGo').disabled = false; }
+  };
 }
 
 let purchaseBusy = false;
@@ -598,9 +702,14 @@ async function buy(planId) {
 async function buyPlan(planId) {
   const plan = plansCache.find((p) => p.id === planId);
   if (!plan) return;
+  const live = subscription && subscription.live ? subscription : null, quote = live ? live.quotes[planId] : null;
   const question = plan.trial
     ? `Vas a activar tu prueba gratuita de ${duration(plan.seconds)}. Es una por cuenta y por equipo.`
-    : `Plan ${plan.name}: ${money(plan.priceCents, plan.currency)} por ${duration(plan.seconds)}, para ${plan.devices} computadora(s). Renovación manual. Al cambiar de plan empieza un período nuevo; si reduces la capacidad se liberan las computadoras menos recientes.`;
+    : quote
+      ? `Subirás a ${plan.displayName} hoy. ${quote.amountCents ? 'Pagas ' + money(quote.amountCents, plan.currency) + ' ahora, la diferencia por el tiempo que te queda.' : 'No se cobra nada ahora: la diferencia es mínima.'} Tu fecha de renovación (${dateText(live.periodEnd)}) no cambia y en el siguiente período pagarás ${money(plan.priceCents, plan.currency)}.`
+      : live && live.plan.id === planId
+        ? `Renovarás tu plan ${plan.displayName}: ${money(plan.priceCents, plan.currency)} por ${duration(plan.seconds)}, que se suman a tu fecha de vencimiento actual.`
+        : `Plan ${plan.name}: ${money(plan.priceCents, plan.currency)} por ${duration(plan.seconds)}, para ${plan.devices} computadora(s). Podrás activar la renovación automática en el siguiente paso, si quieres.`;
   if (!await confirmDialog(question, plan.trial ? 'Activar prueba' : 'Continuar', false)) return;
   try {
     const r = await api('/orders', { method: 'POST', body: { planId } });
@@ -653,37 +762,68 @@ function loadScript(src) {
   scriptLoads.set(src, promise);
   return promise;
 }
-function successModal(order) {
+function successModal(order, autoRenew) {
   const m = modal(`
     <div class="modal-header">
       <div class="modal-icon-badge badge-success">${icon('check')}</div>
       <div>
         <h3>¡Pago confirmado!</h3>
-        <p class="modal-subtitle">Tu licencia ya está activa. Pedido <b class="mono">${esc(order.code)}</b>. Copia tu clave y actívala en Revit.</p>
+        <p class="modal-subtitle">Tu licencia ya está activa. Pedido <b class="mono">${esc(order.code)}</b>. Copia tu clave y actívala en Revit.${autoRenew ? ' Activaste la renovación automática: te avisaremos 3 días antes de cada cobro.' : ''}</p>
       </div>
     </div>
     <div class="actions"><button class="btn primary" id="ok">Ver mi clave</button></div>`);
   m.$('#ok').onclick = () => { m.close(); location.hash = '#licencia'; };
 }
+/** Datos que Culqi exige para guardar una tarjeta. Se piden aquí, en el momento de pagar, en lugar de obligar a ir al perfil. */
+function collectCardData() {
+  return new Promise(resolve => {
+    let done = false;
+    const c = currentCustomer, b = c.billing || {};
+    const needsSurname = c.name.trim().split(/\s+/).length < 2;
+    const m = modal(`<div class="modal-header"><div class="modal-icon-badge badge-primary">${icon('shield')}</div><div><h3>Datos para guardar tu tarjeta</h3><p class="modal-subtitle">Culqi los exige para registrar tu tarjeta de forma segura. Los usamos también para tus comprobantes.</p></div></div>
+      <form id="cardData" style="display:grid;gap:12px">
+        ${needsSurname ? `<label>Nombre y apellido<input name="name" required maxlength="120" value="${esc(c.name)}" autocomplete="off"></label>` : ''}
+        <label>Teléfono<input name="phone" type="tel" required maxlength="24" value="${esc(c.phone || '')}" placeholder="+51 999 999 999" autocomplete="off"></label>
+        <label>Dirección<input name="address" required maxlength="200" value="${esc(b.address || '')}" placeholder="Av., calle, número / distrito" autocomplete="off"></label>
+        <label>Ciudad<input name="city" required maxlength="80" value="${esc(b.city || '')}" placeholder="Lima" autocomplete="off"></label>
+        <div class="err" id="cardDataErr" role="alert"></div>
+        <div class="actions"><button type="button" class="btn" id="cardDataCancel">Volver</button><button class="btn primary" type="submit">Continuar</button></div>
+      </form>`);
+    const finish = v => { if (done) return; done = true; m.close(); resolve(v); };
+    m.root.addEventListener('dialogclose', () => finish(false));
+    m.$('#cardDataCancel').onclick = () => finish(false);
+    m.$('#cardData').onsubmit = async e => {
+      e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); const btn = m.$('button[type=submit]'); btn.disabled = true;
+      try {
+        const body = { phone: f.phone, billing: { name: b.name || '', documentType: b.documentType || '', documentNumber: b.documentNumber || '', address: f.address, city: f.city, country: b.country || 'PE' } };
+        if (f.name) body.name = f.name;
+        const r = await api('/profile', { method: 'PATCH', body });
+        updateCustomer(r.customer);
+        if (cardMissingFields().length) throw new Error('Completa ' + cardMissingFields().join(', ') + '.');
+        finish(true);
+      } catch (err) { m.$('#cardDataErr').textContent = err.message; btn.disabled = false; }
+    };
+  });
+}
 /** Abre el formulario de Culqi (llave pública), recibe el token y pide al servidor que cobre el pedido. */
 async function payOnline(order, pay) {
   const cards = (await api('/cards')).cards;
-  let cardId = '';
-  if (cards.length) {
-    const selected = await choosePayment(order, cards);
-    if (selected === null) return;
-    cardId = selected;
-  }
+  const offerAuto = !(subscription && subscription.live && subscription.autoRenew);
+  const choice = await choosePayment(order, cards, offerAuto);
+  if (choice === null) return;
   try {
+    const extra = choice.autoRenew ? { autoRenew: true, consent: true } : {};
     let body;
-    if (cardId) body = { cardId };
+    if (choice.cardId) body = { cardId: choice.cardId, ...extra };
     else {
+      // Una tarjeta nueva que se va a conservar necesita los datos de cliente que exige Culqi.
+      if (choice.autoRenew && cardMissingFields().length && !await collectCardData()) return;
       const token = await checkoutToken({ title: 'Xport', currency: pay.currency, description: pay.description, amount: pay.amount });
       if (!token) return;
-      body = { token };
+      body = { token, ...extra };
     }
     const r = await api(`/orders/${encodeURIComponent(order.code)}/pay`, { method:'POST', body });
-    successModal(r.order);
+    successModal(r.order, r.autoRenew);
   } catch (err) {
     const m = modal(`
       <div class="modal-header">
@@ -933,11 +1073,11 @@ async function loadCards() {
       <div class="payment-card-body">
         <div class="card-num-row">
           <strong class="mono">•••• •••• •••• ${last}</strong>
-          <span class="card-verified-badge"><span class="pulse-dot-green"></span> Lista</span>
+          <span class="card-verified-badge"><span class="pulse-dot-green"></span> ${c.autoRenew ? 'Renovación automática' : 'Lista'}</span>
         </div>
-        <p class="card-sub-info">Disponible para renovar o comprar planes</p>
+        <p class="card-sub-info">${c.autoRenew ? 'Paga tu renovación automática' : 'Disponible para tus próximas compras'}</p>
       </div>
-      <button class="icon-button card-del-btn" data-delete-card="${esc(c.id)}" title="Eliminar tarjeta" aria-label="Eliminar tarjeta terminada en ${last}">
+      <button class="icon-button card-del-btn" data-delete-card="${esc(c.id)}" ${c.autoRenew ? 'disabled' : ''} title="${c.autoRenew ? 'Paga tu renovación automática: cambia de tarjeta o cancélala primero' : 'Eliminar tarjeta'}" aria-label="Eliminar tarjeta terminada en ${last}">
         ${icon('trash')}
       </button>
     </div>`;
@@ -949,30 +1089,34 @@ async function loadCards() {
     catch(err) { toast(err.message); } finally { btn.disabled=false; }
   });
 }
-function choosePayment(order,cards) {
-  return new Promise(resolve=>{
-    let done=false;
-    const m=modal(`
+function choosePayment(order, cards, offerAuto) {
+  return new Promise(resolve => {
+    let done = false;
+    const plan = plansCache.find(p => p.id === order.planId);
+    const recurring = plan ? money(plan.priceCents, plan.currency) + ' cada ' + (plan.cycle === 'annual' ? 'año' : 'mes') : '';
+    const m = modal(`
       <div class="modal-header">
         <div class="modal-icon-badge badge-primary">${icon('card')}</div>
         <div>
           <h3>Elige cómo pagar</h3>
-          <p class="modal-subtitle">Total a pagar: <strong>${esc(money(order.amountCents,order.currency))}</strong> por ${esc(duration(order.seconds || 30 * DAY))}.</p>
+          <p class="modal-subtitle">Total a pagar hoy: <strong>${esc(money(order.amountCents, order.currency))}</strong>${order.kind === 'upgrade' ? ' (diferencia por subir de plan)' : ' por ' + esc(duration(order.seconds || 30 * DAY))}.</p>
         </div>
       </div>
       <div style="display:grid;gap:10px;margin-top:6px">
-        ${cards.map(c=>`<label class="payment-choice"><input type="radio" name="payChoice" value="${esc(c.id)}"><span>${esc(c.brand)} · •••• ${esc(c.lastFour || c.last_four || '')}</span></label>`).join('')}
-        <label class="payment-choice"><input type="radio" name="payChoice" value="" checked><span>Usar otra tarjeta con Culqi</span></label>
+        ${cards.map(c => `<label class="payment-choice"><input type="radio" name="payChoice" value="${esc(c.id)}"><span>${esc(c.brand)} · •••• ${esc(c.lastFour || c.last_four || '')}</span></label>`).join('')}
+        <label class="payment-choice"><input type="radio" name="payChoice" value="" checked><span>${cards.length ? 'Usar otra tarjeta con Culqi' : 'Pagar con tarjeta en Culqi'}</span></label>
       </div>
-      <p class="muted" style="font-size:12px;margin:2px 0 0">Solo se hará el cobro confirmado. Sin renovación automática.</p>
+      ${offerAuto ? `<div class="consent-box"><span class="consent-title">Suscripción con renovación automática (opcional)</span>
+        <label class="check-consent"><input type="checkbox" id="autoConsent"><span>Guardar mi tarjeta y renovar automáticamente${recurring ? ': autorizo a Xport a cobrar ' + esc(recurring) + ' a esta tarjeta hasta que yo cancele' : ''}.</span></label>
+        <p class="consent-fine">Te avisamos 3 días antes de cada cobro y puedes cancelar cuando quieras en «Tu suscripción». Si no marcas esta casilla, solo se cobra hoy y no guardamos tu tarjeta. Xport no guarda el número de tu tarjeta ni el CVV: los custodia Culqi.</p></div>` : '<p class="muted" style="font-size:12px;margin:2px 0 0">Tu renovación automática sigue activa: no hace falta hacer nada más.</p>'}
       <div class="actions">
         <button class="btn" id="paymentCancel">Cancelar</button>
         <button class="btn primary" id="paymentContinue">Continuar</button>
       </div>`);
-    const finish=value=>{if(done)return;done=true;m.close();resolve(value);};
-    m.root.addEventListener('dialogclose',()=>finish(null));
-    m.$('#paymentCancel').onclick=()=>finish(null);
-    m.$('#paymentContinue').onclick=()=>finish(m.$('input[name=payChoice]:checked').value);
+    const finish = value => { if (done) return; done = true; m.close(); resolve(value); };
+    m.root.addEventListener('dialogclose', () => finish(null));
+    m.$('#paymentCancel').onclick = () => finish(null);
+    m.$('#paymentContinue').onclick = () => finish({ cardId: m.$('input[name=payChoice]:checked').value, autoRenew: !!(m.$('#autoConsent') && m.$('#autoConsent').checked) });
   });
 }
 let checkoutBusy=false;

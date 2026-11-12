@@ -173,3 +173,25 @@ CREATE TABLE IF NOT EXISTS oauth_flows (
   next_view VARCHAR(24) NOT NULL DEFAULT '',
   expires_at BIGINT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id CHAR(36) NOT NULL PRIMARY KEY,
+  customer_id CHAR(36) NOT NULL,
+  license_id CHAR(36) NOT NULL,
+  plan_id VARCHAR(40) NOT NULL,
+  status VARCHAR(12) NOT NULL DEFAULT 'active',
+  period_end BIGINT NOT NULL,
+  auto_renew TINYINT NOT NULL DEFAULT 0,
+  payment_method_id CHAR(36) NULL,
+  pending_plan_id VARCHAR(40) NULL,
+  consent_at BIGINT NULL,
+  consent_ip VARCHAR(64) NULL,
+  consent_version VARCHAR(12) NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  next_attempt_at BIGINT NULL,
+  notice_period_end BIGINT NULL,
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL,
+  UNIQUE KEY uq_subscriptions_customer (customer_id),
+  KEY idx_subscriptions_due (auto_renew, status, period_end)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
