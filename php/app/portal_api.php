@@ -360,14 +360,28 @@ function xp_portal_login(): void
     if ($byIp >= 8 || $byEmail >= 10) {
         xp_json(429, ['ok' => false, 'error' => 'Demasiados intentos. Espere 15 minutos.']);
     }
+    $adminIdentity = $email !== '' && $email === xp_admin_login_email();
+    if ($adminIdentity) {
+        xp_admin_login_limit($ip);
+        if ($password !== '' && password_verify($password, xp_config()['admin_password_hash'])) {
+            if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== 'bimflow') {
+                xp_json(403, ['ok' => false, 'error' => 'csrf']);
+            }
+            xp_admin_start_session();
+            setcookie(XP_USER_COOKIE, '', ['expires' => 1, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict']);
+            xp_json(200, ['ok' => true, 'role' => 'admin', 'redirect' => '/admin/']);
+        }
+    }
     $c = $email !== '' ? xp_one('SELECT * FROM customers WHERE email = ?', [$email]) : null;
     // Se verifica siempre una contraseña para que el tiempo de respuesta no delate si el correo existe.
     $hash = $c['password_hash'] ?? password_hash('no-existe', PASSWORD_DEFAULT);
     if (!password_verify($password, $hash) || !$c) {
+        if ($adminIdentity) { xp_log_event('admin_login_failed', null, null, '', $ip); }
         xp_log_event('portal_login_failed', null, null, $emailKey, $ip);
         xp_json(401, ['ok' => false, 'error' => 'Correo o contraseña incorrectos.']);
     }
     xp_set_user_cookie($c['id'], (int) ($c['session_version'] ?? 0));
+    setcookie(XP_COOKIE, '', ['expires' => 1, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict']);
     xp_json(200, ['ok' => true, 'customer' => xp_customer_public($c), 'verificationRequired' => xp_verification_required()]);
 }
 

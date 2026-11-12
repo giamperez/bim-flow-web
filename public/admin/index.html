@@ -718,7 +718,11 @@ function showKey(key, title) {
 }
 
 /* ---------- auth ---------- */
-function showLogin() { $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#password').focus(); }
+function showLogin() {
+  // Preserve the original recovery access while using the common login by default.
+  if (new URLSearchParams(location.search).get('recovery') !== '1') { location.replace('/portal/'); return; }
+  $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#password').focus();
+}
 function showApp() { $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); }
 $('#loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();

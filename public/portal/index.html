@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;450;500;550;600;650;700;800&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/portal/portal.css?v=20261112-1">
+<link rel="stylesheet" href="/portal/portal.css?v=20261112-3">
 <style>
 /* Essential base defaults */
 .hidden{display:none!important}
@@ -62,21 +62,19 @@
     </aside>
     <form class="card" id="authForm">
       <p class="eyebrow" style="margin:0">Mi cuenta</p>
-      <h1 id="authTitle" tabindex="-1">Crea tu espacio de trabajo</h1>
-      <p class="muted" style="margin:0" id="authLead">Empieza gratis con 150 archivos al mes. Prueba todas las opciones de Full durante 14 días, sin tarjeta.</p>
-      <div class="tabs" role="tablist" aria-label="Acceso a tu cuenta">
-        <button type="button" role="tab" id="tabRegister" aria-selected="true" aria-controls="authFields">Crear cuenta</button>
-        <button type="button" role="tab" id="tabLogin" aria-selected="false" aria-controls="authFields" tabindex="-1">Ya tengo cuenta</button>
-      </div>
-      <div id="authFields" role="tabpanel" aria-labelledby="tabRegister" style="display:grid;gap:18px">
-      <label id="nameRow">Nombre o empresa<input id="name" autocomplete="organization" maxlength="120" placeholder="Tu nombre o el de tu estudio"></label>
+      <h1 id="authTitle" tabindex="-1">Qué bueno verte de nuevo</h1>
+      <p class="muted" style="margin:0" id="authLead">Ingresa con tu correo y contraseña para continuar.</p>
+      <div id="authFields" style="display:grid;gap:18px">
+      <label id="nameRow" class="hidden">Nombre o empresa<input id="name" autocomplete="organization" maxlength="120" placeholder="Tu nombre o el de tu estudio"></label>
       <label>Correo electrónico<input id="email" type="email" autocomplete="email" required maxlength="160" placeholder="nombre@empresa.com"></label>
       <label for="password">Contraseña</label>
-      <div class="password-field" style="margin-top:-10px"><input id="password" aria-describedby="authLead" type="password" autocomplete="new-password" required minlength="8" maxlength="200" placeholder="Mínimo 8 caracteres"><button type="button" class="password-toggle" id="togglePassword" aria-label="Mostrar contraseña" aria-pressed="false">Mostrar</button></div>
+      <div class="password-field" style="margin-top:-10px"><input id="password" aria-describedby="authLead" type="password" autocomplete="current-password" required maxlength="200" placeholder="Tu contraseña"><button type="button" class="password-toggle" id="togglePassword" aria-label="Mostrar contraseña" aria-pressed="false">Mostrar</button></div>
       </div>
-      <p class="hidden" id="forgotLink" style="margin:-4px 0 0;font-size:13px"><a href="#" id="goForgot">¿Olvidaste tu contraseña?</a></p>
+      <p id="forgotLink" style="margin:-4px 0 0;font-size:13px"><a href="#" id="goForgot">¿Olvidaste tu contraseña?</a></p>
       <div class="err" id="authErr" role="alert"></div>
-      <button class="btn primary" type="submit" id="authBtn">Crear cuenta</button>
+      <button class="btn primary" type="submit" id="authBtn">Ingresar</button>
+      <div class="auth-switch" id="registerCta"><span>¿Es tu primera vez en Xport?</span><button class="btn" type="button" id="goRegister">Crear cuenta gratis</button></div>
+      <div class="auth-switch hidden" id="loginCta"><span>¿Ya tienes una cuenta?</span><button class="btn" type="button" id="goLogin">Ingresar a mi cuenta</button></div>
       <p class="auth-footnote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Tu licencia y tus proyectos, bajo tu control.</p>
     </form>
   </section>
@@ -388,28 +386,24 @@ function confirmDialog(message, okLabel, danger) {
 }
 
 /* ---------- acceso ---------- */
-let mode = 'register';
+let mode = 'login';
 function setMode(m) {
   mode = m;
-  $('#tabLogin').setAttribute('aria-selected', m === 'login'); $('#tabRegister').setAttribute('aria-selected', m === 'register');
-  $('#tabLogin').tabIndex = m === 'login' ? 0 : -1; $('#tabRegister').tabIndex = m === 'register' ? 0 : -1;
-  $('#authFields').setAttribute('aria-labelledby', m === 'login' ? 'tabLogin' : 'tabRegister');
+  $('#registerCta').classList.toggle('hidden', m !== 'login');
+  $('#loginCta').classList.toggle('hidden', m !== 'register');
+  $('#name').required = m === 'register';
+  $('#password').minLength = m === 'register' ? 8 : 1;
   $('#nameRow').classList.toggle('hidden', m === 'login');
   $('#authBtn').textContent = m === 'login' ? 'Ingresar' : 'Crear cuenta';
   $('#authTitle').textContent = m === 'login' ? 'Qué bueno verte de nuevo' : 'Crea tu espacio de trabajo';
-  $('#authLead').textContent = m === 'login' ? 'Gestiona tu licencia, tus equipos y tus pedidos.' : 'Empieza gratis con 150 archivos al mes. Prueba todas las opciones de Full durante 14 días, sin tarjeta.';
+  $('#authLead').textContent = m === 'login' ? 'Ingresa con tu correo y contraseña para continuar.' : 'Empieza gratis con 150 archivos al mes. Prueba todas las opciones de Full durante 14 días, sin tarjeta.';
   $('#password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
-  $('#password').placeholder = m === 'login' ? '' : 'Mínimo 8 caracteres';
+  $('#password').placeholder = m === 'login' ? 'Tu contraseña' : 'Mínimo 8 caracteres';
   $('#authErr').textContent = '';
   $('#forgotLink').classList.toggle('hidden', m !== 'login');
 }
-$('#tabLogin').onclick = () => setMode('login'); $('#tabRegister').onclick = () => setMode('register');
-$('.tabs').addEventListener('keydown', (e) => {
-  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-  e.preventDefault();
-  const next = e.key === 'Home' ? 'register' : e.key === 'End' ? 'login' : mode === 'register' ? 'login' : 'register';
-  setMode(next); $(next === 'login' ? '#tabLogin' : '#tabRegister').focus();
-});
+$('#goLogin').onclick = () => { setMode('login'); $('#authTitle').focus(); };
+$('#goRegister').onclick = () => { setMode('register'); $('#authTitle').focus(); };
 $('#togglePassword').onclick = () => {
   const visible = $('#password').type === 'password';
   $('#password').type = visible ? 'text' : 'password';
@@ -417,13 +411,14 @@ $('#togglePassword').onclick = () => {
   $('#togglePassword').setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña');
   $('#togglePassword').setAttribute('aria-pressed', String(visible));
 };
-function showAuth() { showScreen('auth'); }
+function showAuth() { setMode('login'); showScreen('auth'); }
 $('#authForm').addEventListener('submit', async (e) => {
   e.preventDefault(); $('#authErr').textContent = ''; $('#authBtn').disabled = true;
   try {
     const body = { email: $('#email').value, password: $('#password').value };
     if (mode === 'register') body.name = $('#name').value;
     const r = await api(mode === 'login' ? '/login' : '/register', { method: 'POST', body });
+    if (r.role === 'admin') { $('#password').value = ''; location.assign('/admin/'); return; }
     $('#password').value = ''; enter(r.customer, r.verificationRequired);
   } catch (err) { $('#authErr').textContent = err.message; }
   finally { $('#authBtn').disabled = false; }
@@ -1028,7 +1023,7 @@ $('#addCard').onclick=async()=>{
   const link = location.hash.match(/^#(verify|reset)=([A-Za-z0-9_-]{20,100})$/);
   if (link && link[1] === 'verify') { await handleVerify(link[2]); return; }
   if (link && link[1] === 'reset') { showReset(link[2]); return; }
-  if (!await boot()) { showAuth(); setMode('register'); }
+  if (!await boot()) { showAuth(); }
 })();
 })();
 </script>

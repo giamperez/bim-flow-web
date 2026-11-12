@@ -1232,6 +1232,9 @@ body:not([data-screen=account]) > .wrap { margin: auto; }
 .password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); border: 0; background: none; color: var(--brand); cursor: pointer; font-size: 12px; }
 .auth-footnote { display: flex; gap: 8px; align-items: center; margin: 0; }
 .auth-footnote svg { width: 16px; height: 16px; flex: none; }
+.auth-switch { display: grid; gap: 12px; padding-top: 20px; border-top: 1px solid var(--line); text-align: center; }
+.auth-switch > span { font-size: 12px; color: var(--muted); }
+.auth-switch > .btn { width: 100%; min-height: 44px; }
 .portal-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1100px; margin: 0 auto 24px; }
 body:not([data-screen=account]) > header .wrap { max-width: 1240px; height: 84px; }
 body:not([data-screen=account]) > .wrap { max-width: 1240px; padding: 0 32px; }

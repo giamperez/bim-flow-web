@@ -11,6 +11,7 @@
 //   php app/bin/setup.php --ip-header=HTTP_CF_CONNECTING_IP|HTTP_X_FORWARDED_FOR|REMOTE_ADDR   de dónde tomar la IP del cliente
 //   php app/bin/setup.php --public-url=https://dominio   URL base que usan los enlaces de los correos
 //   php app/bin/setup.php --admin-email=a@b.c   correo al que avisar de pedidos por aprobar
+//   php app/bin/setup.php --admin-login-email=a@b.c   correo para entrar al admin desde /portal/ (con la contraseña admin existente)
 //   php app/bin/setup.php --force            REGENERA la clave de firma (invalida todas las DLL ya repartidas)
 // Variables de entorno opcionales (modo no interactivo): XP_DRIVER=mysql|sqlite, XP_DB_HOST, XP_DB_NAME,
 // XP_DB_USER, XP_DB_PASS, XP_SQLITE_PATH, XP_IP_HEADER.
@@ -235,6 +236,18 @@ foreach ($flags as $flag) {
         $config['public_url'] = $url;
         write_config($configFile, $config);
         echo "URL pública guardada: $url (se usa en los enlaces de los correos).\n";
+        exit(0);
+    }
+    if (strpos($flag, '--admin-login-email=') === 0) {
+        $addr = strtolower(trim(substr($flag, strlen('--admin-login-email='))));
+        if (!$exists || !filter_var($addr, FILTER_VALIDATE_EMAIL)) {
+            fwrite(STDERR, "Uso: php app/bin/setup.php --admin-login-email=tu@correo.com\n");
+            exit(1);
+        }
+        $config = require $configFile;
+        $config['admin_login_email'] = $addr;
+        write_config($configFile, $config);
+        echo "Correo de acceso administrador guardado: $addr. Usa tu contraseña de administración en /portal/.\n";
         exit(0);
     }
     if (strpos($flag, '--admin-email=') === 0) {

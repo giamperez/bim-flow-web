@@ -94,9 +94,8 @@ function xp_route_admin(string $method, string $route): void
     xp_json(404, ['ok' => false, 'error' => 'not_found']);
 }
 
-function xp_admin_login(): void
+function xp_admin_login_limit(string $ip): void
 {
-    $ip = xp_ip();
     $since = time() - 900;
     $perIp = $ip === '' ? 0 : (int) xp_one("SELECT COUNT(*) AS n FROM events WHERE type = 'admin_login_failed' AND ip = ? AND created_at > ?", [$ip, $since])['n'];
     // The client address may be forged behind some proxies, so a global ceiling backs up the per-address one.
@@ -104,12 +103,29 @@ function xp_admin_login(): void
     if ($perIp >= 5 || $global >= 30) {
         xp_json(429, ['ok' => false, 'error' => 'Demasiados intentos. Espere 15 minutos.']);
     }
+}
+
+function xp_admin_login_email(): string
+{
+    return strtolower(trim((string) (xp_config()['admin_login_email'] ?? xp_config()['admin_email'] ?? '')));
+}
+
+function xp_admin_login(): void
+{
+    $ip = xp_ip();
+    xp_admin_login_limit($ip);
     $body = xp_body() ?? [];
     $password = is_string($body['password'] ?? null) ? $body['password'] : '';
     if ($password === '' || !password_verify($password, xp_config()['admin_password_hash'])) {
         xp_log_event('admin_login_failed', null, null, '', $ip);
         xp_json(401, ['ok' => false, 'error' => 'Contraseña incorrecta.']);
     }
+    xp_admin_start_session();
+    xp_json(200, ['ok' => true]);
+}
+
+function xp_admin_start_session(): void
+{
     setcookie(XP_COOKIE, xp_session_create(XP_SESSION_TTL), [
         'expires' => time() + XP_SESSION_TTL,
         'path' => '/',
@@ -117,8 +133,7 @@ function xp_admin_login(): void
         'httponly' => true,
         'samesite' => 'Strict',
     ]);
-    xp_log_event('admin_login', null, null, '', $ip);
-    xp_json(200, ['ok' => true]);
+    xp_log_event('admin_login', null, null, '', xp_ip());
 }
 
 function xp_admin_stats(): void

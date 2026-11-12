@@ -240,6 +240,24 @@ try{
   sql(`for($i=0;$i<27;$i++){xp_exec('INSERT INTO customers (id,email,name,password_hash,created_at) VALUES (?,?,?,?,?)',[xp_uuid(),'pagination-'.$i.'@example.test','PageAdmin '.$i,'unused',time()]);}`);
   const page1=(await admin('/customers?q=PageAdmin&page=0')).data, page2=(await admin('/customers?q=PageAdmin&page=1')).data;
   check('Paginación sin duplicados',page1.customers.length===25&&page1.hasMore&&page2.customers.length===2&&!page2.hasMore&&!page1.customers.some(a=>page2.customers.some(b=>b.id===a.id)));
+  check('Login inicial sin pestañas de acceso',doc.includes('id="goRegister"')&&!doc.includes('id="tabLogin"')&&doc.includes('autocomplete="current-password"'));
+  const loginEmailSetup=spawnSync(PHP,[join(sandbox,'php/app/bin/setup.php'),'--admin-login-email=owner@example.test'],{encoding:'utf8'});
+  check('Configura correo de acceso admin',loginEmailSetup.status===0);
+  check('Contraseña admin con otro correo no concede acceso',(await por('wrongAdminEmail','/login','POST',{email:'stranger@example.test',password})).status===401);
+  check('Login admin desde portal exige header CSRF',(await por('unifiedAdmin','/login','POST',{email:'owner@example.test',password},false)).status===403);
+  const unified=await por('unifiedAdmin','/login','POST',{email:'OWNER@example.test',password});
+  check('Login común reconoce administrador',unified.status===200&&unified.data.role==='admin'&&unified.data.redirect==='/admin/');
+  check('Cookie de login común abre administración',(await call('unifiedAdmin','/admin/api/stats')).status===200);
+  check('Acceso admin no crea cliente ficticio',(await por('unifiedAdmin','/me')).status===401);
+  check('No filtra datos del administrador',!JSON.stringify(unified.data).match(/password_hash|admin_email|session_secret/));
+  check('Cuenta cliente con mismo correo no hereda permisos',(await por('sameEmail','/register','POST',{name:'Cliente mismo correo',email:'owner@example.test',password:'customer-only-12345'})).status===201);
+  const sameEmailLogin=await por('sameEmail','/login','POST',{email:'owner@example.test',password:'customer-only-12345'});
+  check('Contraseña de cliente mantiene rol cliente',sameEmailLogin.status===200&&sameEmailLogin.data.customer&&!sameEmailLogin.data.role);
+  check('Cliente del mismo correo no entra al admin',(await call('sameEmail','/admin/api/stats')).status===401);
+  const limitedLogin=(path,body)=>fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json','X-Requested-With':'bimflow','X-Forwarded-For':'10.7.1.99'},body:JSON.stringify(body)});
+  for(let i=0;i<5;i++)await limitedLogin('/portal/api/login',{email:'owner@example.test',password:'wrong-password'});
+  check('Login común limita intentos admin',(await limitedLogin('/portal/api/login',{email:'owner@example.test',password})).status===429);
+  check('Comparte límite con acceso admin directo',(await limitedLogin('/admin/api/login',{password})).status===429);
   if(process.env.EXTRA_SUITES==='1'){
     await new Promise(r=>fake.close(r));
     const pub=JSON.parse(php(`$c=require ${quote(configPath)};$ec=openssl_pkey_get_details(openssl_pkey_get_private($c['signing_key_pem']))['ec'];echo json_encode(['x'=>base64_encode($ec['x']),'y'=>base64_encode($ec['y'])]);`));
