@@ -540,6 +540,7 @@ tbody tr.click:hover{background:color-mix(in srgb, var(--brand) 4%, var(--panel)
 }
 </style>
 <link rel="stylesheet" href="/ui/theme.css?v=20261112-1">
+<link rel="stylesheet" href="/ui/admin.css?v=20261112-2">
 </head>
 <body class="ui-admin">
 <button type="button" class="theme-toggle admin-theme" data-theme-toggle aria-label="Cambiar tema"></button>
@@ -572,10 +573,12 @@ tbody tr.click:hover{background:color-mix(in srgb, var(--brand) 4%, var(--panel)
       <span class="brand-badge">v3.3</span>
     </div>
     <nav class="nav" aria-label="Secciones">
+
       <button data-view="dashboard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
         Resumen
       </button>
+      <button data-view="customers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M15 3a4 4 0 0 1 0 8"/><circle cx="9" cy="7" r="4"/></svg>Usuarios</button>
       <button data-view="licenses">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 2l-2 2m-1.5 1.5L12 11l4 4 5.5-5.5a2.121 2.121 0 0 0 0-3L20 5m-8.5 6.5L9 9l-5 5a2 2 0 0 0 0 3l3 3a2 2 0 0 0 3 0l5-5-2.5-2.5"/></svg>
         Licencias
@@ -629,7 +632,7 @@ const EVENT_LABEL = {
   device_limit: 'Límite de equipos', bad_key: 'Clave inválida', admin_created: 'Licencia creada', admin_updated: 'Licencia editada',
   admin_extended: 'Licencia extendida', admin_key_regenerated: 'Clave regenerada', admin_deleted: 'Licencia eliminada',
   admin_released_device: 'Equipo liberado (admin)', order_created: 'Pedido creado', order_paid: 'Pedido pagado', order_cancelled: 'Pedido cancelado',
-  portal_register: 'Cliente registrado', payment_attempt: 'Intento de pago', payment_charged: 'Cobro con tarjeta', payment_failed: 'Pago rechazado', payment_unknown: 'Pago sin confirmar (revisar)', payment_paid_not_recorded: 'Cobrado sin registrar (REVISAR)', order_cancelled_by_customer: 'Pedido cancelado por el cliente', verify_sent: 'Correo de verificación enviado', email_verified: 'Correo verificado', forgot_requested: 'Recuperación de contraseña pedida', password_reset: 'Contraseña restablecida', reset_failed: 'Restablecimiento fallido', installer_uploaded: 'Instalador publicado', trial_started: 'Prueba gratis iniciada', trial_reused: 'Prueba reutilizada (bloqueada)', demo_request: 'Solicitud de demo', released_by_owner: 'Equipo liberado por el cliente', owner_key_regenerated: 'Clave regenerada por el cliente', portal_login_failed: 'Login de cliente fallido', admin_login: 'Inicio de sesión', admin_login_failed: 'Intento de acceso fallido',
+  admin_customer_updated: 'Usuario actualizado', admin_customer_sessions_revoked: 'Sesiones de usuario cerradas', portal_register: 'Cliente registrado', payment_attempt: 'Intento de pago', payment_charged: 'Cobro con tarjeta', payment_failed: 'Pago rechazado', payment_unknown: 'Pago sin confirmar (revisar)', payment_paid_not_recorded: 'Cobrado sin registrar (REVISAR)', order_cancelled_by_customer: 'Pedido cancelado por el cliente', verify_sent: 'Correo de verificación enviado', email_verified: 'Correo verificado', forgot_requested: 'Recuperación de contraseña pedida', password_reset: 'Contraseña restablecida', reset_failed: 'Restablecimiento fallido', installer_uploaded: 'Instalador publicado', trial_started: 'Prueba gratis iniciada', trial_reused: 'Prueba reutilizada (bloqueada)', demo_request: 'Solicitud de demo', released_by_owner: 'Equipo liberado por el cliente', owner_key_regenerated: 'Clave regenerada por el cliente', portal_login_failed: 'Login de cliente fallido', admin_login: 'Inicio de sesión', admin_login_failed: 'Intento de acceso fallido',
 };
 const badge = (state) => `<span class="badge ${esc(state)}">${esc(STATE_LABEL[state] || state)}</span>`;
 
@@ -680,23 +683,34 @@ function askDays() {
 
 /* ---------- modal helper ---------- */
 function openModal(html, { drawer = false, onClose } = {}) {
+  const previous = document.activeElement;
   const root = document.createElement('div');
   root.className = 'overlay' + (drawer ? ' drawer' : '');
-  root.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
-  const close = () => { root.remove(); document.removeEventListener('keydown', onKey); onClose && onClose(); };
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  root.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="Administración de Xport" tabindex="-1">${html}</div>`;
+  const close = () => { root.remove(); document.removeEventListener('keydown', onKey); if(previous?.isConnected)previous.focus(); onClose && onClose(); };
+  const onKey = (e) => {
+    if ([...document.querySelectorAll('.overlay')].at(-1) !== root) return;
+    if (e.key === 'Escape') { e.preventDefault(); close(); }
+    if (e.key === 'Tab') {
+      const focusable=[...root.querySelectorAll('button:not(:disabled),input:not(:disabled):not([type=hidden]),select:not(:disabled),textarea:not(:disabled),a[href],summary')].filter(el=>el.getClientRects().length);
+      const first=focusable[0], last=focusable.at(-1);
+      if(!first){e.preventDefault();root.querySelector('.modal').focus();}
+      else if(e.shiftKey&&(document.activeElement===first||!root.contains(document.activeElement))){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&(document.activeElement===last||!root.contains(document.activeElement))){e.preventDefault();first.focus();}
+    }
+  };
   root.addEventListener('mousedown', (e) => { if (e.target === root) close(); });
   document.addEventListener('keydown', onKey);
   $('#modalRoot').append(root);
   const first = root.querySelector('input,select,textarea,button');
-  first && first.focus();
+  (first || root.querySelector('.modal')).focus();
   return { root, close, $: (s) => root.querySelector(s) };
 }
 
 function showKey(key, title) {
   const m = openModal(`
     <h3>${esc(title)}</h3>
-    <p class="muted">Copie la clave ahora y envíela al cliente. <b>No se vuelve a mostrar</b>: en el sistema solo queda su huella.</p>
+    <p class="muted">Copia la clave para activar Xport. Si la licencia está vinculada a una cuenta, su dueño también puede consultarla en el portal.</p>
     <div class="keybox mono">${esc(key)}</div>
     <div class="actions"><button class="btn" id="copyKey">Copiar clave</button><button class="btn primary" id="doneKey">Listo</button></div>`);
   m.$('#copyKey').onclick = async () => { try { await navigator.clipboard.writeText(key); toast('Clave copiada'); } catch { toast('Seleccione y copie manualmente'); } };
@@ -718,7 +732,7 @@ $('#loginForm').addEventListener('submit', async (e) => {
 $('#logout').onclick = async () => { await api('/logout', { method: 'POST' }).catch(() => {}); showLogin(); };
 
 /* ---------- router ---------- */
-const state = { view: 'dashboard', lic: { q: '', state: '', page: 0 }, ev: { type: '', page: 0 }, ord: { status: 'pending', page: 0 } };
+const state = { view: 'dashboard', customers: { q: '', page: 0 }, lic: { q: '', state: '', page: 0 }, ev: { type: '', page: 0 }, ord: { status: 'pending', page: 0 } };
 document.querySelectorAll('.nav button').forEach((b) => b.addEventListener('click', () => { state.view = b.dataset.view; route(); }));
 
 async function route() {
@@ -727,6 +741,7 @@ async function route() {
   view.innerHTML = '<p class="muted">Cargando…</p>';
   try {
     if (state.view === 'dashboard') await renderDashboard(view);
+    else if (state.view === 'customers') await renderCustomers(view);
     else if (state.view === 'licenses') await renderLicenses(view);
     else if (state.view === 'orders') await renderOrders(view);
     else await renderEvents(view);
@@ -734,28 +749,68 @@ async function route() {
 }
 
 /* ---------- dashboard ---------- */
+const adminGlyph = (kind) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${({users:'<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m2-16a3 3 0 0 1 0 6m2 10v-3a6 6 0 0 0-2-4"/>',key:'<circle cx="8" cy="9" r="5"/><path d="m12 13 8 8 2-2-3-3 2-2-3-3"/>',screen:'<rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8m-4-5v5"/>',orders:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6m-6 4h6m-6 4h3"/>',arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>',download:'<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',plus:'<path d="M12 5v14M5 12h14"/>'})[kind] || ''}</svg>`;
+function goAdmin(view) { state.view = view; route(); }
+
+async function renderCustomers(view) {
+  const f = state.customers;
+  const query=f.q, page=f.page;
+  const d = await api('/customers?' + new URLSearchParams({q:query, page}));
+  if(state.view!=='customers'||f.q!==query||f.page!==page)return;
+  view.innerHTML = `<div class="head"><div><p class="admin-kicker">RELACIONES CON CLIENTES</p><h2>Usuarios</h2><p class="muted">Cuentas registradas, datos de contacto y licencias en un solo lugar.</p></div></div>
+    <div class="toolbar"><input id="customerQuery" type="search" value="${esc(f.q)}" placeholder="Buscar por nombre, correo o empresa" aria-label="Buscar usuarios"></div>
+    <div class="panel">${d.customers.length ? `<div class="tablewrap"><table><thead><tr><th>Usuario</th><th>Empresa</th><th>Correo</th><th>Licencias</th><th>Registro</th><th></th></tr></thead><tbody>${d.customers.map(c=>`<tr><td><div class="customer-cell"><span class="customer-avatar">${esc(c.name.slice(0,2).toUpperCase())}</span><div><b>${esc(c.name)}</b><small>${esc(c.email)}</small></div></div></td><td>${esc(c.company)||'—'}</td><td><span class="badge ${c.verified?'active':'expiring'}">${c.verified?'Verificado':'Sin verificar'}</span></td><td>${c.licensesCount}</td><td>${fmtDate(c.createdAt)}</td><td><button class="btn small" data-customer="${esc(c.id)}">Gestionar</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No hay usuarios que coincidan con la búsqueda.</div>'}
+    <div class="pager"><button class="btn small" id="customerPrev" ${f.page===0?'disabled':''}>Anterior</button><span class="muted">Página ${f.page+1}</span><button class="btn small" id="customerNext" ${d.hasMore?'':'disabled'}>Siguiente</button></div></div>`;
+  let timer;
+  $('#customerQuery').oninput=e=>{clearTimeout(timer);f.q=e.target.value;f.page=0;timer=setTimeout(()=>{if(state.view==='customers')route().then(()=>{const q=$('#customerQuery');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length);}});},300);};
+  $('#customerPrev').onclick=()=>{f.page--;route();}; $('#customerNext').onclick=()=>{f.page++;route();};
+  view.querySelectorAll('[data-customer]').forEach(b=>b.onclick=()=>openCustomer(b.dataset.customer));
+}
+
+async function openCustomer(id) {
+  const m = openModal('<p class="muted">Cargando usuario…</p>',{drawer:true});
+  try {
+    const d=await api('/customers/'+encodeURIComponent(id)), c=d.customer;
+    if(!m.root.isConnected)return;
+    m.root.querySelector('.modal').innerHTML=`<div class="customer-detail-head"><span class="customer-avatar large">${esc(c.name.slice(0,2).toUpperCase())}</span><div><p class="admin-kicker">CUENTA DE CLIENTE</p><h3>${esc(c.name)}</h3><p class="muted">${esc(c.email)}</p></div><button class="btn small" id="customerClose" aria-label="Cerrar usuario">Cerrar</button></div>
+      <div class="customer-facts"><span><b>${c.licensesCount}</b> licencias</span><span><b>${d.ordersCount}</b> pedidos</span><span><b>${d.paidOrders}</b> pedidos pagados</span></div>
+      <form id="customerEdit" class="customer-edit"><h4>Datos de la cuenta</h4><label>Nombre<input name="name" required maxlength="120" value="${esc(c.name)}"></label><label>Correo<input type="email" name="email" required maxlength="160" value="${esc(c.email)}"></label><div class="row"><label>Empresa<input name="company" maxlength="120" value="${esc(c.company)}"></label><label>Teléfono<input name="phone" maxlength="24" value="${esc(c.phone)}"></label></div>
+      <p class="muted">Al cambiar el correo se cierran las sesiones de esta cuenta y el nuevo correo queda pendiente de verificación.</p><div id="customerError" class="err" role="alert"></div><button class="btn primary" type="submit">Guardar cambios</button></form>
+      <section class="customer-licenses"><div class="section-title"><h4>Licencias vinculadas</h4><button class="btn small" id="customerAddLicense">${adminGlyph('plus')} Asignar licencia</button></div>${d.licenses.length?d.licenses.map(l=>`<button class="customer-license" data-license="${esc(l.id)}"><span><b>${esc(l.plan)}</b><small>${l.maxDevices} equipo(s) · …${esc(l.keyHint)}</small></span>${badge(l.state)}${adminGlyph('arrow')}</button>`).join(''):'<p class="muted">Todavía no tiene una licencia vinculada.</p>'}</section>
+      <div class="session-security"><div><h4>Sesiones del portal</h4><p class="muted">Solicita que vuelva a iniciar sesión. Las activaciones de Revit se gestionan desde su licencia.</p></div><button class="btn" id="customerRevoke">Cerrar sesiones</button></div>`;
+    m.$('#customerClose').onclick=m.close;
+    m.$('#customerAddLicense').onclick=()=>{m.close();openCreate(c);};
+    m.root.querySelectorAll('[data-license]').forEach(b=>b.onclick=()=>{m.close();openDetail(b.dataset.license);});
+    m.$('#customerEdit').onsubmit=async e=>{e.preventDefault();const b=m.$('button[type=submit]');b.disabled=true;m.$('#customerError').textContent='';try{await api('/customers/'+encodeURIComponent(id),{method:'PATCH',body:Object.fromEntries(new FormData(e.target))});m.close();toast('Usuario actualizado');route();}catch(err){m.$('#customerError').textContent=err.message;b.disabled=false;}};
+    m.$('#customerRevoke').onclick=async()=>{if(!await confirmDialog('El usuario deberá iniciar sesión nuevamente en el portal.',{okLabel:'Cerrar sesiones'}))return;try{await api('/customers/'+encodeURIComponent(id)+'/revoke-sessions',{method:'POST'});toast('Sesiones cerradas');}catch(err){m.$('#customerError').textContent=err.message;}};
+    m.$('#customerClose').focus();
+  } catch(err){if(m.root.isConnected){m.root.querySelector('.modal').innerHTML=`<p class="err">${esc(err.message)}</p><button class="btn" id="customerLoadClose">Cerrar</button>`;m.$('#customerLoadClose').onclick=m.close;}}
+}
+
+function setupCustomerPicker(m, initial) {
+  let timer, seq=0;
+  const input=m.$('#licenseCustomerSearch'), results=m.$('#customerResults'), linked=m.$('#linkAccount');
+  function select(c){m.$('[name=customerId]').value=c.id;input.value=c.name+' · '+c.email;m.$('[name=customerName]').value=c.name;m.$('[name=customerEmail]').value=c.email;results.innerHTML='';m.$('#customerSelected').textContent='Vinculada a '+c.email+'. Se mostrará en su portal. No desactiva sus licencias anteriores.';}
+  function mode(){seq++;results.innerHTML='';m.$('#customerPicker').classList.toggle('hidden',!linked.checked);for(const key of ['customerName','customerEmail'])m.$('[name='+key+']').readOnly=linked.checked;if(!linked.checked){m.$('[name=customerId]').value='';m.$('#customerSelected').textContent='Licencia manual sin cuenta de portal vinculada.';}else if(initial)select(initial);}
+  linked.onchange=mode;mode();
+  input.oninput=()=>{clearTimeout(timer);const current=++seq;m.$('[name=customerId]').value='';m.$('#customerSelected').textContent='Selecciona una cuenta de los resultados.';results.textContent='Buscando…';timer=setTimeout(async()=>{try{const d=await api('/customers?'+new URLSearchParams({q:input.value}));if(current!==seq||!m.root.isConnected)return;results.innerHTML=d.customers.length?d.customers.map(c=>`<button type="button" data-id="${esc(c.id)}"><b>${esc(c.name)}</b><small>${esc(c.email)}${c.company?' · '+esc(c.company):''}</small></button>`).join(''):'<p class="muted">Sin resultados. El cliente puede crear su cuenta en el portal.</p>';results.querySelectorAll('button').forEach(b=>b.onclick=()=>{seq++;select(d.customers.find(c=>c.id===b.dataset.id));});}catch(err){if(current===seq)results.textContent=err.message;}},250);};
+  input.onfocus=()=>{if(!m.$('[name=customerId]').value)input.oninput();};
+}
+
 async function renderDashboard(view) {
-  const s = await api('/stats');
-  const L = s.licenses;
-  view.innerHTML = `
-    <div class="head"><h2>Resumen</h2><button class="btn primary" id="newLic">Nueva licencia</button></div>
-    <div class="cards">
-      <div class="card"><div class="l">Licencias activas</div><div class="n">${L.active}</div></div>
-      <div class="card"><div class="l">Vencen en 30 días</div><div class="n">${L.expiring}</div></div>
-      <div class="card"><div class="l">Vencidas</div><div class="n">${L.expired}</div></div>
-      <div class="card"><div class="l">Suspendidas / revocadas</div><div class="n">${L.blocked}</div></div>
-      <div class="card"><div class="l">Equipos activos</div><div class="n">${s.devicesActive}</div></div>
-      <div class="card"><div class="l">Pedidos por aprobar</div><div class="n">${s.pendingOrders ?? 0}</div></div>
-      <div class="card"><div class="l">Alertas (7 días)</div><div class="n">${s.suspiciousLast7d}</div></div>
-    </div>
-    <div class="panel"><h3>Próximos vencimientos</h3>
-      ${s.nextToExpire.length ? `<div class="tablewrap"><table><thead><tr><th>Cliente</th><th>Clave</th><th>Vence</th><th>Restante</th></tr></thead><tbody>
-        ${s.nextToExpire.map((r) => `<tr class="click" data-id="${esc(r.id)}"><td>${esc(r.customerName)}</td><td class="mono">…${esc(r.keyHint)}</td><td>${fmtDate(r.expiresAt)}</td><td>${fmtLeft(r.expiresAt)}</td></tr>`).join('')}
-      </tbody></table></div>` : '<div class="empty">Sin licencias activas todavía.</div>'}
-    </div>`;
-  $('#newLic').onclick = () => openCreate();
-  view.querySelectorAll('tr.click').forEach((tr) => tr.onclick = () => openDetail(tr.dataset.id));
-  view.insertAdjacentHTML('beforeend', '<div class="panel" id="instPanel" style="margin-top:22px"></div>');
+  const s = await api('/stats'), L = s.licenses;
+  const metric = (title, value, note, glyph, dest) => `<button class="overview-metric" data-go="${dest}"><span class="metric-top"><span>${esc(title)}</span><i>${adminGlyph(glyph)}</i></span><strong>${Number(value)||0}</strong><span class="metric-bottom">${esc(note)} ${adminGlyph('arrow')}</span></button>`;
+  view.innerHTML = `<div class="admin-welcome"><div><p class="admin-kicker">CENTRO DE CONTROL · XPORT</p><h2>Tu operación, de un vistazo.</h2><p>Gestiona las cuentas, las licencias y la próxima entrega de tus clientes.</p></div><button class="btn primary" id="newLic">${adminGlyph('plus')} Nueva licencia</button></div>
+    <div class="overview-metrics">${metric('Licencias activas',L.active,'Ver licencias','key','licenses')}${metric('Usuarios registrados',s.customersTotal,'Gestionar cuentas','users','customers')}${metric('Equipos conectados',s.devicesActive,'Ver activaciones','screen','licenses')}${metric('Pedidos pendientes',s.pendingOrders,'Revisar pedidos','orders','orders')}</div>
+    <div class="attention-strip"><span><i class="attention-dot"></i> Estado de la operación</span><button data-filter="expiring"><b>${L.expiring}</b> por vencer en 30 días</button><button data-filter="expired"><b>${L.expired}</b> vencidas</button><button data-filter="blocked"><b>${L.blocked}</b> suspendidas / revocadas</button><button data-go="events"><b>${s.suspiciousLast7d}</b> alertas en 7 días</button></div>
+    <div class="admin-overview-grid"><section class="panel expiry-panel"><div class="section-title"><div><p class="admin-kicker">ANTICÍPATE A LA RENOVACIÓN</p><h3>Próximos vencimientos</h3></div><button class="btn small" data-filter="expiring">Ver licencias ${adminGlyph('arrow')}</button></div>
+    ${s.nextToExpire.length ? `<div class="expiry-list">${s.nextToExpire.map(r=>`<button class="expiry-row" data-license="${esc(r.id)}"><span class="customer-avatar">${esc(r.customerName.slice(0,2).toUpperCase())}</span><span class="expiry-customer"><b>${esc(r.customerName)}</b><small>Licencia …${esc(r.keyHint)} · ${fmtDate(r.expiresAt)}</small></span><span class="expiry-days">${fmtLeft(r.expiresAt)}</span>${adminGlyph('arrow')}</button>`).join('')}</div>` : '<div class="empty">No hay vencimientos próximos.</div>'}</section>
+    <section class="panel admin-shortcuts"><div class="section-title"><div><p class="admin-kicker">TU SIGUIENTE PASO</p><h3>Todo bajo control</h3></div></div><button data-go="customers">${adminGlyph('users')}<span><b>Conoce a tus usuarios</b><small>Datos, cuentas y licencias vinculadas.</small></span>${adminGlyph('arrow')}</button><button data-go="orders">${adminGlyph('orders')}<span><b>${Number(s.pendingOrders)||0} pedidos por revisar</b><small>Consulta el estado antes de aprobar un pago.</small></span>${adminGlyph('arrow')}</button><button data-go="events">${adminGlyph('screen')}<span><b>Actividad del sistema</b><small>Revisa accesos y eventos de las licencias.</small></span>${adminGlyph('arrow')}</button></section></div>
+    <section class="panel installer-panel" id="instPanel"></section>`;
+  $('#newLic').onclick=()=>openCreate();
+  view.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>goAdmin(b.dataset.go));
+  view.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{state.lic.state=b.dataset.filter;state.lic.page=0;goAdmin('licenses');});
+  view.querySelectorAll('[data-license]').forEach(b=>b.onclick=()=>openDetail(b.dataset.license));
   loadInstaller();
 }
 
@@ -765,14 +820,10 @@ async function loadInstaller() {
   if (!panel) return;
   let info = null;
   try { info = (await api('/installer')).installer; } catch { /* sin datos */ }
-  panel.innerHTML = `<h3>Instalador para clientes</h3><div style="padding:16px;display:grid;gap:14px">
-    ${info ? `<div>Publicado: <b>${info.version ? 'v' + esc(info.version) : 'sin versión'}</b> · ${(info.size / 1048576).toFixed(1)} MB · ${fmtDateTime(info.uploadedAt)}
-      <div class="muted mono" style="font-size:12px;word-break:break-all;margin-top:4px">SHA-256 ${esc(info.sha256)}</div>
-      <div style="margin-top:4px"><a href="${esc(info.url)}" target="_blank" rel="noopener">Descargar para comprobarlo</a></div></div>`
-      : '<div class="muted">Aún no hay un instalador publicado. Los clientes verán «estará disponible muy pronto».</div>'}
-    <div class="row"><input type="file" id="instFile" accept=".exe" style="max-width:420px"><button class="btn primary fixed" id="instUp">Publicar instalador</button></div>
-    <div class="muted" style="font-size:13px">Sube el archivo <b>Xport_Setup_vX.Y.Z_….exe</b> descargado de GitHub Actions. Reemplaza al anterior y calcula su huella SHA-256.</div>
-    <div class="err" id="instErr" role="alert"></div></div>`;
+  panel.innerHTML = `<div class="installer-intro"><span class="installer-icon">${adminGlyph('download')}</span><div><p class="admin-kicker">DISTRIBUCIÓN DEL COMPLEMENTO</p><h3>La última versión, en manos de tus clientes.</h3><p class="muted">Publica el instalador que se descarga desde el portal y la guía.</p></div>${info?'<span class="badge active">Publicado</span>':'<span class="badge expiring">Sin publicar</span>'}</div><div class="installer-body">
+    <div class="installer-current">${info?`<span class="version-chip">${info.version?'v'+esc(info.version):'Sin versión'}</span><h4>Xport para Revit</h4><p class="muted">${(info.size/1048576).toFixed(1)} MB · ${fmtDateTime(info.uploadedAt)}</p><a class="installer-download" href="${esc(info.url)}" target="_blank" rel="noopener">${adminGlyph('download')} Descargar versión publicada</a><details class="installer-hash"><summary>Ver huella de integridad SHA-256</summary><code>${esc(info.sha256)}</code></details>`:'<h4>Prepara tu primera publicación</h4><p class="muted">El instalador estará disponible para tus clientes cuando publiques un archivo.</p>'}</div>
+    <div class="installer-upload"><label class="upload-zone" for="instFile">${adminGlyph('download')}<b>Selecciona el nuevo instalador</b><span>Archivo .exe de GitHub Actions</span></label><input class="upload-input" type="file" id="instFile" accept=".exe"><div class="upload-file" id="instFileName" aria-live="polite">Ningún archivo seleccionado</div><button class="btn primary" id="instUp">Publicar instalador ${adminGlyph('arrow')}</button><p class="muted">Reemplaza la versión publicada. La huella SHA-256 se calcula al subir el archivo.</p><div class="err" id="instErr" role="alert"></div></div></div>`;
+  $('#instFile').onchange=e=>{$('#instFileName').textContent=e.target.files[0]?.name||'Ningún archivo seleccionado';};
   $('#instUp').onclick = async () => {
     const f = $('#instFile').files[0];
     $('#instErr').textContent = '';
@@ -802,7 +853,7 @@ async function renderLicenses(view) {
     <div class="toolbar">
       <input id="q" type="search" placeholder="Buscar cliente, correo o fin de clave" value="${esc(f.q)}" aria-label="Buscar">
       <select id="st" aria-label="Estado">
-        ${[['', 'Todos los estados'], ['active', 'Activas'], ['expiring', 'Por vencer (30 d)'], ['expired', 'Vencidas'], ['suspended', 'Suspendidas'], ['revoked', 'Revocadas']].map(([v, l]) => `<option value="${v}" ${f.state === v ? 'selected' : ''}>${l}</option>`).join('')}
+        ${[['', 'Todos los estados'], ['active', 'Activas'], ['expiring', 'Por vencer (30 d)'], ['expired', 'Vencidas'], ['blocked', 'Suspendidas / revocadas'], ['suspended', 'Suspendidas'], ['revoked', 'Revocadas']].map(([v, l]) => `<option value="${v}" ${f.state === v ? 'selected' : ''}>${l}</option>`).join('')}
       </select>
     </div>
     <div class="panel">
@@ -828,18 +879,19 @@ async function renderLicenses(view) {
 function toDateInput(sec) { return new Date(sec * 1000).toISOString().slice(0, 10); }
 function endOfDay(dateStr) { return Math.floor(new Date(dateStr + 'T23:59:59Z').getTime() / 1000); }
 
-function openCreate() {
+function openCreate(customer = null) {
   const m = openModal(`
     <h3>Nueva licencia</h3>
     <form id="f" style="display:grid;gap:12px">
+      <div class="license-assignment"><label class="assignment-check"><input type="checkbox" id="linkAccount" checked> Vincular a un usuario registrado</label><input type="hidden" name="customerId"><div id="customerPicker"><label>Buscar usuario<input id="licenseCustomerSearch" type="search" autocomplete="off" placeholder="Nombre, correo o empresa"></label><div id="customerResults" class="customer-search-results" role="group" aria-label="Usuarios encontrados"></div></div><p class="muted" id="customerSelected" aria-live="polite">Busca y selecciona la cuenta que recibirá esta licencia.</p></div>
       <label>Cliente <input name="customerName" required maxlength="120"></label>
       <label>Correo <input name="customerEmail" type="email" maxlength="160"></label>
       <div class="row">
-        <label>Equipos permitidos <input name="maxDevices" type="number" min="1" max="100" value="2" required></label>
-        <label>Plan <input name="plan" value="standard" maxlength="40"></label>
+        <label>Equipos permitidos <input name="maxDevices" type="number" min="1" max="100" value="1" required></label>
+        <label>Plan <select name="plan"><option value="Individual">Individual</option><option value="Equipo">Equipo · 3 computadoras</option><option value="Estudio">Estudio · 7 computadoras</option><option value="standard">Personalizado</option></select></label>
       </div>
       <div class="row">
-        <label>Vence el <input name="expires" type="date" required value="${toDateInput(Date.now() / 1000 + 365 * DAY)}"></label>
+        <label>Vence el <input name="expires" type="date" required value="${toDateInput(Date.now() / 1000 + 30 * DAY)}"></label>
         <div class="fixed" style="display:flex;gap:6px;align-items:end">
           <button type="button" class="btn small" data-d="30">1 mes</button>
           <button type="button" class="btn small" data-d="90">3 meses</button>
@@ -858,18 +910,22 @@ function openCreate() {
       <div class="err" id="e" role="alert"></div>
       <div class="actions"><button type="button" class="btn" id="cancel">Cancelar</button><button class="btn primary" type="submit">Crear licencia</button></div>
     </form>`);
+  setupCustomerPicker(m, customer);
+  m.$('[name=plan]').onchange=e=>{const n={Individual:1,Equipo:3,Estudio:7}[e.target.value];if(n)m.$('[name=maxDevices]').value=n;};
   m.root.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => { m.$('[name=minutes]').value = b.dataset.m; });
   m.root.querySelectorAll('[data-d]').forEach((b) => b.onclick = () => { m.$('[name=expires]').value = toDateInput(Date.now() / 1000 + Number(b.dataset.d) * DAY); });
   m.$('#cancel').onclick = m.close;
   m.$('#f').onsubmit = async (e) => {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target));
+    if(m.$('#linkAccount').checked&&!fd.customerId){m.$('#e').textContent='Selecciona un usuario de los resultados de búsqueda.';return;}
+    const submit=m.$('button[type=submit]');submit.disabled=true;
     try {
       const body = { ...fd, maxDevices: Number(fd.maxDevices) };
       if (Number(fd.minutes) > 0) body.minutes = Number(fd.minutes); else body.expiresAt = endOfDay(fd.expires);
       const r = await api('/licenses', { method: 'POST', body });
       m.close(); showKey(r.key, 'Licencia creada'); route();
-    } catch (err) { m.$('#e').textContent = err.message; }
+    } catch (err) { m.$('#e').textContent = err.message; submit.disabled=false; }
   };
 }
 

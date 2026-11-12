@@ -72,7 +72,17 @@ function sendJson(res, statusCode, data) {
   res.end(JSON.stringify(data));
 }
 
-const server = http.createServer((req, res) => {
+// In-memory fixtures for visual previews only. Real API behavior is tested with PHP + SQLite.
+const mockCustomers = mockLicenses.map((l, i) => ({ id: 'customer-' + i, name: l.customerName,
+  email: l.customerEmail, company: l.customerName, phone: '', verified: i !== 1,
+  createdAt: Math.floor(Date.now() / 1000) - (i + 1) * 86400, licensesCount: 1 }));
+mockLicenses.forEach((l, i) => { l.customerId = mockCustomers[i].id; });
+async function previewBody(req) {
+  let body = '';
+  for await (const chunk of req) { body += chunk; if (body.length > 65536) return {}; }
+  try { return JSON.parse(body || '{}'); } catch { return {}; }
+}
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
 
@@ -95,10 +105,40 @@ const server = http.createServer((req, res) => {
         ok: true,
         licenses: { active: 14, expiring: 2, expired: 1, blocked: 0 },
         devicesActive: 22,
+        customersTotal: mockCustomers.length,
         pendingOrders: 2,
         suspiciousLast7d: 0,
         nextToExpire: mockLicenses.slice(0, 3),
       });
+    }
+    if (sub === '/customers') {
+      const q=(url.searchParams.get('q')||'').toLowerCase(), page=Math.max(0,Number(url.searchParams.get('page'))||0);
+      const rows=mockCustomers.filter(c=>[c.name,c.email,c.company].some(v=>v.toLowerCase().includes(q)));
+      return sendJson(res,200,{ok:true,customers:rows.slice(page*25,page*25+25),hasMore:rows.length>(page+1)*25});
+    }
+    if (sub.startsWith('/customers/')) {
+      const [, , id, action]=sub.split('/'), customer=mockCustomers.find(c=>c.id===id);
+      if(!customer)return sendJson(res,404,{ok:false,error:'Usuario no encontrado.'});
+      if(req.method==='PATCH') {
+        const body=await previewBody(req);
+        for(const field of ['name','email','company','phone'])if(typeof body[field]==='string')customer[field]=body[field];
+        return sendJson(res,200,{ok:true});
+      }
+      if(action==='revoke-sessions')return sendJson(res,200,{ok:true});
+      return sendJson(res,200,{ok:true,customer,licenses:mockLicenses.filter(l=>l.customerId===id),ordersCount:0,paidOrders:0});
+    }
+    if (sub === '/licenses' && req.method === 'POST') {
+      const body=await previewBody(req), c=mockCustomers.find(c=>c.id===body.customerId);
+      const license={id:'preview-'+Date.now(),customerId:c?.id,customerName:c?.name||body.customerName,
+        customerEmail:c?.email||body.customerEmail,plan:body.plan,maxDevices:Number(body.maxDevices),devicesActive:0,
+        state:'active',status:'active',expiresAt:body.expiresAt||Math.floor(Date.now()/1000)+Number(body.minutes)*60,
+        createdAt:Math.floor(Date.now()/1000),keyHint:'DEMO1',notes:body.notes||''};
+      mockLicenses.unshift(license); if(c)c.licensesCount++;
+      return sendJson(res,201,{ok:true,license,key:'XPBM-DEMO1-DEMO1-DEMO1-DEMO1'});
+    }
+    if (sub.startsWith('/licenses/') && req.method === 'GET') {
+      const license=mockLicenses.find(l=>l.id===sub.split('/')[2]);
+      return license?sendJson(res,200,{ok:true,license,devices:[],events:[]}):sendJson(res,404,{ok:false,error:'No encontrada.'});
     }
     if (sub === '/licenses') {
       return sendJson(res, 200, { ok: true, licenses: mockLicenses, hasMore: false });

@@ -1,0 +1,130 @@
+/* Administration: operational overview and account management. */
+.ui-admin main { padding: 38px 40px; max-width: 1600px; }
+.ui-admin svg { flex-shrink: 0; }
+.ui-admin .btn svg { width: 17px; height: 17px; }
+.admin-kicker { margin: 0 0 9px; font-size: 10px; font-weight: 750; letter-spacing: .14em; color: var(--muted); }
+.admin-welcome { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-right: 38px; margin-bottom: 30px; }
+.admin-welcome h2 { font-size: clamp(24px, 2.2vw, 34px); line-height: 1.2; letter-spacing: -.045em; }
+.admin-welcome p:last-child { color: var(--muted); margin: 12px 0 0; font-size: 13px; }
+.admin-welcome > .btn { flex: none; min-height: 42px; }
+.overview-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 18px; }
+.overview-metric { text-align: left; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); color: var(--ink); padding: 22px; min-width: 0; cursor: pointer; box-shadow: var(--shadow-sm); transition: border-color .15s, transform .15s; }
+.overview-metric:hover { border-color: var(--brand); transform: translateY(-2px); }
+.metric-top { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 12px; font-weight: 600; color: var(--muted); }
+.metric-top i { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 10px; display: grid; place-items: center; color: var(--brand); background: var(--accent-soft); }
+.metric-top svg { width: 18px; height: 18px; }
+.overview-metric strong { display: block; font-size: 40px; line-height: 1.1; font-weight: 750; letter-spacing: -.055em; margin: 18px 0 22px; }
+.metric-bottom { padding-top: 14px; border-top: 1px solid var(--line-light); display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); }
+.metric-bottom svg { width: 15px; height: 15px; }
+.attention-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; padding: 18px 2px 26px; color: var(--muted); font-size: 11px; }
+.attention-strip > span { display: inline-flex; gap: 8px; align-items: center; margin-right: auto; font-weight: 650; }
+.attention-dot { background: var(--brand); width: 6px; height: 6px; border-radius: 50%; }
+.attention-strip button { padding: 0; background: none; border: 0; color: var(--muted); cursor: pointer; text-align: left; font-size: 11px; }
+.attention-strip b { color: var(--ink); margin-right: 3px; }
+.attention-strip button:hover { color: var(--brand); text-decoration: underline; }
+.admin-overview-grid { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(0,1fr); gap: 22px; margin-bottom: 24px; }
+.ui-admin :is(.admin-overview-grid,.customer-licenses) .section-title { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 23px 24px; border-bottom: 1px solid var(--line); text-transform: none; letter-spacing: normal; color: var(--ink); margin-top: 0; }
+.section-title h3, .section-title h4 { margin: 0; font-size: 16px; }
+.section-title .admin-kicker { font-size: 9px; }
+.section-title .btn { flex: none; }
+.expiry-row { display: flex; align-items: center; text-align: left; padding: 20px 24px; gap: 12px; width: 100%; border: 0; border-bottom: 1px solid var(--line-light); background: var(--panel); color: var(--ink); cursor: pointer; }
+.expiry-row:last-child { border-bottom: 0; }
+.expiry-row:hover, .admin-shortcuts > button:hover, .customer-license:hover { background: var(--panel2); }
+.customer-avatar { width: 36px; height: 36px; flex: none; border: 1px solid var(--line); border-radius: 11px; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--ink-secondary); background: var(--panel2); }
+.expiry-customer { flex: 1; min-width: 0; }
+.expiry-customer b { display: block; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.expiry-customer small { display: block; color: var(--muted); margin-top: 5px; font-size: 10px; }
+.expiry-days { font-size: 11px; white-space: nowrap; color: var(--brand); background: var(--accent-soft); padding: 5px 9px; border-radius: 6px; font-weight: 600; }
+.expiry-row > svg { width: 15px; height: 15px; color: var(--muted); }
+.admin-shortcuts > button { display: flex; align-items: center; gap: 14px; padding: 20px 24px; border: 0; border-bottom: 1px solid var(--line-light); width: 100%; color: var(--ink); background: var(--panel); text-align: left; cursor: pointer; }
+.admin-shortcuts > button > svg:first-child { width: 20px; height: 20px; color: var(--muted); }
+.admin-shortcuts > button > svg:last-child { width: 15px; height: 15px; margin-left: auto; color: var(--muted); }
+.admin-shortcuts b { display: block; font-size: 12px; }
+.admin-shortcuts small { display: block; font-size: 10px; margin-top: 5px; color: var(--muted); line-height: 1.6; }
+.installer-intro { display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--line); padding: 24px; }
+.installer-intro h3 { font-size: 17px; }
+.installer-intro p:last-child { font-size: 12px; margin: 8px 0 0; }
+.installer-intro > .badge { margin-left: auto; flex: none; }
+.installer-icon { width: 48px; height: 48px; background: var(--accent-soft); border: 1px solid var(--line); color: var(--brand); border-radius: 14px; display: grid; place-items: center; flex: none; }
+.installer-icon svg { width: 23px; height: 23px; }
+.installer-body { display: grid; grid-template-columns: 1fr 1fr; }
+.installer-current { padding: 28px; border-right: 1px solid var(--line); min-width: 0; }
+.version-chip { display: inline-block; font: 600 12px 'JetBrains Mono',monospace; padding: 6px 10px; border-radius: 6px; background: var(--panel2); border: 1px solid var(--line); }
+.installer-current h4 { font-size: 19px; margin: 18px 0 8px; }
+.installer-current p { font-size: 12px; }
+.installer-download { display: inline-flex; gap: 8px; align-items: center; text-decoration: none; font-weight: 650; font-size: 12px; margin: 8px 0 20px; }
+.installer-download svg { width: 16px; height: 16px; }
+.installer-hash { border-top: 1px solid var(--line); padding-top: 14px; font-size: 11px; color: var(--muted); }
+.installer-hash summary { cursor: pointer; }
+.installer-hash code { display: block; overflow-wrap: anywhere; background: var(--panel2); padding: 12px; margin-top: 12px; border-radius: 8px; }
+.installer-upload { padding: 24px 28px; position: relative; }
+.upload-zone { cursor: pointer; border: 1px dashed var(--line-strong); background: var(--bg); border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 20px; text-align: center; }
+.upload-zone:hover { border-color: var(--brand); background: var(--accent-soft); }
+.upload-zone svg { width: 23px; height: 23px; color: var(--muted); }
+.upload-zone b { font-size: 12px; color: var(--ink); }
+.upload-zone span { font-size: 10px; color: var(--muted); font-weight: 400; }
+.upload-input { position: absolute; width: 1px; height: 1px; padding: 0; opacity: 0; }
+.installer-upload:has(.upload-input:focus-visible) .upload-zone { outline: 2px solid var(--brand); outline-offset: 3px; }
+.upload-file { font-size: 11px; color: var(--muted); margin: 10px 0 14px; overflow-wrap: anywhere; }
+.installer-upload > p { font-size: 10px; line-height: 1.7; margin-bottom: 0; }
+.customer-cell { display: flex; align-items: center; gap: 12px; }
+.customer-cell small { display: block; margin-top: 4px; color: var(--muted); }
+.customer-detail-head { display: flex; align-items: center; gap: 14px; }
+.ui-admin .drawer .modal > * { flex-shrink: 0; }
+.customer-detail-head .large { width: 48px; height: 48px; font-size: 15px; }
+.customer-detail-head p { margin: 4px 0; }
+.customer-detail-head > button { margin-left: auto; }
+.customer-facts { display: flex; flex-wrap: wrap; gap: 14px 24px; padding: 18px; background: var(--panel2); border-radius: 12px; margin: 24px 0; color: var(--muted); font-size: 12px; }
+.customer-facts b { display: block; color: var(--ink); font-size: 18px; margin-bottom: 4px; }
+.customer-edit { display: grid; gap: 14px; }
+.customer-edit h4, .session-security h4 { margin: 0; font-size: 14px; }
+.customer-edit p { font-size: 11px; margin: 0; line-height: 1.7; }
+.customer-edit button { justify-self: start; }
+.customer-licenses { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-top: 28px; }
+.ui-admin .customer-licenses .section-title { padding: 16px; }
+.customer-licenses > p { padding: 16px; }
+.customer-license { display: flex; align-items: center; gap: 12px; width: 100%; background: var(--panel); border: 0; border-bottom: 1px solid var(--line); text-align: left; padding: 16px; color: var(--ink); cursor: pointer; }
+.customer-license > span:first-child { flex: 1; }
+.customer-license small { display: block; color: var(--muted); margin-top: 4px; }
+.customer-license > svg { width: 16px; height: 16px; }
+.session-security { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 24px; }
+.session-security p { font-size: 12px; line-height: 1.7; }
+.license-assignment { padding: 16px; background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; }
+.assignment-check { display: flex; flex-direction: row; align-items: center; gap: 10px; margin-bottom: 14px; }
+.assignment-check input { width: 16px; height: 16px; flex: none; }
+.license-assignment p { font-size: 11px; line-height: 1.7; margin: 10px 0 0; }
+.customer-search-results { display: grid; gap: 4px; max-height: 220px; overflow-y: auto; }
+.customer-search-results:empty { display: none; }
+.customer-search-results button { text-align: left; background: var(--panel); border: 1px solid var(--line); color: var(--ink); padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+.customer-search-results button:hover { background: var(--accent-soft); border-color: var(--brand); }
+.customer-search-results small { display: block; color: var(--muted); margin-top: 3px; }
+.ui-admin button:focus-visible, .ui-admin a:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+@media(min-width:861px) { .ui-admin .nav button[data-view=customers] { order: 1; } .ui-admin .nav button[data-view=dashboard] { order: 0; } .ui-admin .nav button:not([data-view=customers]):not([data-view=dashboard]) { order: 2; } }
+@media(max-width:1150px) { .admin-overview-grid { grid-template-columns: 1fr; } .overview-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:680px) {
+  .ui-admin main { padding: 24px 16px; }
+  .admin-welcome { flex-wrap: wrap; padding-right: 0; gap: 18px; }
+  .admin-welcome h2 { font-size: 26px; }
+  .overview-metrics { gap: 12px; }
+  .overview-metric { padding: 16px; }
+  .metric-top { font-size: 11px; align-items: flex-start; }
+  .metric-top i { width: 27px; height: 27px; flex: none; }
+  .metric-top svg { width: 15px; height: 15px; }
+  .overview-metric strong { font-size: 34px; margin: 16px 0; }
+  .metric-bottom { font-size: 10px; }
+  .attention-strip { gap: 12px 18px; padding: 20px 0; }
+  .attention-strip > span { flex-basis: 100%; }
+  .ui-admin :is(.admin-overview-grid,.customer-licenses) .section-title { padding: 18px; flex-wrap: wrap; }
+  .expiry-row { padding: 18px; gap: 8px; flex-wrap: wrap; }
+  .expiry-row > .customer-avatar { display: none; }
+  .expiry-customer small { font-size: 10px; }
+  .installer-body { grid-template-columns: 1fr; }
+  .installer-current { border-right: 0; border-bottom: 1px solid var(--line); padding: 22px; }
+  .installer-upload { padding: 22px; }
+  .installer-intro { padding: 20px; flex-wrap: wrap; }
+  .installer-icon { display: none; }
+  .installer-intro > .badge { margin-left: 0; }
+  .installer-intro h3 { line-height: 1.5; }
+  .customer-detail-head { flex-wrap: wrap; }
+}
+@media(prefers-reduced-motion:reduce) { .overview-metric { transition: none; } }

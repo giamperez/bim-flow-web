@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 const XP_COOKIE = 'bf_admin';
 const XP_SESSION_TTL = 12 * 3600;
+require_once __DIR__ . '/admin_customers.php';
 
 function xp_route_admin(string $method, string $route): void
 {
@@ -25,6 +26,15 @@ function xp_route_admin(string $method, string $route): void
 
     $parts = $route === '' ? [] : explode('/', $route);
     $n = count($parts);
+
+    if ($route === 'customers' && $method === 'GET') { xp_admin_customers(); }
+    if ($n === 2 && $parts[0] === 'customers') {
+        if ($method === 'GET') { xp_admin_customer_detail($parts[1]); }
+        if ($method === 'PATCH') { xp_admin_customer_update($parts[1]); }
+    }
+    if ($n === 3 && $parts[0] === 'customers' && $parts[2] === 'revoke-sessions' && $method === 'POST') {
+        xp_admin_customer_revoke_sessions($parts[1]);
+    }
 
     if ($route === 'me' && $method === 'GET') {
         xp_json(200, ['ok' => true]);
@@ -128,8 +138,8 @@ function xp_admin_stats(): void
     $pendingOrders = xp_one("SELECT COUNT(*) AS n FROM orders WHERE status = 'pending'");
     $ev = xp_one("SELECT COUNT(*) AS n FROM events WHERE created_at > ? AND type IN ('bad_key','device_limit')", [$t - 7 * XP_DAY]);
     $next = xp_all(
-        "SELECT id, key_hint, customer_name, expires_at FROM licenses WHERE status = 'active' AND expires_at > ? ORDER BY expires_at ASC LIMIT 5",
-        [$t]
+        "SELECT id, key_hint, customer_name, expires_at FROM licenses WHERE status = 'active' AND access_mode <> 'free' AND expires_at > ? AND expires_at <= ? ORDER BY expires_at ASC LIMIT 5",
+        [$t, $t + 30 * XP_DAY]
     );
     xp_json(200, [
         'ok' => true,
@@ -141,6 +151,7 @@ function xp_admin_stats(): void
             'total' => (int) $lic['total'],
         ],
         'devicesActive' => (int) $dev['n'],
+        'customersTotal' => (int) xp_one('SELECT COUNT(*) AS n FROM customers')['n'],
         'pendingOrders' => (int) $pendingOrders['n'],
         'suspiciousLast7d' => (int) $ev['n'],
         'nextToExpire' => array_map(function ($r) {
@@ -172,6 +183,8 @@ function xp_admin_list(): void
     } elseif ($state === 'expired') {
         $where[] = "l.status = 'active' AND l.expires_at <= ?";
         $binds[] = $t;
+    } elseif ($state === 'blocked') {
+        $where[] = "l.status IN ('suspended', 'revoked')";
     } elseif ($state === 'suspended' || $state === 'revoked') {
         $where[] = 'l.status = ?';
         $binds[] = $state;
@@ -211,6 +224,10 @@ function xp_expiry_from(array $body, int $base): ?int
 function xp_admin_create(): void
 {
     $body = xp_body() ?? [];
+    $customerId = xp_clip($body['customerId'] ?? '', 36);
+    $customer = $customerId === '' ? null : xp_one('SELECT id, name, email FROM customers WHERE id = ?', [$customerId]);
+    if ($customerId !== '' && !$customer) { xp_json(404, ['ok' => false, 'error' => 'Usuario no encontrado.']); }
+    if ($customer) { $body['customerName'] = $customer['name']; $body['customerEmail'] = $customer['email']; }
     $name = xp_clip($body['customerName'] ?? '', 120);
     if ($name === '') {
         xp_json(400, ['ok' => false, 'error' => 'El nombre del cliente es obligatorio.']);
@@ -224,16 +241,34 @@ function xp_admin_create(): void
     if (!$expires || $expires <= $t) {
         xp_json(400, ['ok' => false, 'error' => 'Indique un vencimiento futuro.']);
     }
-    [$id, $key] = xp_new_license([
+    [$id, $key] = xp_tx(function () use ($body, $name, $maxDevices, $expires, $customer) {
+      $created = time();
+      if ($customer) {
+        $customer = xp_one('SELECT id, name, email FROM customers WHERE id = ?' . xp_for_update(), [$customer['id']]);
+        $name = $customer['name'];
+        $body['customerEmail'] = $customer['email'];
+        $last = xp_one('SELECT MAX(created_at) AS t FROM licenses WHERE customer_id = ?', [$customer['id']]);
+        // Portal selects the latest license: keep assignments ordered even within the same second.
+        $created = max($created, (int) ($last['t'] ?? 0) + 1);
+      }
+      [$id, $key] = xp_new_license([
         'customer_name' => $name,
         'customer_email' => xp_clip($body['customerEmail'] ?? '', 160),
         'plan' => xp_clip($body['plan'] ?? '', 40) ?: 'standard',
         'max_devices' => $maxDevices,
         'expires_at' => $expires,
         'notes' => xp_clip($body['notes'] ?? '', 1000),
-    ]);
+        'customer_id' => $customer['id'] ?? null,
+        'store_key' => $customer !== null,
+      ]);
+      if ($customer) {
+        xp_exec('UPDATE licenses SET created_at = ? WHERE id = ?', [$created, $id]);
+        xp_exec('UPDATE customers SET free_started_at = COALESCE(free_started_at, ?) WHERE id = ?', [time(), $customer['id']]);
+      }
+      return [$id, $key];
+    });
     xp_log_event('admin_created', $id, null, $name);
-    // The key is shown once; only its hash is stored.
+    // Linked accounts also retain an encrypted copy for the owner's portal.
     xp_json(201, ['ok' => true, 'key' => $key, 'license' => xp_license_public(xp_one('SELECT * FROM licenses WHERE id = ?', [$id]))]);
 }
 
@@ -345,11 +380,18 @@ function xp_admin_extend(string $id): void
 
 function xp_admin_regenerate(string $id): void
 {
-    if (!xp_one('SELECT id FROM licenses WHERE id = ?', [$id])) {
+    $key = xp_generate_key();
+    $found = xp_tx(function () use ($id, $key) {
+        $lic = xp_one('SELECT customer_id, key_enc FROM licenses WHERE id = ?' . xp_for_update(), [$id]);
+        if (!$lic) { return false; }
+        $encrypted = !empty($lic['customer_id']) || !empty($lic['key_enc']) ? xp_encrypt_key($key) : null;
+        xp_exec('UPDATE licenses SET key_hash = ?, key_hint = ?, key_enc = ?, updated_at = ? WHERE id = ?',
+            [xp_sha256($key), substr($key, -5), $encrypted, time(), $id]);
+        return true;
+    });
+    if (!$found) {
         xp_json(404, ['ok' => false, 'error' => 'No encontrada.']);
     }
-    $key = xp_generate_key();
-    xp_exec('UPDATE licenses SET key_hash = ?, key_hint = ?, updated_at = ? WHERE id = ?', [xp_sha256($key), substr($key, -5), time(), $id]);
     xp_log_event('admin_key_regenerated', $id);
     xp_json(200, ['ok' => true, 'key' => $key]);
 }

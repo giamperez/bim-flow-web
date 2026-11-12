@@ -8,13 +8,14 @@ import http from 'node:http';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 const PHP=process.env.PHP||'php', root=resolve(import.meta.dirname,'..');
+const PORT=Number(process.env.QA_PORT||8788);
 const sandbox=mkdtempSync(join(tmpdir(),'bimflow-dashboard-'));
 cpSync(join(root,'php'),join(sandbox,'php'),{recursive:true,filter:p=>!p.endsWith('config.php')&&!p.includes('node_modules')});
 cpSync(join(root,'public'),join(sandbox,'public'),{recursive:true});
 mkdirSync(join(sandbox,'site'),{recursive:true});
 cpSync(join(root,'site/brand'),join(sandbox,'site/brand'),{recursive:true});
 const password='qa-dashboard-only-1234';
-const config={db:{driver:'sqlite',path:join(sandbox,'qa.sqlite')},session_secret:'isolated-integration-test-session-secret-12345',payment_mode:'culqi',payment_instructions:'Realice el pago indicando el codigo del pedido.',public_url:'http://127.0.0.1:8788',ip_header:'HTTP_X_FORWARDED_FOR',culqi:{public_key:'pk_test_FAKE123',secret_key:'sk_test_FAKEKEY123',api_base:'http://127.0.0.1:8799/v2'}};
+const config={db:{driver:'sqlite',path:join(sandbox,'qa.sqlite')},session_secret:'isolated-integration-test-session-secret-12345',payment_mode:'culqi',payment_instructions:'Realice el pago indicando el codigo del pedido.',public_url:`http://127.0.0.1:${PORT}`,ip_header:'HTTP_X_FORWARDED_FOR',culqi:{public_key:'pk_test_FAKE123',secret_key:'sk_test_FAKEKEY123',api_base:'http://127.0.0.1:8799/v2'}};
 const configPath=join(sandbox,'php/app/config.php');
 const bootstrap=join(sandbox,'php/app/bootstrap.php');
 function php(code){const r=spawnSync(PHP,['-r',code],{encoding:'utf8'});if(r.status!==0)throw new Error(r.stderr||r.stdout);return r.stdout;}
@@ -51,9 +52,9 @@ const fake=http.createServer((req,res)=>{let raw='';req.on('data',d=>raw+=d);req
   send(404,{object:'error'});
 });});
 await new Promise(r=>fake.listen(8799,'127.0.0.1',r));
-const server=spawn(PHP,['-d','opcache.enable=0','-d','opcache.enable_cli=0','-S','127.0.0.1:8788','-t',join(sandbox,'php/public'),join(sandbox,'php/dev-router.php')],{stdio:['ignore','pipe','pipe']});
+const server=spawn(PHP,['-d','opcache.enable=0','-d','opcache.enable_cli=0','-S',`127.0.0.1:${PORT}`,'-t',join(sandbox,'php/public'),join(sandbox,'php/dev-router.php')],{stdio:['ignore','pipe','pipe']});
 let logs='';server.stderr.on('data',d=>logs+=d);
-const base='http://127.0.0.1:8788', jar={};let count=0;
+const base=`http://127.0.0.1:${PORT}`, jar={};let count=0;
 function check(name,ok){assert(ok,name);count++;console.log('✓ '+name);}
 async function call(who,path,method='GET',body,csrf=true){
   const res=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(csrf?{'X-Requested-With':'bimflow'}:{}),...(jar[who]?{Cookie:jar[who]}:{}),'X-Forwarded-For':'10.7.1.1'},body:body===undefined?undefined:JSON.stringify(body)});
@@ -200,6 +201,45 @@ try{
   check('CSS del portal disponible',css.status===200&&cssText.includes('.sidebar'));
   const doc=await (await fetch(base+'/portal/')).text();
   check('HTML de panel con navegación y perfil',doc.includes('id="sidebar"')&&doc.includes('id="profileForm"')&&!doc.includes('sk_test_FAKEKEY123'));
+  // Admin account management and explicit license ownership.
+  check('Registro para gestión admin',(await por('managed','/register','POST',{name:'Gestión Admin',email:'managed@example.test',password})).status===201);
+  const managed=(await por('managed','/me')).data.customer;
+  const managedFree=(await por('managed','/license')).data.license;
+  check('Listado protegido',(await call('managed','/admin/api/customers')).status===401);
+  const found=await admin('/customers?q=managed%40example.test');
+  check('Busca usuarios por correo',found.data.customers.length===1&&found.data.customers[0].id===managed.id);
+  check('Sin secretos en listado',!JSON.stringify(found.data).match(/password_hash|session_version|provider_id|billing_json/));
+  check('CSRF al editar usuario',(await call('admin','/admin/api/customers/'+managed.id,'PATCH',{name:'No'},false)).status===403);
+  check('Detalle de usuario',(await admin('/customers/'+managed.id)).data.licenses.some(l=>l.id===managedFree.id));
+  check('Edita contacto',(await admin('/customers/'+managed.id,'PATCH',{name:'Estudio Administrado',company:'Empresa Admin',phone:'+51 999 111 222'})).status===200);
+  check('Nombre sincronizado a licencia',(await por('managed','/license')).data.license.customerName==='Estudio Administrado');
+  check('Busca usuarios por empresa',(await admin('/customers?q=Empresa%20Admin')).data.customers.some(c=>c.id===managed.id));
+  check('Correo duplicado rechazado',(await admin('/customers/'+managed.id,'PATCH',{email:'bruno@example.test'})).status===409);
+  check('Teléfono inválido rechazado',(await admin('/customers/'+managed.id,'PATCH',{phone:'<script>'})).status===400);
+  check('Usuario inexistente rechazado',(await admin('/licenses','POST',{customerId:'missing',customerName:'X',days:30})).status===404);
+  const assigned=await admin('/licenses','POST',{customerId:managed.id,customerName:'Nombre falsificado',customerEmail:'other@example.test',plan:'Equipo',maxDevices:3,days:30});
+  check('Licencia vinculada usa identidad real',assigned.status===201&&assigned.data.license.customerName==='Estudio Administrado'&&assigned.data.license.customerEmail==='managed@example.test');
+  const portalAssigned=(await por('managed','/license')).data.license;
+  check('Licencia y clave visibles al dueño',portalAssigned.id===assigned.data.license.id&&portalAssigned.key===assigned.data.key&&portalAssigned.maxDevices===3);
+  const nextAssigned=await admin('/licenses','POST',{customerId:managed.id,plan:'Estudio',maxDevices:7,days:30});
+  check('Asignaciones consecutivas muestran la última',(await por('managed','/license')).data.license.id===nextAssigned.data.license.id);
+  check('Otro usuario no recibe licencia ajena',(await por('b','/license')).data.license?.id!==nextAssigned.data.license.id);
+  check('Detalle conserva historial',(await admin('/customers/'+managed.id)).data.licenses.length===3);
+  const rotated=await admin('/licenses/'+nextAssigned.data.license.id+'/regenerate-key','POST');
+  check('Clave regenerada sincronizada al portal',rotated.status===200&&(await por('managed','/license')).data.license.key===rotated.data.key);
+  check('Clave anterior deja de activar',(await api('activate',dev(nextAssigned.data.key))).status!==200);
+  check('Vencimientos no incluyen gratuitos',(await admin('/stats')).data.nextToExpire.every(l=>l.expiresAt<=Date.now()/1000+30*86400));
+  check('Cierre de sesiones admin',(await admin('/customers/'+managed.id+'/revoke-sessions','POST')).status===200);
+  check('Sesión revocada no entra',(await por('managed','/me')).status===401);
+  check('Puede volver a ingresar',(await por('managed','/login','POST',{email:'managed@example.test',password})).status===200);
+  check('Admin cambia correo',(await admin('/customers/'+managed.id,'PATCH',{email:'managed-new@example.test'})).status===200);
+  check('Cambio de correo revoca sesión',(await por('managed','/me')).status===401);
+  check('Nuevo correo requiere verificación',!(await admin('/customers/'+managed.id)).data.customer.verified);
+  check('Admin customer 404',(await admin('/customers/not-a-customer')).status===404);
+  check('Conteo de usuarios real',(await admin('/stats')).data.customersTotal>=3);
+  sql(`for($i=0;$i<27;$i++){xp_exec('INSERT INTO customers (id,email,name,password_hash,created_at) VALUES (?,?,?,?,?)',[xp_uuid(),'pagination-'.$i.'@example.test','PageAdmin '.$i,'unused',time()]);}`);
+  const page1=(await admin('/customers?q=PageAdmin&page=0')).data, page2=(await admin('/customers?q=PageAdmin&page=1')).data;
+  check('Paginación sin duplicados',page1.customers.length===25&&page1.hasMore&&page2.customers.length===2&&!page2.hasMore&&!page1.customers.some(a=>page2.customers.some(b=>b.id===a.id)));
   if(process.env.EXTRA_SUITES==='1'){
     await new Promise(r=>fake.close(r));
     const pub=JSON.parse(php(`$c=require ${quote(configPath)};$ec=openssl_pkey_get_details(openssl_pkey_get_private($c['signing_key_pem']))['ec'];echo json_encode(['x'=>base64_encode($ec['x']),'y'=>base64_encode($ec['y'])]);`));
