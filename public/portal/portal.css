@@ -2049,19 +2049,40 @@ ol.steps li::before {
 }
 
 /* ---------- Tu suscripción y consentimiento de renovación automática ---------- */
-.sub-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
-.sub-grid > div { border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: var(--bg); min-width: 0; }
-.sub-label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-.sub-grid strong { display: block; font-size: 15px; letter-spacing: -.02em; }
-.sub-grid small { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.sub-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 12px; }
-.sub-badge { padding: 4px 12px; border-radius: 99px; font-size: 11.5px; font-weight: 700; border: 1px solid var(--line); color: var(--muted); background: var(--bg); }
-.sub-badge.active { color: #059669; border-color: #a7f3d0; background: #ecfdf5; }
-.sub-badge.expiring { color: #b45309; border-color: #fde68a; background: #fffbeb; }
-.sub-badge.expired { color: #dc2626; border-color: #fecaca; background: #fef2f2; }
-.btn.danger-outline { border-color: #fecaca; color: #dc2626; }
+#paymentEnvironment {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--warn-bg); color: var(--warn); border-color: var(--warn-border);
+  font-weight: 600; margin-bottom: 18px;
+}
+#paymentEnvironment::before {
+  content: "!"; flex: none; width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 12px; font-weight: 800;
+  background: var(--warn); color: var(--warn-bg);
+}
+#subscriptionCard { padding: 28px 30px; margin-bottom: 28px; }
+#subscriptionCard .section-title { align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 0; }
+.sub-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0 0 4px; }
+.sub-grid > div {
+  border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px;
+  background: var(--bg); min-width: 0; display: flex; flex-direction: column; gap: 4px;
+}
+.sub-label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.sub-grid strong { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
+.sub-grid small { display: block; margin-top: 4px; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.sub-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 16px; }
+.sub-badge {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 13px 5px 11px;
+  border-radius: 99px; font-size: 12px; font-weight: 700;
+  border: 1px solid var(--line); color: var(--muted); background: var(--bg);
+}
+.sub-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.sub-badge.active { color: var(--ok); border-color: var(--ok-border); background: var(--ok-bg); }
+.sub-badge.expiring { color: var(--warn); border-color: var(--warn-border); background: var(--warn-bg); }
+.sub-badge.expired { color: var(--bad); border-color: var(--bad-border); background: var(--bad-bg); }
+.btn.danger-outline { border-color: var(--bad-border); color: var(--bad); background: transparent; }
+.btn.danger-outline:hover { background: var(--bad-bg); }
 .plan.current { outline: 2px solid var(--brand); outline-offset: -2px; }
 .consent-box { border: 1.5px solid var(--line); border-radius: 14px; padding: 14px 16px; background: var(--bg); display: grid; gap: 8px; }
 .consent-title { font-size: 12px; font-weight: 700; color: var(--ink); }
 .consent-fine { margin: 0; font-size: 11.5px; line-height: 1.6; color: var(--muted); }
-@media (max-width: 760px) { .sub-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .sub-grid { grid-template-columns: 1fr; } #subscriptionCard { padding: 22px 18px; } }
