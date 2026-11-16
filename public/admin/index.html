@@ -539,8 +539,8 @@ tbody tr.click:hover{background:color-mix(in srgb, var(--brand) 4%, var(--panel)
   main{padding:20px 16px}
 }
 </style>
-<link rel="stylesheet" href="/ui/theme.css?v=20261113-1">
-<link rel="stylesheet" href="/ui/admin.css?v=20261113-1">
+<link rel="stylesheet" href="/ui/theme.css?v=20261116-1">
+<link rel="stylesheet" href="/ui/admin.css?v=20261116-1">
 </head>
 <body class="ui-admin">
 <button type="button" class="theme-toggle admin-theme" data-theme-toggle aria-label="Cambiar tema"></button>
@@ -635,7 +635,7 @@ const EVENT_LABEL = {
   admin_released_device: 'Equipo liberado (admin)', order_created: 'Pedido creado', order_paid: 'Pedido pagado', order_cancelled: 'Pedido cancelado',
   admin_customer_updated: 'Usuario actualizado', admin_customer_sessions_revoked: 'Sesiones de usuario cerradas', portal_register: 'Cliente registrado', payment_attempt: 'Intento de pago', payment_charged: 'Cobro con tarjeta', payment_failed: 'Pago rechazado', payment_unknown: 'Pago sin confirmar (revisar)', payment_paid_not_recorded: 'Cobrado sin registrar (REVISAR)', order_cancelled_by_customer: 'Pedido cancelado por el cliente', verify_sent: 'Correo de verificación enviado', email_verified: 'Correo verificado', forgot_requested: 'Recuperación de contraseña pedida', password_reset: 'Contraseña restablecida', reset_failed: 'Restablecimiento fallido', installer_uploaded: 'Instalador publicado', trial_started: 'Prueba gratis iniciada', trial_reused: 'Prueba reutilizada (bloqueada)', demo_request: 'Solicitud de demo', released_by_owner: 'Equipo liberado por el cliente', owner_key_regenerated: 'Clave regenerada por el cliente', portal_login_failed: 'Login de cliente fallido', admin_login: 'Inicio de sesión', admin_login_failed: 'Intento de acceso fallido',
 };
-Object.assign(EVENT_LABEL, { auto_renew_on: 'Renovación automática activada', auto_renew_off: 'Renovación automática cancelada', admin_auto_renew_off: 'Renovación automática detenida (admin)', renewal_attempt: 'Cobro automático intentado', renewal_charged: 'Renovación automática cobrada', renewal_failed: 'Cobro automático rechazado', plan_change_scheduled: 'Cambio de plan programado', card_saved: 'Tarjeta guardada', card_deleted: 'Tarjeta eliminada', free_plan_started: 'Plan gratuito iniciado', admin_customer_created: 'Usuario creado (admin)', admin_customer_deleted: 'Usuario eliminado (admin)', admin_customer_password_set: 'Contraseña definida (admin)', admin_customer_reset_link: 'Enlace de contraseña enviado (admin)', oauth_login: 'Ingreso con Google/Microsoft', oauth_failed: 'Ingreso social fallido' });
+Object.assign(EVENT_LABEL, { admin_license_reissued: 'Licencia nueva emitida (la anterior estaba revocada)', auto_renew_on: 'Renovación automática activada', auto_renew_off: 'Renovación automática cancelada', admin_auto_renew_off: 'Renovación automática detenida (admin)', renewal_attempt: 'Cobro automático intentado', renewal_charged: 'Renovación automática cobrada', renewal_failed: 'Cobro automático rechazado', plan_change_scheduled: 'Cambio de plan programado', card_saved: 'Tarjeta guardada', card_deleted: 'Tarjeta eliminada', free_plan_started: 'Plan gratuito iniciado', admin_customer_created: 'Usuario creado (admin)', admin_customer_deleted: 'Usuario eliminado (admin)', admin_customer_password_set: 'Contraseña definida (admin)', admin_customer_reset_link: 'Enlace de contraseña enviado (admin)', oauth_login: 'Ingreso con Google/Microsoft', oauth_failed: 'Ingreso social fallido' });
 const badge = (state) => `<span class="badge ${esc(state)}">${esc(STATE_LABEL[state] || state)}</span>`;
 
 async function api(path, { method = 'GET', body } = {}) {
@@ -1061,7 +1061,7 @@ async function openDetail(id) {
           <button class="btn" id="aEdit">Editar</button>
           <button class="btn" id="aExt">Extender…</button>
           ${l.status === 'active' ? '<button class="btn" id="aSusp">Suspender</button>' : '<button class="btn" id="aReact">Reactivar</button>'}
-          <button class="btn" id="aKey">Regenerar clave</button>
+          <button class="btn" id="aKey">${l.status === 'revoked' ? 'Emitir licencia nueva' : 'Regenerar clave'}</button>
         </div>
         <section class="dw-card"><header><h4>Equipos</h4><span class="muted" style="font-size:12px">${activeDevices.length} activos</span></header>
           ${d.devices.length ? `<div class="dw-list">${d.devices.map((x) => `<div><span class="dev-icon">${adminGlyph('screen')}</span><span class="grow"><b>${esc(x.name) || 'Sin nombre'} ${x.status === 'released' ? badge('released') : ''}</b><small>Revit ${esc(x.revitVersion) || '—'} · v${esc(x.appVersion) || '—'} · último uso ${fmtDateTime(x.lastSeen)}</small></span>${x.status === 'active' ? `<button class="btn small" data-rel="${esc(x.id)}">Liberar</button>` : ''}</div>`).join('')}</div>` : '<div class="dw-empty">Aún no se ha activado en ningún equipo.</div>'}</section>
@@ -1086,9 +1086,17 @@ async function openDetail(id) {
     q('#aSusp')?.addEventListener('click', () => ask('¿Suspender? El cliente perderá acceso en su próxima validación.', () => act(() => api('/licenses/' + id, { method: 'PATCH', body: { status: 'suspended' } }), 'Suspendida'), { okLabel: 'Suspender' }));
     q('#aReact')?.addEventListener('click', () => act(() => api('/licenses/' + id, { method: 'PATCH', body: { status: 'active' } }), 'Reactivada'));
     q('#aRevoke')?.addEventListener('click', () => ask('¿Revocar definitivamente esta licencia?', () => act(() => api('/licenses/' + id, { method: 'PATCH', body: { status: 'revoked' } }), 'Revocada'), { danger: true, okLabel: 'Revocar' }));
-    q('#aKey').onclick = () => ask('La clave actual dejará de funcionar. Los equipos deberán volver a activarse con la nueva. ¿Continuar?', async () => {
-      try { const r = await api(`/licenses/${id}/regenerate-key`, { method: 'POST' }); showKey(r.key, 'Nueva clave'); await render(); route(); } catch (err) { toast(err.message); }
-    }, { okLabel: 'Regenerar' });
+    const revoked = l.status === 'revoked';
+    q('#aKey').onclick = () => ask(revoked
+      ? 'Esta licencia está revocada y no se puede rehabilitar. Se creará una licencia NUEVA con otra clave (mismo cliente, plan, equipos y vencimiento). La revocada se conserva como registro. ¿Continuar?'
+      : (l.status === 'suspended' ? 'La clave actual dejará de funcionar. OJO: la licencia sigue suspendida; reactívala para que la clave nueva funcione. ¿Continuar?' : 'La clave actual dejará de funcionar. Los equipos deberán volver a activarse con la nueva. ¿Continuar?'), async () => {
+      try {
+        const r = await api(`/licenses/${id}/regenerate-key`, { method: 'POST' });
+        if (r.replaced) { m.close(); await render(); showKey(r.key, 'Licencia nueva creada'); return; }
+        showKey(r.key, 'Nueva clave');
+        await render(); route();
+      } catch (err) { toast(err.message); }
+    }, { okLabel: revoked ? 'Emitir licencia nueva' : 'Regenerar' });
     q('#aDel').onclick = () => ask('Se eliminará la licencia y sus equipos. Esta acción no se puede deshacer.', () => act(async () => { await api('/licenses/' + id, { method: 'DELETE' }); m.close(); }, 'Eliminada'), { danger: true, okLabel: 'Eliminar' });
     m.root.querySelectorAll('[data-rel]').forEach((b) => b.onclick = () => ask('¿Liberar este equipo? Podrá activarse otro en su lugar.', () => act(() => api(`/licenses/${id}/devices/${b.dataset.rel}/release`, { method: 'POST' }), 'Equipo liberado'), { okLabel: 'Liberar' }));
   };

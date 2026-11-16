@@ -421,6 +421,20 @@ try{
   const rotated=await admin('/licenses/'+nextAssigned.data.license.id+'/regenerate-key','POST');
   check('Clave regenerada sincronizada al portal',rotated.status===200&&(await por('managed','/license')).data.license.key===rotated.data.key);
   check('Clave anterior deja de activar',(await api('activate',dev(nextAssigned.data.key))).status!==200);
+  // Revocar bloquea para siempre: una "clave nueva" sobre la misma licencia seguiría revocada, así que se emite otra licencia.
+  const revokedId=nextAssigned.data.license.id;
+  await admin('/licenses/'+revokedId,'PATCH',{status:'revoked'});
+  const reissued=await admin('/licenses/'+revokedId+'/regenerate-key','POST');
+  check('Regenerar una revocada emite una licencia nueva y distinta',reissued.status===200&&reissued.data.replaced===true&&reissued.data.licenseId!==revokedId&&reissued.data.key!==rotated.data.key);
+  const reissuedPortal=(await por('managed','/license')).data.license;
+  check('El dueño ve la licencia nueva, activa, con la clave nueva',reissuedPortal.id===reissued.data.licenseId&&reissuedPortal.key===reissued.data.key&&reissuedPortal.status==='active');
+  check('La revocada se conserva revocada',sql(`echo xp_one("SELECT status FROM licenses WHERE id = '${revokedId}'")['status'];`)==='revoked');
+  check('La clave de la licencia nueva activa',(await api('activate',dev(reissued.data.key))).status===200);
+  check('Clave de la revocada sigue sin activar',(await api('activate',dev(rotated.data.key))).status!==200);
+  await admin('/licenses/'+reissued.data.licenseId,'PATCH',{status:'suspended'});
+  const ownerRegen=await por('managed','/license/regenerate-key','POST');
+  check('El dueño no puede regenerar una licencia suspendida',ownerRegen.status===409&&/suspendida/.test(ownerRegen.data.error||''));
+  await admin('/licenses/'+reissued.data.licenseId,'PATCH',{status:'active'});
   check('Vencimientos no incluyen gratuitos',(await admin('/stats')).data.nextToExpire.every(l=>l.expiresAt<=Date.now()/1000+30*86400));
   check('Cierre de sesiones admin',(await admin('/customers/'+managed.id+'/revoke-sessions','POST')).status===200);
   check('Sesión revocada no entra',(await por('managed','/me')).status===401);

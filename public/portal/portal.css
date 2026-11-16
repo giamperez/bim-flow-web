@@ -2086,3 +2086,17 @@ ol.steps li::before {
 .consent-title { font-size: 12px; font-weight: 700; color: var(--ink); }
 .consent-fine { margin: 0; font-size: 11.5px; line-height: 1.6; color: var(--muted); }
 @media (max-width: 900px) { .sub-grid { grid-template-columns: 1fr; } #subscriptionCard { padding: 22px 18px; } }
+
+/* ---------- Requisitos para pagar / guardar tarjeta ---------- */
+.readiness { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: var(--bg); margin: 14px 0; }
+.readiness-title { margin: 0 0 10px; font-size: 12.5px; font-weight: 700; }
+.readiness-title.ok { color: var(--ok); }
+.readiness-title.warn { color: var(--warn); }
+.readiness-title.bad { color: var(--bad); }
+.readiness ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.readiness li { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--ink-secondary); }
+.readiness li small { color: var(--muted); }
+.readiness .dot { flex: none; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; border: 1px solid var(--line); color: var(--muted); }
+.readiness li.ok .dot { background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok); }
+.readiness li.todo .dot { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn); }
+#cardRequirements { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-border); font-weight: 600; margin: 0 0 12px; }

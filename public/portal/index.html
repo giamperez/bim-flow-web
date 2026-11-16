@@ -11,13 +11,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;450;500;550;600;650;700;800&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/portal/portal.css?v=20261113-1">
+<link rel="stylesheet" href="/portal/portal.css?v=20261116-1">
 <style>
 /* Essential base defaults */
 .hidden{display:none!important}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 </style>
-<link rel="stylesheet" href="/ui/theme.css?v=20261113-1">
+<link rel="stylesheet" href="/ui/theme.css?v=20261116-1">
 </head>
 <body>
 
@@ -250,8 +250,9 @@
                   <h2>Tarjetas guardadas</h2>
                   <i data-icon="card"></i>
                 </div>
-                <p class="card-description">Agiliza tus pagos. Tú decides cuándo confirmar cada compra. Para guardar una tarjeta necesitamos tu nombre y apellido, teléfono, dirección y ciudad.</p>
+                <p class="card-description">Agiliza tus pagos y activa la renovación automática si quieres. Tú decides cuándo confirmar cada compra.</p>
                 <div id="cards" class="cards-list"></div>
+                <div class="readiness" id="cardChecklist" aria-live="polite"></div>
                 <div class="notice hidden" id="cardRequirements" role="alert"></div>
                 <button class="btn add-card-btn" id="addCard" type="button"><i data-icon="plus"></i> Añadir tarjeta</button>
                 <div class="secure-note">
@@ -576,7 +577,7 @@ async function loadPlans() {
   banner.classList.toggle('hidden', !['test', 'culqi'].includes(paymentMode) || (paymentMode === 'culqi' && paymentInfo?.environment !== 'test'));
   banner.textContent = paymentMode === 'test' ? 'Modo de demostración: los pedidos se aprueban sin pasar por Culqi.' : 'Culqi en modo de prueba: usa una tarjeta de prueba. No se cobra dinero real.';
   renderPlanCards(); renderSubscription();
-  $('#addCard').disabled = paymentMode !== 'culqi' || !paymentInfo || needsVerification;
+  renderCardChecklist();
 }
 const dateText = (ts) => new Date(ts * 1000).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
 const cycleText = (c) => c === 'annual' ? 'anual' : 'mensual';
@@ -588,7 +589,7 @@ function planAction(p) {
     if (s && s.autoRenew) return { text: 'Gratuito al terminar el período', act: 'cancel-auto' };
     return { text: s ? 'Gratuito cuando venza tu plan' : 'Incluido en tu cuenta', disabled: true };
   }
-  if (needsVerification) return { text: 'Confirma tu correo', disabled: true };
+  if (needsVerification) return { text: 'Confirma tu correo para comprar', act: 'verify' };
   if (!s) return { text: 'Elegir ' + name, act: 'buy' };
   if (s.status === 'review') return { text: 'Verificando tu cobro', disabled: true };
   if (p.id === s.plan.id) return s.status === 'past_due' ? { text: 'Pagar ahora', act: 'buy' } : s.autoRenew ? { text: 'Tu plan actual', disabled: true } : { text: 'Renovar ahora', act: 'buy' };
@@ -617,6 +618,7 @@ function renderPlanCards() {
     if (act === 'buy') buy(b.dataset.plan);
     else if (act === 'schedule') scheduleChange(b.dataset.plan);
     else if (act === 'cancel-auto') disableAutoRenew();
+    else if (act === 'verify') { toast('Primero confirma tu correo: te enviamos un enlace. Puedes reenviarlo desde el aviso de arriba.'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     else if (act === 'info') toast('Puedes elegir este plan cuando venza el actual, o activar la renovación automática para programar el cambio.');
   });
 }
@@ -999,6 +1001,7 @@ $('#sideLogout').onclick = () => $('#logout').click();
 $('#refreshOrders').onclick = async () => { const btn=$('#refreshOrders'); btn.disabled=true; try { await loadOrders(); toast('Pedidos actualizados'); } catch(e) { toast(e.message); } finally { btn.disabled=false; } };
 function updateCustomer(c) {
   currentCustomer = c;
+  setTimeout(() => { try { renderCardChecklist(); } catch {} }, 0);
   document.querySelectorAll('[data-customer-name]').forEach(el=>el.textContent=c.name);
   document.querySelectorAll('[data-customer-email]').forEach(el=>el.textContent=c.email);
   const initials = c.name.trim().split(/\s+/).slice(0,2).map(n=>n[0]).join('').toUpperCase();
@@ -1158,6 +1161,31 @@ async function checkoutToken(settings) {
     });
   } finally { checkoutBusy=false; }
 }
+/** Qué impide pagar con tarjeta ahora mismo (nada de esto se oculta: el cliente ve cada motivo). */
+function paymentBlockers() {
+  const out = [];
+  if (paymentMode !== 'culqi' || !paymentInfo) out.push('Los pagos con tarjeta aún no están activos. Escríbenos y activamos tu compra manualmente.');
+  if (needsVerification) out.push('Confirma tu correo: te enviamos un enlace (revisa también el spam).');
+  return out;
+}
+/** Lista de verificación: para pagar basta lo esencial; para guardar la tarjeta Culqi exige además tus datos. */
+function renderCardChecklist() {
+  const box = $('#cardChecklist'); if (!box || !currentCustomer) return;
+  const c = currentCustomer, b = c.billing || {};
+  const payOk = paymentMode === 'culqi' && !!paymentInfo;
+  const items = [
+    [payOk, 'Pagos con tarjeta activos', false, '#comprar'],
+    [!needsVerification, 'Correo confirmado', false, null],
+    [c.name.trim().split(/\s+/).length >= 2, 'Nombre y apellido', true, '#perfil'],
+    [!!c.phone, 'Teléfono', true, '#perfil'],
+    [!!b.address, 'Dirección', true, null],
+    [!!b.city, 'Ciudad', true, null],
+  ];
+  const payPending = items.filter(i => !i[2] && !i[0]).length, savePending = items.filter(i => i[2] && !i[0]).length;
+  const head = payPending ? 'Aún no puedes pagar: completa lo que falta.' : savePending ? 'Ya puedes pagar. Para guardar tu tarjeta falta completar tus datos.' : 'Todo listo para pagar y guardar tu tarjeta.';
+  box.innerHTML = `<p class="readiness-title ${payPending ? 'bad' : savePending ? 'warn' : 'ok'}">${esc(head)}</p>
+    <ul>${items.map(i => `<li class="${i[0] ? 'ok' : 'todo'}"><span class="dot" aria-hidden="true">${i[0] ? '✓' : '•'}</span><span>${esc(i[1])}${i[2] ? ' <small>· para guardar la tarjeta</small>' : ''}</span></li>`).join('')}</ul>`;
+}
 // Culqi exige crear primero un cliente con estos datos; se avisa con claridad qué falta en lugar de un aviso pasajero.
 function cardMissingFields() {
   const missing = [], c = currentCustomer;
@@ -1168,7 +1196,12 @@ function cardMissingFields() {
   return missing;
 }
 $('#addCard').onclick=async()=>{
-  const missing = cardMissingFields(), note = $('#cardRequirements');
+  const missing = cardMissingFields(), note = $('#cardRequirements'), blockers = paymentBlockers();
+  if (blockers.length) {
+    note.innerHTML = '<b>No se puede guardar una tarjeta todavía:</b><br>' + blockers.map(esc).join('<br>');
+    note.classList.remove('hidden'); note.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return;
+  }
   if (missing.length) {
     note.innerHTML = '<b>Antes de guardar una tarjeta completa:</b> ' + esc(missing.join(', ')) + '. Después pulsa «Guardar datos».';
     note.classList.remove('hidden');

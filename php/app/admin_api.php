@@ -404,19 +404,36 @@ function xp_admin_extend(string $id): void
 function xp_admin_regenerate(string $id): void
 {
     $key = xp_generate_key();
-    $found = xp_tx(function () use ($id, $key) {
-        $lic = xp_one('SELECT customer_id, key_enc FROM licenses WHERE id = ?' . xp_for_update(), [$id]);
-        if (!$lic) { return false; }
+    $out = xp_tx(function () use ($id, $key) {
+        $lic = xp_one('SELECT * FROM licenses WHERE id = ?' . xp_for_update(), [$id]);
+        if (!$lic) { return null; }
+        if ($lic['status'] === 'revoked') {
+            // Una licencia revocada queda bloqueada para siempre: cambiarle la clave no la rehabilita (seguiría dando
+            // "revocada"). Se emite una licencia NUEVA, con clave nueva, para el mismo cliente, plan, equipos y vencimiento.
+            $created = time();
+            if (!empty($lic['customer_id'])) {
+                $last = xp_one('SELECT MAX(created_at) AS t FROM licenses WHERE customer_id = ?', [$lic['customer_id']]);
+                $created = max($created, (int) ($last['t'] ?? 0) + 1); // el portal muestra la más reciente
+            }
+            [$newId, $newKey] = xp_new_license([
+                'customer_name' => $lic['customer_name'], 'customer_email' => $lic['customer_email'] ?? '', 'plan' => $lic['plan'],
+                'max_devices' => (int) $lic['max_devices'], 'expires_at' => (int) $lic['expires_at'], 'notes' => $lic['notes'] ?? '',
+                'customer_id' => $lic['customer_id'] ?? null, 'store_key' => !empty($lic['customer_id']),
+                'access_mode' => $lic['access_mode'] ?? 'paid', 'is_trial' => !empty($lic['is_trial']),
+            ]);
+            xp_exec('UPDATE licenses SET created_at = ? WHERE id = ?', [$created, $newId]);
+            return ['key' => $newKey, 'licenseId' => $newId, 'replaced' => true, 'status' => 'active'];
+        }
         $encrypted = !empty($lic['customer_id']) || !empty($lic['key_enc']) ? xp_encrypt_key($key) : null;
         xp_exec('UPDATE licenses SET key_hash = ?, key_hint = ?, key_enc = ?, updated_at = ? WHERE id = ?',
             [xp_sha256($key), substr($key, -5), $encrypted, time(), $id]);
-        return true;
+        return ['key' => $key, 'licenseId' => $id, 'replaced' => false, 'status' => $lic['status']];
     });
-    if (!$found) {
+    if (!$out) {
         xp_json(404, ['ok' => false, 'error' => 'No encontrada.']);
     }
-    xp_log_event('admin_key_regenerated', $id);
-    xp_json(200, ['ok' => true, 'key' => $key]);
+    xp_log_event($out['replaced'] ? 'admin_license_reissued' : 'admin_key_regenerated', $out['licenseId'], null, $out['replaced'] ? $id : '');
+    xp_json(200, ['ok' => true] + $out);
 }
 
 function xp_admin_delete(string $id): void

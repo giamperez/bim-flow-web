@@ -557,6 +557,10 @@ function xp_portal_regenerate(array $customer): void
     if (!$lic) {
         xp_json(404, ['ok' => false, 'error' => 'Aún no tiene una licencia.']);
     }
+    if ($lic['status'] !== 'active') {
+        // Cambiar la clave no desbloquea una licencia suspendida o revocada; evita un "nuevo" código que sigue sin funcionar.
+        xp_json(409, ['ok' => false, 'error' => 'Tu licencia está ' . ($lic['status'] === 'revoked' ? 'revocada' : 'suspendida') . ': una clave nueva no la reactiva. Contacta a soporte.']);
+    }
     $key = xp_generate_key();
     xp_exec(
         'UPDATE licenses SET key_hash = ?, key_hint = ?, key_enc = ?, updated_at = ? WHERE id = ?',
